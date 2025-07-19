@@ -397,5 +397,12 @@ public class ScheduleService {
     public Integer findIdByStatizId(int statizId) {
         return scheduleRepository.findIdByStatizId(statizId);
     }
+    
+    /**
+     * 날짜 범위로 경기 일정 조회
+     */
+    public List<Schedule> getSchedulesByDateRange(Timestamp start, Timestamp end) {
+        return scheduleRepository.findByMatchDateBetweenOrderByMatchDate(start, end);
+    }
 
 }

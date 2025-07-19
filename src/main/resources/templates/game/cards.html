@@ -1,0 +1,18 @@
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/userDefault}"
+>
+  <head>
+    <title>내 카드 보기</title>
+  </head>
+  <th:block layout:fragment="contents">
+    <div class="container mt-4">
+      <h2>내 카드 컬렉션</h2>
+      <div id="my-cards-container" class="row">
+        <!-- 카드들이 여기에 로드됩니다 -->
+      </div>
+    </div>
+  </th:block>
+</html>

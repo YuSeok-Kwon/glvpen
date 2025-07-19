@@ -19,6 +19,7 @@ public class CustomPlayerResultDTO {
     
     // 게임 기본 정보
     private String gameMode;
+    private String difficulty;
     private String userTeamName;
     private String opponentTeamName;
     private LocalDateTime playedAt;
@@ -49,6 +50,8 @@ public class CustomPlayerResultDTO {
     private String gameSummary;
     private LocalDateTime gameStartTime;
     private LocalDateTime gameEndTime;
+    private LocalDateTime startTime; // 추가된 필드
+    private LocalDateTime endTime;   // 추가된 필드
     
     /**
      * 커스텀 선수 경기 성과
@@ -56,6 +59,7 @@ public class CustomPlayerResultDTO {
     @Data
     @Builder
     public static class CustomPlayerPerformance {
+        private Long playerId; // 추가된 필드
         private String playerName;
         private String position;
         
@@ -66,6 +70,7 @@ public class CustomPlayerResultDTO {
         private Integer rbis;
         private Integer runs;
         private Double battingAverage;
+        private Integer stolenBases; // 추가된 필드
         
         // 투구 성과 (투수인 경우)
         private Double inningsPitched;
@@ -92,8 +97,11 @@ public class CustomPlayerResultDTO {
     @Builder
     public static class CustomTeamStats {
         private Integer totalHits;
+        private Integer hits;      // 추가된 필드
         private Integer totalRuns;
+        private Integer runs;      // 추가된 필드
         private Integer totalErrors;
+        private Integer errors;    // 추가된 필드
         private Double teamBattingAverage;
         private Double teamEra;
         private Integer leftOnBase;

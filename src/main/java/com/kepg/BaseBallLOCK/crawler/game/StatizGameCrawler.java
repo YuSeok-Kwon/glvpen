@@ -129,12 +129,12 @@ public class StatizGameCrawler {
             driver.get(url);
 
             WebDriverWait wait = new WebDriverWait(driver, java.time.Duration.ofSeconds(5));
-            wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("div.games a[href*='summary']")));
+            wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("a[href*='summary'].basics")));
 
             String html = driver.getPageSource();
             Document doc = Jsoup.parse(html);
 
-            Elements links = doc.select("div.games a[href*='summary']");
+            Elements links = doc.select("a[href*='summary'].basics");
 
             for (Element link : links) {
                 String href = link.attr("href");

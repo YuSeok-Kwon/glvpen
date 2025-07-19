@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/default}">
+  <head>
+    <title>나만의 타자 만들기 - BaseBall LOCK</title>
+    <style>
+      .creator-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      .page-header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      .page-title {
+        font-size: 2.5rem;
+        font-weight: bold;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+      }
+
+      .page-subtitle {
+        color: #666;
+        font-size: 1.1rem;
+      }
+
+      .creator-card {
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        overflow: hidden;
+        width: 100%;
+        margin: 0;
+      }
+
+      .preview-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 400px;
+      }
+
+      @media (min-width: 768px) {
+        .preview-section {
+          min-height: 600px;
+        }
+      }
+
+      .player-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .avatar-generated {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      #avatarPlaceholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        font-size: 3rem;
+      }
+
+      .player-name {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+      }
+
+      .player-info {
+        width: 100%;
+        max-width: 300px;
+      }
+
+      .stats-container {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+      }
+
+      .stats-header {
+        text-align: center;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+      }
+
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.3rem 0.5rem;
+        background: rgba(255,255,255,0.1);
+        border-radius: 5px;
+      }
+
+      .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+      }
+
+      .stat-value {
+        font-size: 1.1rem;
+        font-weight: bold;
+      }
+
+      .stats-total {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(255,255,255,0.3);
+        text-align: center;
+        font-weight: bold;
+      }
+
+      .reroll-container {
+        margin-top: 1rem;
+        text-align: center;
+      }
+
+      .btn-reroll {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .btn-reroll:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+      }
+
+      .btn-reroll:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .reroll-info {
+        font-size: 0.8rem;
+        opacity: 0.8;
+        margin-top: 0.5rem;
+      }
+
+      .alert-message {
+        border-radius: 10px;
+        font-weight: 500;
+        animation: fadeInDown 0.5s ease-in-out;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .stat-value {
+        font-size: 1.1rem;
+        font-weight: bold;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255,255,255,0.3);
+      }
+
+      .form-section {
+        padding: 2rem;
+      }
+
+      .form-group {
+        margin-bottom: 2rem;
+      }
+
+      .form-label {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        color: #333;
+        display: block;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 2px solid #e1e5e9;
+        border-radius: 10px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }
+
+      .option-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .option-btn {
+        padding: 0.75rem;
+        border: 2px solid #e1e5e9;
+        background: white;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        font-size: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        z-index: 10;
+        position: relative;
+      }
+
+      .option-btn:hover {
+        border-color: #667eea;
+        background: #f8f9ff;
+      }
+
+      .option-btn.active {
+        border-color: #667eea;
+        background: #667eea;
+        color: white;
+      }
+
+      .btn-generate {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-bottom: 1rem;
+      }
+
+      .btn-generate:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-create {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        font-size: 1.1rem;
+      }
+
+      .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+      }
+
+      .btn-create:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .btn-test {
+        background: linear-gradient(135deg, #ffc107, #fd7e14);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        width: 100%;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+      }
+
+      .btn-test:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.4);
+      }
+
+      #avatarLoading {
+        display: none;
+        text-align: center;
+        color: #667eea;
+        font-weight: bold;
+        margin: 1rem 0;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #667eea;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .random-stats-note {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        color: #856404;
+        font-size: 0.9rem;
+      }
+
+      .error-message {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 10px;
+        padding: 1rem;
+        margin-top: 1rem;
+        color: #721c24;
+        font-size: 0.9rem;
+        display: none;
+      }
+
+      .error-message.show {
+        display: block;
+      }
+
+      .form-control.error {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+      }
+
+      .validation-message {
+        color: #dc3545;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+        display: none;
+      }
+
+      .validation-message.show {
+        display: block;
+      }
+    </style>
+  </head>
+
+  <th:block layout:fragment="contents">
+    <div class="creator-container">
+      <div class="page-header">
+        <h1 class="page-title">⚾ 나만의 타자 만들기</h1>
+        <p class="page-subtitle">당신만의 특별한 야구 선수를 만들어보세요!</p>
+      </div>
+
+      <div class="creator-card">
+        <div class="row g-0 h-100">
+          <!-- 미리보기 섹션 -->
+          <div class="col-12 col-md-5 col-lg-4 d-flex">
+            <div class="preview-section w-100">
+              <div class="player-avatar" id="playerAvatar">
+                <span id="avatarPlaceholder">👤</span>
+                <img id="generatedAvatar" class="avatar-generated" style="display: none;" 
+                     onerror="this.style.display='none'; document.getElementById('avatarPlaceholder').style.display='flex';">
+              </div>
+              
+              <div class="player-name" id="playerNamePreview">새로운 선수</div>
+              
+              <div class="player-info">
+                <div class="row">
+                  <div class="col-6">
+                    <div class="stat-item">
+                      <div class="stat-label">나이</div>
+                      <div class="stat-value" id="agePreview">-</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="stat-item">
+                      <div class="stat-label">타석</div>
+                      <div class="stat-value" id="battingPreview">-</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="row mt-2">
+                  <div class="col-6">
+                    <div class="stat-item">
+                      <div class="stat-label">신장</div>
+                      <div class="stat-value" id="heightPreview">-</div>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="stat-item">
+                      <div class="stat-label">몸무게</div>
+                      <div class="stat-value" id="weightPreview">-</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-3">
+                  <div class="stat-item">
+                    <div class="stat-label">포지션</div>
+                    <div class="stat-value" id="positionPreview">-</div>
+                  </div>
+                </div>
+                
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <div class="stat-label">파워</div>
+                    <div class="stat-value" id="powerStat">-</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">컨택</div>
+                    <div class="stat-value" id="contactStat">-</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">스피드</div>
+                    <div class="stat-value" id="speedStat">-</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-label">수비</div>
+                    <div class="stat-value" id="defenseStat">-</div>
+                  </div>
+                </div>
+                
+                <!-- 능력치 총합 표시 -->
+                <div class="stats-total">
+                  총 능력치: <span id="totalStats">0</span> / 120
+                </div>
+                
+                <!-- 능력치 재분배 버튼 -->
+                <div class="reroll-container" id="rerollContainer" style="display: none;">
+                  <button type="button" id="rerollStats" class="btn-reroll">
+                    🎲 능력치 재분배
+                  </button>
+                  <div class="reroll-info">
+                    남은 재분배 횟수: <span id="rerollCount">3</span>회
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 입력 폼 섹션 -->
+          <div class="col-12 col-md-7 col-lg-8 d-flex">
+            <div class="form-section w-100">
+              <!-- 기본 정보 -->
+              <div class="form-group">
+                <label class="form-label">선수 이름</label>
+                <input type="text" id="playerName" class="form-control" placeholder="선수 이름을 입력하세요" maxlength="10">
+              </div>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label">나이</label>
+                    <input type="number" id="playerAge" class="form-control" min="18" max="45" placeholder="18-45">
+                    <div class="validation-message" id="ageError"></div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="form-group">
+                    <label class="form-label">포지션</label>
+                    <select id="playerPosition" class="form-control">
+                      <option value="">포지션 선택</option>
+                      <option value="C">포수 (C)</option>
+                      <option value="1B">1루수 (1B)</option>
+                      <option value="2B">2루수 (2B)</option>
+                      <option value="3B">3루수 (3B)</option>
+                      <option value="SS">유격수 (SS)</option>
+                      <option value="LF">좌익수 (LF)</option>
+                      <option value="CF">중견수 (CF)</option>
+                      <option value="RF">우익수 (RF)</option>
+                      <option value="DH">지명타자 (DH)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 외모 -->
+              <div class="form-group">
+                <label class="form-label">성별</label>
+                <div class="option-group">
+                  <button type="button" class="option-btn" data-gender="male">
+                    <span>👨</span>
+                    <span>남성</span>
+                  </button>
+                  <button type="button" class="option-btn" data-gender="female">
+                    <span>👩</span>
+                    <span>여성</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">피부색</label>
+                <div class="option-group">
+                  <button type="button" class="option-btn" data-skin="light">
+                    <span>🟡</span>
+                    <span>밝음</span>
+                  </button>
+                  <button type="button" class="option-btn" data-skin="medium">
+                    <span>🟠</span>
+                    <span>보통</span>
+                  </button>
+                  <button type="button" class="option-btn" data-skin="dark">
+                    <span>🟤</span>
+                    <span>어두움</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">머리 스타일</label>
+                <div class="option-group">
+                  <button type="button" class="option-btn" data-hair="buzzcut">
+                    <span>✂️</span>
+                    <span>스포츠컷</span>
+                  </button>
+                  <button type="button" class="option-btn" data-hair="short">
+                    <span>👦</span>
+                    <span>짧은머리</span>
+                  </button>
+                  <button type="button" class="option-btn" data-hair="medium">
+                    <span>🧑</span>
+                    <span>중간머리</span>
+                  </button>
+                  <button type="button" class="option-btn" data-hair="curly">
+                    <span>🌀</span>
+                    <span>곱슬머리</span>
+                  </button>
+                  <button type="button" class="option-btn" data-hair="bald">
+                    <span>🪥</span>
+                    <span>삭발</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 신체 정보 -->
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">신장 (cm)</label>
+                    <input type="number" id="playerHeight" class="form-control" min="160" max="200" placeholder="160-200">
+                    <div class="validation-message" id="heightError"></div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">몸무게 (kg)</label>
+                    <input type="number" id="playerWeight" class="form-control" min="50" max="150" placeholder="50-150">
+                    <div class="validation-message" id="weightError"></div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="form-group">
+                    <label class="form-label">타석</label>
+                    <div class="option-group">
+                      <button type="button" class="option-btn" data-batting="right">우타</button>
+                      <button type="button" class="option-btn" data-batting="left">좌타</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 아바타 생성 -->
+              <div class="form-group">
+                <button type="button" id="generateAvatar" class="btn-generate">🎨 정교한 아바타 생성</button>
+                <div id="avatarLoading">
+                  <span class="spinner"></span>
+                  아바타 생성 중...
+                </div>
+              </div>
+
+              <!-- 에러 메시지 영역 -->
+              <div class="error-message" id="validationErrors">
+                <strong>⚠️ 입력 오류</strong><br>
+                <ul id="errorList"></ul>
+              </div>
+
+              <!-- 능력치 정보 -->
+              <div class="random-stats-note">
+                <strong>💡 능력치 안내</strong><br>
+                신인 선수로 시작하므로 모든 능력치는 10~50 범위에서 랜덤으로 생성됩니다.<br>
+                총 능력치 합계는 120이며, 3번까지 재분배할 수 있습니다!
+              </div>
+
+              <!-- 선수 생성 버튼 -->
+              <div class="form-group mt-4">
+                <button type="button" id="createPlayer" class="btn-create" disabled>⚾ 선수 생성</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </th:block>
+
+  <th:block layout:fragment="script">
+    <script>
+      // 전역 변수
+      let selectedGender = '';
+      let selectedSkin = '';
+      let selectedHair = '';
+      let selectedBatting = '';
+      let generatedAvatarUrl = '';
+      let isAvatarGenerated = false; // 아바타 생성 여부
+      let statsRerollCount = 0; // 능력치 재분배 횟수
+      let maxStatsRerolls = 3; // 최대 재분배 횟수
+      let playerStats = {
+        power: 0,
+        contact: 0,
+        speed: 0,
+        defense: 0
+      };
+
+      $(document).ready(function() {
+        console.log('문서 준비 완료');
+        
+        // 옵션 선택 처리 (jQuery로 통합)
+        $('.option-btn').on('click', function() {
+          const $btn = $(this);
+          const group = $btn.closest('.option-group');
+          
+          // 그룹 내 다른 버튼 비활성화 및 현재 버튼 활성화
+          group.find('.option-btn').removeClass('active');
+          $btn.addClass('active');
+
+          // 데이터 속성을 기반으로 선택된 값 저장
+          const data = $btn.data();
+          if (data.gender) {
+            selectedGender = data.gender;
+            console.log('성별 선택:', selectedGender);
+          } else if (data.skin) {
+            selectedSkin = data.skin;
+            console.log('피부색 선택:', selectedSkin);
+          } else if (data.hair) {
+            selectedHair = data.hair;
+            console.log('헤어 선택:', selectedHair);
+          } else if (data.batting) {
+            selectedBatting = data.batting;
+            console.log('타석 선택:', selectedBatting);
+            updateBattingPreview();
+          }
+          
+          updatePreview();
+        });
+
+        $('#playerName').on('input', function() {
+          validateField('name');
+          updatePreview();
+        });
+        $('#playerAge').on('input', function() {
+          validateField('age');
+          updatePreview();
+        });
+        $('#playerHeight').on('input', function() {
+          validateField('height');
+          updatePreview();
+        });
+        $('#playerWeight').on('input', function() {
+          validateField('weight');
+          updatePreview();
+        });
+        $('#playerPosition').on('change', updatePreview);
+
+        // 능력치 랜덤 생성
+        generateRandomStats();
+
+        // 아바타 생성 버튼
+        $('#generateAvatar').click(function() {
+          if (isAvatarGenerated) {
+            showMessage('아바타는 한 번 생성하면 변경할 수 없습니다!', 'warning');
+            return;
+          }
+          generateAvatar();
+        });
+
+        // 능력치 재분배 버튼
+        $('#rerollStats').click(function() {
+          rerollPlayerStats();
+        });
+
+        // 선수 생성 버튼
+        $('#createPlayer').click(function() {
+          createPlayer();
+        });
+      });
+
+      function updatePreview() {
+        const name = $('#playerName').val() || '새로운 선수';
+        const age = $('#playerAge').val();
+        const height = $('#playerHeight').val();
+        const weight = $('#playerWeight').val();
+        const position = $('#playerPosition').val();
+
+        $('#playerNamePreview').text(name);
+        $('#agePreview').text(age ? age + '세' : '-');
+        $('#heightPreview').text(height ? height + 'cm' : '-');
+        $('#weightPreview').text(weight ? weight + 'kg' : '-');
+        $('#positionPreview').text(position || '-');
+      }
+
+      function updateBattingPreview() {
+        const battingText = {
+          'right': '우타',
+          'left': '좌타',
+          'switch': '스위치'
+        };
+        $('#battingPreview').text(battingText[selectedBatting] || '-');
+      }
+
+      function generateRandomStats() {
+        // 10~50 범위에서 4개 능력치 생성, 총합 120
+        const min = 10;
+        const max = 50;
+        const total = 120;
+        const numStats = 4;
+
+        let stats = new Array(numStats).fill(min);
+        let remaining = total - (min * numStats); // 120 - 40 = 80
+
+        // 80 포인트를 분배
+        for (let i = 0; i < remaining; i++) {
+          let randomIndex;
+          // 해당 능력치가 max(50) 미만인 슬롯을 찾을 때까지 반복
+          do {
+            randomIndex = Math.floor(Math.random() * numStats);
+          } while (stats[randomIndex] >= max);
+          
+          stats[randomIndex]++;
+        }
+        
+        // 능력치 할당 순서를 섞어서 예측 불가능하게 만듦 (Fisher-Yates shuffle)
+        for (let i = stats.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [stats[i], stats[j]] = [stats[j], stats[i]];
+        }
+
+        playerStats.power = stats[0];
+        playerStats.contact = stats[1];
+        playerStats.speed = stats[2];
+        playerStats.defense = stats[3];
+        
+        updateStatsDisplay();
+        $('#rerollContainer').show();
+        
+        console.log('생성된 능력치:', playerStats);
+        console.log('총합:', Object.values(playerStats).reduce((a, b) => a + b, 0));
+      }
+
+      function updateStatsDisplay() {
+        $('#powerStat').text(playerStats.power);
+        $('#contactStat').text(playerStats.contact);
+        $('#speedStat').text(playerStats.speed);
+        $('#defenseStat').text(playerStats.defense);
+        
+        const total = Object.values(playerStats).reduce((a, b) => a + b, 0);
+        $('#totalStats').text(total);
+      }
+
+      function rerollPlayerStats() {
+        if (statsRerollCount >= maxStatsRerolls) {
+          showMessage('능력치 재분배 횟수를 모두 사용했습니다!', 'warning');
+          return;
+        }
+        
+        statsRerollCount++;
+        generateRandomStats();
+        updateRerollDisplay();
+        
+        console.log(`능력치 재분배 ${statsRerollCount}회 사용`);
+      }
+
+      function updateRerollDisplay() {
+        const remaining = maxStatsRerolls - statsRerollCount;
+        $('#rerollCount').text(remaining);
+        
+        if (remaining <= 0) {
+          $('#rerollStats').prop('disabled', true);
+          $('#rerollStats').text('재분배 완료');
+        }
+      }
+
+      function generateAvatar() {
+        // 선택된 값들 확인
+        checkSelectedValues();
+        
+        // 먼저 모든 필드 검증
+        if (!validateAllFields()) {
+          alert('입력 정보를 확인해주세요.');
+          return;
+        }
+
+        const name = $('#playerName').val();
+        
+        $('#avatarLoading').show();
+        $('#generateAvatar').prop('disabled', true);
+        $('#generateAvatar').text('🎨 생성 중...');
+
+        // 다단계 아바타 생성 시도
+        tryGenerateAvatarWithFallbacks(name, selectedGender, selectedSkin, selectedHair);
+      }
+
+      function tryGenerateAvatarWithFallbacks(name, gender, skin, hair) {
+        const seed = encodeURIComponent(name + Math.random().toString(36).substring(7));
+        
+        console.log('아바타 생성 시작:', { name, gender, skin, hair });
+        
+        // 1단계: DiceBear 7.x avataaars (최신 버전)
+        const avatarUrl7x = generateDiceBearAvatar7x(seed, gender, skin, hair);
+        
+        testAvatarUrl(avatarUrl7x, function() {
+          console.log('DiceBear 7.x 아바타 생성 성공');
+          setGeneratedAvatar(avatarUrl7x);
+        }, function() {
+          console.log('DiceBear 7.x 실패, 6.x 시도');
+          
+          // 2단계: DiceBear 6.x avataaars (안정적인 버전)
+          const avatarUrl6x = generateDiceBearAvatar6x(seed, gender, skin, hair);
+          
+          testAvatarUrl(avatarUrl6x, function() {
+            console.log('DiceBear 6.x 아바타 생성 성공');
+            setGeneratedAvatar(avatarUrl6x);
+          }, function() {
+            console.log('DiceBear 6.x 실패, 5.x 시도');
+            
+            // 3단계: DiceBear 5.x (더 안정적)
+            const avatarUrl5x = generateDiceBearAvatar5x(seed, gender, skin, hair);
+            testAvatarUrl(avatarUrl5x, function() {
+              console.log('DiceBear 5.x 아바타 생성 성공');
+              setGeneratedAvatar(avatarUrl5x);
+            }, function() {
+              console.log('DiceBear 5.x 실패, Robohash 시도');
+              
+              // 4단계: Robohash (캐릭터 스타일 아바타)
+              const robohashUrl = generateRobohashAvatar(name, gender);
+              
+              testAvatarUrl(robohashUrl, function() {
+                console.log('Robohash 아바타 생성 성공');
+                setGeneratedAvatar(robohashUrl);
+              }, function() {
+                console.log('Robohash 실패, UI-Avatars 시도');
+                
+                // 5단계: UI-Avatars (간단한 텍스트 기반)
+                const uiAvatarUrl = generateUIAvatar(name, gender);
+                
+                testAvatarUrl(uiAvatarUrl, function() {
+                  console.log('UI-Avatars 아바타 생성 성공');
+                  setGeneratedAvatar(uiAvatarUrl);
+                }, function() {
+                  console.log('모든 외부 API 실패, 캔버스 아바타 생성');
+                  
+                  // 6단계: 캔버스 기반 아바타 (마지막 대안)
+                  const canvasAvatarUrl = generateCanvasAvatar(name, gender, skin);
+                  setGeneratedAvatar(canvasAvatarUrl);
+                });
+              });
+            });
+          });
+        });
+      }
+
+      function testAvatarUrl(url, onSuccess, onError) {
+        const testImg = new Image();
+        
+        // CORS 문제 방지
+        testImg.crossOrigin = "anonymous";
+        
+        let timeoutId;
+        let completed = false;
+        
+        testImg.onload = function() {
+          if (completed) return;
+          completed = true;
+          clearTimeout(timeoutId);
+          
+          if (this.complete && this.naturalWidth > 0 && this.naturalHeight > 0) {
+            console.log('아바타 로딩 성공:', url);
+            onSuccess();
+          } else {
+            console.log('아바타 로딩 실패 (크기 0):', url);
+            onError();
+          }
+        };
+        
+        testImg.onerror = function() {
+          if (completed) return;
+          completed = true;
+          clearTimeout(timeoutId);
+          console.log('아바타 로딩 에러:', url);
+          onError();
+        };
+        
+        // 5초 타임아웃으로 증가
+        timeoutId = setTimeout(function() {
+          if (completed) return;
+          completed = true;
+          console.log('아바타 로딩 타임아웃:', url);
+          onError();
+        }, 5000);
+        
+        testImg.src = url;
+      }
+
+      function setGeneratedAvatar(url) {
+        generatedAvatarUrl = url;
+        isAvatarGenerated = true; // 아바타 생성 완료 표시
+        
+        $('#generatedAvatar').attr('src', url);
+        $('#generatedAvatar').show();
+        $('#avatarPlaceholder').hide();
+        $('#avatarLoading').hide();
+        $('#generateAvatar').prop('disabled', true); // 아바타 재생성 비활성화
+        $('#generateAvatar').text('🔒 아바타 확정');
+        
+        // 선수 생성 버튼 활성화
+        $('#createPlayer').prop('disabled', false);
+        $('#createPlayer').text('⚾ 선수 생성');
+        
+        showMessage('아바타가 생성되었습니다! 이제 변경할 수 없습니다.', 'success');
+        console.log('아바타 설정 완료 및 잠금:', url);
+      }
+
+      // DiceBear 7.x 아바타 생성 (최신 버전)
+      function generateDiceBearAvatar7x(seed, gender, skin, hair) {
+        const baseUrl = 'https://api.dicebear.com/7.x/avataaars/svg';
+        
+        // 7.x에서 사용 가능한 스타일 옵션들
+        const skinOptions = ['f5c6a0', 'fd9841', 'ae5d29', 'd08b5b', 'edb98a', 'fdbcb4'];
+        const hairOptions = ['auburn', 'black', 'blonde', 'brown', 'pastel', 'platinum', 'red', 'silver'];
+        const eyeOptions = ['close', 'cry', 'default', 'dizzy', 'roll', 'happy', 'hearts', 'side', 'squint', 'surprised', 'wink'];
+        const eyebrowOptions = ['angry', 'default', 'frown', 'raise', 'sad', 'surprised', 'unibrow', 'up'];
+        const mouthOptions = ['concerned', 'default', 'disbelief', 'eating', 'grimace', 'sad', 'scream', 'serious', 'smile', 'tongue', 'twinkle', 'vomit'];
+        
+        const selectedSkin = skinOptions[Math.floor(Math.random() * skinOptions.length)];
+        const selectedHair = hairOptions[Math.floor(Math.random() * hairOptions.length)];
+        const selectedEyes = eyeOptions[Math.floor(Math.random() * eyeOptions.length)];
+        const selectedEyebrows = eyebrowOptions[Math.floor(Math.random() * eyebrowOptions.length)];
+        const selectedMouth = mouthOptions[Math.floor(Math.random() * mouthOptions.length)];
+        
+        return `${baseUrl}?seed=${seed}&skinColor=${selectedSkin}&hairColor=${selectedHair}&eyes=${selectedEyes}&eyebrows=${selectedEyebrows}&mouth=${selectedMouth}&backgroundColor=transparent&scale=100`;
+      }
+      
+      // DiceBear 6.x 아바타 생성 (안정적인 버전)
+      function generateDiceBearAvatar6x(seed, gender, skin, hair) {
+        const baseUrl = 'https://api.dicebear.com/6.x/avataaars/svg';
+        
+        // 6.x에서 사용 가능한 스타일 옵션들
+        const skinColors = ['tanned', 'yellow', 'pale', 'light', 'brown', 'darkBrown', 'black'];
+        const hairColors = ['auburn', 'black', 'blonde', 'brown', 'pastelPink', 'platinum', 'red', 'silverGray'];
+        const topTypes = ['eyepatch', 'hat', 'hijab', 'turban', 'winterHat1', 'winterHat2', 'winterHat3', 'winterHat4', 'longHairBigHair', 'longHairBob', 'longHairBun'];
+        
+        const selectedSkinColor = skinColors[Math.floor(Math.random() * skinColors.length)];
+        const selectedHairColor = hairColors[Math.floor(Math.random() * hairColors.length)];
+        const selectedTopType = topTypes[Math.floor(Math.random() * topTypes.length)];
+        
+        return `${baseUrl}?seed=${seed}&skinColor=${selectedSkinColor}&hairColor=${selectedHairColor}&topType=${selectedTopType}&backgroundColor=transparent`;
+      }
+
+      function generateDiceBearAvatar5x(seed, gender, skin, hair) {
+        // 5.x 버전은 더 간단한 파라미터 구조 사용
+        let url = 'https://api.dicebear.com/5.x/avataaars/svg?seed=' + seed;
+        
+        // 5.x에서는 더 많은 옵션을 수동으로 추가할 수 있습니다.
+        const skinColor = getDiceBearSkinColor(skin).replace('#','');
+        const hairStyle = getDiceBearHairStyle(hair);
+        const hairColor = '2c1b18'; // Brown
+        
+        url += '&backgroundColor=transparent';
+        url += '&skinColor=' + skinColor;
+        url += '&top=' + hairStyle;
+        url += '&topColor=' + hairColor;
+        
+        console.log('DiceBear 5.x URL:', url);
+        return url;
+      }
+
+      function generateUIAvatar(name, gender) {
+        const colors = ['1abc9c', '2ecc71', '3498db', '9b59b6', 'e67e22', 'e74c3c'];
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${randomColor}&color=fff&size=150&bold=true`;
+      }
+
+      function generateRobohashAvatar(name, gender) {
+        const set = (gender === 'female') ? 'set4' : 'set1';
+        return `https://robohash.org/${encodeURIComponent(name)}?set=${set}&size=150x150&bgset=bg1`;
+      }
+
+      function generateCanvasAvatar(name, gender, skin) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 200;
+        canvas.height = 200;
+        const ctx = canvas.getContext('2d');
+        
+        // 배경 그라디언트
+        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 200, 200);
+        
+        // 얼굴
+        const skinTones = {
+          'light': '#F8D4B4',
+          'medium': '#E0A37E',
+          'dark': '#A0522D'
+        };
+        const bgColor = skinTones[skin] || '#cccccc';
+        
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, 150, 150);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 60px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(name.charAt(0).toUpperCase(), 75, 75);
+        
+        return canvas.toDataURL();
+      }
+
+      function getDiceBearSkinColor(skin) {
+        switch (skin) {
+          case 'light': return 'fdbcb4';
+          case 'medium': return 'd08b5b';
+          case 'dark': return 'ae5d29';
+          default: return 'fdbcb4';
+        }
+      }
+
+      function getDiceBearHairStyle(hair) {
+        switch (hair) {
+          case 'buzzcut': return 'shortHairTheCaesar';
+          case 'short': return 'shortHairShortWaved';
+          case 'medium': return 'longHairStraight';
+          case 'curly': return 'longHairCurvy';
+          case 'bald': return 'noHair';
+          default: return 'shortHairShortWaved';
+        }
+      }
+
+      function checkSelectedValues() {
+        console.log('선택된 값 확인:', {
+          selectedGender,
+          selectedSkin,
+          selectedHair,
+          selectedBatting
+        });
+      }
+
+      function createPlayer() {
+        if (!validateAllFields(true)) {
+          showMessage('모든 필수 정보를 입력하고 아바타를 생성해주세요.', 'error');
+          return;
+        }
+
+        const playerData = {
+          name: $('#playerName').val(),
+          age: parseInt($('#playerAge').val()),
+          gender: selectedGender,
+          skin: selectedSkin,
+          hair: selectedHair,
+          batting: selectedBatting,
+          height: parseInt($('#playerHeight').val()),
+          weight: parseInt($('#playerWeight').val()),
+          position: $('#playerPosition').val(),
+          avatarUrl: generatedAvatarUrl,
+          power: playerStats.power,
+          contact: playerStats.contact,
+          speed: playerStats.speed,
+          defense: playerStats.defense
+        };
+
+        console.log('생성할 선수 데이터:', playerData);
+
+        $.ajax({
+          url: '/game/create-custom-player',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify(playerData),
+          success: function(response) {
+            if (response.success) {
+              showMessage('선수 생성이 완료되었습니다! 잠시 후 게임 화면으로 이동합니다.', 'success');
+              setTimeout(() => {
+                window.location.href = '/game/play'; // 또는 다른 페이지
+              }, 2000);
+            } else {
+              showMessage('서버 오류: ' + (response.message || '선수 생성에 실패했습니다.'), 'error');
+            }
+          },
+          error: function(xhr, status, error) {
+            console.error('선수 생성 AJAX 오류:', xhr.responseText);
+            let errorMessage = '선수 생성 중 오류가 발생했습니다.';
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                errorMessage = xhr.responseJSON.message;
+            }
+            showMessage(errorMessage, 'error');
+          }
+        });
+      }
+
+      function validateAllFields(checkAvatar = false) {
+        let isValid = true;
+        $('#errorList').empty();
+
+        // 이름
+        if (!$('#playerName').val()) {
+          isValid = false;
+          showValidationError('playerName', '선수 이름은 필수입니다.');
+        } else {
+          hideValidationError('playerName');
+        }
+
+        // 나이
+        const age = parseInt($('#playerAge').val());
+        if (isNaN(age) || age < 18 || age > 45) {
+          isValid = false;
+          showValidationError('playerAge', '나이는 18-45세 사이여야 합니다.');
+        } else {
+          hideValidationError('playerAge');
+        }
+        
+        // 신장
+        const height = parseInt($('#playerHeight').val());
+        if (isNaN(height) || height < 160 || height > 210) {
+            isValid = false;
+            showValidationError('playerHeight', '신장은 160-210cm 사이여야 합니다.');
+        } else {
+            hideValidationError('playerHeight');
+        }
+
+        // 몸무게
+        const weight = parseInt($('#playerWeight').val());
+        if (isNaN(weight) || weight < 50 || weight > 150) {
+            isValid = false;
+            showValidationError('playerWeight', '몸무게는 50-150kg 사이여야 합니다.');
+        } else {
+            hideValidationError('playerWeight');
+        }
+
+        // 포지션
+        if (!$('#playerPosition').val()) {
+          isValid = false;
+          showValidationError('playerPosition', '포지션을 선택해주세요.');
+        } else {
+          hideValidationError('playerPosition');
+        }
+
+        // 옵션 버튼 그룹
+        if (!selectedGender) {
+          isValid = false;
+          showValidationError('gender', '성별을 선택해주세요.');
+        } else {
+          hideValidationError('gender');
+        }
+        if (!selectedSkin) {
+          isValid = false;
+          showValidationError('skin', '피부색을 선택해주세요.');
+        } else {
+          hideValidationError('skin');
+        }
+        if (!selectedHair) {
+          isValid = false;
+          showValidationError('hair', '머리 스타일을 선택해주세요.');
+        } else {
+          hideValidationError('hair');
+        }
+        if (!selectedBatting) {
+          isValid = false;
+          showValidationError('batting', '타석을 선택해주세요.');
+        } else {
+          hideValidationError('batting');
+        }
+
+        if (checkAvatar && !isAvatarGenerated) {
+          isValid = false;
+          showValidationError('avatar', '아바타를 생성해주세요.');
+        } else {
+          hideValidationError('avatar');
+        }
+
+        if (!isValid) {
+          $('#validationErrors').addClass('show');
+        } else {
+          $('#validationErrors').removeClass('show');
+        }
+
+        return isValid;
+      }
+
+      function validateField(fieldName) {
+        let isValid = true;
+        let message = '';
+
+        switch(fieldName) {
+            case 'name':
+                if (!$('#playerName').val()) {
+                    isValid = false;
+                    message = '선수 이름은 필수입니다.';
+                }
+                break;
+            case 'age':
+                const age = parseInt($('#playerAge').val());
+                if (isNaN(age) || age < 18 || age > 45) {
+                    isValid = false;
+                    message = '나이는 18-45세 사이여야 합니다.';
+                }
+                break;
+            case 'height':
+                const height = parseInt($('#playerHeight').val());
+                if (isNaN(height) || height < 160 || height > 210) {
+                    isValid = false;
+                    message = '신장은 160-210cm 사이여야 합니다.';
+                }
+                break;
+            case 'weight':
+                const weight = parseInt($('#playerWeight').val());
+                if (isNaN(weight) || weight < 50 || weight > 150) {
+                    isValid = false;
+                    message = '몸무게는 50-150kg 사이여야 합니다.';
+                }
+                break;
+        }
+
+        if (!isValid) {
+            showInlineError(fieldName, message);
+        } else {
+            hideInlineError(fieldName);
+        }
+      }
+
+      function showInlineError(field, message) {
+          const errorEl = $(`#${field}Error`);
+          if (errorEl.length) {
+              errorEl.text(message).show();
+              $(`#player${field.charAt(0).toUpperCase() + field.slice(1)}`).addClass('error');
+          }
+      }
+
+      function hideInlineError(field) {
+          const errorEl = $(`#${field}Error`);
+          if (errorEl.length) {
+              errorEl.hide();
+              $(`#player${field.charAt(0).toUpperCase() + field.slice(1)}`).removeClass('error');
+          }
+      }
+
+      function showValidationError(field, message) {
+        $('#errorList').append(`<li>${message}</li>`);
+        $(`#${field}`).addClass('error'); // Simplified selector
+      }
+
+      function hideValidationError(field) {
+        // This function is now less important as errors are cleared and re-added
+        $(`#${field}`).removeClass('error');
+      }
+
+      function showMessage(message, type = 'info') {
+        // Using a library like Toastr or Noty would be better,
+        // but for now, a simple alert is used.
+        alert(message);
+      }
+    </script>
+  </th:block>
+</html>

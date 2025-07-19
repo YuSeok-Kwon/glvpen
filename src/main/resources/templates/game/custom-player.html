@@ -1,0 +1,24 @@
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/userDefault}"
+>
+  <head>
+    <title>커스텀 플레이어 모드</title>
+  </head>
+  <th:block layout:fragment="contents">
+    <div class="container mt-4">
+      <h2>👤 커스텀 플레이어 모드</h2>
+      <div class="text-center">
+        <p>나만의 선수를 만들어 플레이하세요!</p>
+        <button class="btn btn-primary btn-lg">선수 생성</button>
+      </div>
+      <div class="mt-4">
+        <a href="/game/home-view" class="btn btn-secondary"
+          >← 게임 모드 선택으로 돌아가기</a
+        >
+      </div>
+    </div>
+  </th:block>
+</html>

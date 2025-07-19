@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.kepg.BaseBallLOCK.modules.game.highlight.doamin.GameHighlight;
+import com.kepg.BaseBallLOCK.modules.game.highlight.domain.GameHighlight;
 import com.kepg.BaseBallLOCK.modules.game.highlight.dto.GameHighlightDTO;
 import com.kepg.BaseBallLOCK.modules.game.highlight.repository.GameHighlightRepository;
 

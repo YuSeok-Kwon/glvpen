@@ -14,7 +14,6 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
@@ -57,19 +56,6 @@ public class StatizScheduleCrawler {
         stadiumNameMap.put("청주", "청주야구장");
     }
     
-    /**
-     * 매일 새벽 3시에 오늘 날짜의 스케줄을 자동으로 크롤링합니다.
-     */
-    @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
-    public void crawlToday() {
-        LocalDate today = LocalDate.now();
-        processDailySchedule(today);
-        System.out.println("[자동 크롤링 완료] 오늘 날짜: " + today);
-    }
-    
-    /**
-     * 지정된 날짜 범위의 스케줄을 크롤링합니다 (수동 실행용).
-     */
     public void crawlGameRange(LocalDate startDate, LocalDate endDate) {
         LocalDate currentDate = startDate;
         while (!currentDate.isAfter(endDate)) {

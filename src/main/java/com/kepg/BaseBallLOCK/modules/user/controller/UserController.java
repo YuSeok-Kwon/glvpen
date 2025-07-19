@@ -9,7 +9,10 @@ import java.util.Map;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
@@ -21,6 +24,7 @@ import com.kepg.BaseBallLOCK.modules.team.domain.Team;
 import com.kepg.BaseBallLOCK.modules.team.service.TeamService;
 import com.kepg.BaseBallLOCK.modules.team.teamRanking.dto.TeamRankingCardView;
 import com.kepg.BaseBallLOCK.modules.user.domain.User;
+import com.kepg.BaseBallLOCK.modules.user.service.UserService;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -35,11 +39,40 @@ public class UserController {
     private final GameService gameService;
     private final BatterStatsService batterStatsService;
     private final PitcherStatsService pitcherStatsService;
+    private final UserService userService;
 
 
     @GetMapping("/login-view")
     public String loginView() {
         return "user/login";
+    }
+    
+    // 로그인 API
+    @PostMapping("/login")
+    @ResponseBody
+    public Map<String, String> login(
+            @RequestParam("loginId") String loginId,
+            @RequestParam("password") String password,
+            HttpSession session) {
+        
+        Map<String, String> resultMap = new HashMap<>();
+        
+        User user = userService.getUser(loginId, password);
+        
+        if (user != null) {
+            // 로그인 성공
+            session.setAttribute("loginUser", user);
+            session.setAttribute("userId", user.getId());
+            session.setAttribute("userNickname", user.getNickname());
+            session.setAttribute("favoriteTeamId", user.getFavoriteTeamId());
+            resultMap.put("result", "success");
+        } else {
+            // 로그인 실패
+            resultMap.put("result", "fail");
+            resultMap.put("message", "아이디 또는 비밀번호가 올바르지 않습니다.");
+        }
+        
+        return resultMap;
     }
     
 	// 로그아웃 API
@@ -73,6 +106,13 @@ public class UserController {
 
         if (user == null) {
             return "redirect:/user/login-view";
+        }
+
+        // 세션 정보 보장 (로그인 후 직접 URL 접근 시 대비)
+        if (session.getAttribute("userNickname") == null) {
+            session.setAttribute("userId", user.getId());
+            session.setAttribute("userNickname", user.getNickname());
+            session.setAttribute("favoriteTeamId", user.getFavoriteTeamId());
         }
 
         int myTeamId = user.getFavoriteTeamId();

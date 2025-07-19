@@ -1,8 +1,5 @@
 package com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto;
 
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.card.playerCard.dto.PlayerCardOverallDTO;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.userLineup.dto.UserLineupDTO;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

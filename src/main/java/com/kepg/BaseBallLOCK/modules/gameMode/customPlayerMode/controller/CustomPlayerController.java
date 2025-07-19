@@ -21,7 +21,7 @@ import java.util.List;
  * - RPG 스타일 선수 성장 시스템
  */
 @Controller
-@RequestMapping("/customplayer")
+@RequestMapping("/customPlayer")
 @RequiredArgsConstructor
 public class CustomPlayerController {
     
@@ -33,8 +33,8 @@ public class CustomPlayerController {
     @GetMapping
     public String customPlayerHome(Model model) {
         model.addAttribute("pageTitle", "Custom Player Mode");
-        model.addAttribute("gameMode", "customplayer");
-        return "customplayer/home";
+        model.addAttribute("gameMode", "customPlayer");
+        return "customPlayer/home";
     }
     
     /**
@@ -43,7 +43,7 @@ public class CustomPlayerController {
     @GetMapping("/create")
     public String createPlayerPage(Model model) {
         model.addAttribute("pageTitle", "Create Custom Player");
-        return "customplayer/create";
+        return "customPlayer/create";
     }
     
     /**
@@ -136,20 +136,20 @@ public class CustomPlayerController {
     
     /**
      * 커스텀 선수 통계 페이지
+     * TODO: CustomPlayerStatistics 클래스 구현 후 활성화
      */
     @GetMapping("/stats/{userId}")
     public String playerStatistics(@PathVariable Integer userId, Model model) {
-        CustomPlayerService.CustomPlayerStatistics stats = 
-            customPlayerService.getCustomPlayerStatistics(userId);
-        
-        model.addAttribute("stats", stats);
+        // 임시로 기본 데이터만 전달
         model.addAttribute("userId", userId);
         return "customplayer/stats";
     }
     
     /**
      * 커스텀 선수 통계 조회 API
+     * TODO: CustomPlayerStatistics 클래스 구현 후 활성화
      */
+    /*
     @GetMapping("/api/stats/{userId}")
     @ResponseBody
     public ResponseEntity<CustomPlayerService.CustomPlayerStatistics> getPlayerStatistics(@PathVariable Integer userId) {
@@ -161,6 +161,7 @@ public class CustomPlayerController {
             return ResponseEntity.internalServerError().build();
         }
     }
+    */
     
     /**
      * 선수 성장/훈련 페이지

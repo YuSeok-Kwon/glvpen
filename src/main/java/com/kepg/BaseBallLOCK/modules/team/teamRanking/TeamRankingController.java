@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class TeamRankingController {
 
 
-    @GetMapping("/teamranking-view")
+    @GetMapping("/rankings")
     public String teamRankingView(
             @RequestParam(name = "season", required = false, defaultValue = "2025") int season,
             @RequestParam(name = "sort", required = false, defaultValue = "TotalWAR") String sort,
@@ -34,6 +34,27 @@ public class TeamRankingController {
         model.addAttribute("headers", getTeamRankingHeaders());
 
         return "ranking/teamranking"; // 이제 첫 화면은 빈 틀만 보여줘
+    }
+
+    @GetMapping("/teamranking-view")
+    public String teamRankingViewPage(
+            @RequestParam(name = "season", required = false, defaultValue = "2025") int season,
+            @RequestParam(name = "sort", required = false, defaultValue = "TotalWAR") String sort,
+            @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
+            Model model) {
+
+        model.addAttribute("season", season);
+        model.addAttribute("currentSort", sort.trim().toUpperCase());
+        model.addAttribute("sortDirection", direction);
+        model.addAttribute("categoryNameMap", getCategoryNameMap());
+        model.addAttribute("headers", getTeamRankingHeaders());
+
+        return "ranking/teamranking"; 
+    }
+
+    @GetMapping("/playerranking-view")
+    public String playerRankingViewPage(Model model) {
+        return "ranking/playerranking";
     }
 
     private Map<String, String> getCategoryNameMap() {

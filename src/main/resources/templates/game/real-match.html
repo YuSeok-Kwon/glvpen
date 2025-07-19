@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/userDefault}">
+<head>
+    <title>Real Match Mode - BaseBall LOCK</title>
+    <style>
+        .real-match-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .match-date-selector {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .date-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+
+        .date-btn {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1rem 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .date-btn:hover {
+            border-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .date-btn.active {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            color: white;
+        }
+
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .match-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .match-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-color: #e74c3c;
+        }
+
+        .match-card.selected {
+            border-color: #e74c3c;
+            background: #fff5f5;
+        }
+
+        .match-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .team {
+            text-align: center;
+            flex: 1;
+        }
+
+        .team-logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 0.5rem;
+            background: #f8f9fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .team-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .vs-text {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #e74c3c;
+            margin: 0 1rem;
+        }
+
+        .match-info {
+            text-align: center;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .match-time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .match-stadium {
+            color: #888;
+            font-size: 0.8rem;
+        }
+
+        .match-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        .status-finished, .completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-live {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .scheduled {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .no-matches {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .start-simulation-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            padding: 1rem 3rem;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 2rem auto;
+            min-width: 200px;
+        }
+
+        .start-simulation-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .start-simulation-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #e74c3c;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<th:block layout:fragment="contents">
+    <div class="real-match-container">
+        <div class="page-header">
+            <h1 class="page-title">⚾ Real Match Mode</h1>
+            <p class="page-subtitle">실제 KBO 경기를 기반으로 시뮬레이션을 진행하세요!</p>
+        </div>
+
+        <div class="match-date-selector">
+            <h3 style="text-align: center; margin-bottom: 1.5rem;">경기 날짜 선택</h3>
+            <div class="date-buttons">
+                <button class="date-btn active" data-date="yesterday">어제 경기</button>
+                <button class="date-btn" data-date="today">오늘 경기</button>
+            </div>
+
+            <div id="loadingMatches" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>경기 정보를 불러오는 중...</p>
+            </div>
+
+            <div id="matchesContainer">
+                <div class="matches-grid" id="matchesGrid">
+                    <!-- 어제 경기 목록 -->
+                    <div th:each="game : ${yesterdayGames}" class="match-card" 
+                         th:data-match-id="${game.id}"
+                         th:data-home-team="${game.homeTeamId}"
+                         th:data-away-team="${game.awayTeamId}">
+                        
+                        <div class="match-teams">
+                            <div class="team home-team">
+                                <div class="team-logo">
+                                    <img th:src="@{'/static/emblems/' + ${@teamService.getTeamById(game.homeTeamId).name} + '.svg'}"
+                                         th:alt="${@teamService.getTeamById(game.homeTeamId).name + ' 로고'}"
+                                         onerror="this.src='/static/emblems/KBO.png'">
+                                </div>
+                                <div class="team-name" th:text="${@teamService.getTeamById(game.homeTeamId).name}">홈팀</div>
+                                <div class="team-score" th:text="${game.homeTeamScore != null ? game.homeTeamScore : '-'}">0</div>
+                            </div>
+                            
+                            <div class="vs-separator">VS</div>
+                            
+                            <div class="team away-team">
+                                <div class="team-logo">
+                                    <img th:src="@{'/static/emblems/' + ${@teamService.getTeamById(game.awayTeamId).name} + '.svg'}"
+                                         th:alt="${@teamService.getTeamById(game.awayTeamId).name + ' 로고'}"
+                                         onerror="this.src='/static/emblems/KBO.png'">
+                                </div>
+                                <div class="team-name" th:text="${@teamService.getTeamById(game.awayTeamId).name}">원정팀</div>
+                                <div class="team-score" th:text="${game.awayTeamScore != null ? game.awayTeamScore : '-'}">0</div>
+                            </div>
+                        </div>
+                        
+                        <div class="match-info">
+                            <div class="match-time" th:text="${#dates.format(game.matchDate, 'HH:mm')}">14:00</div>
+                            <div class="match-stadium" th:text="${game.stadium}">잠실야구장</div>
+                            <div class="match-status" 
+                                 th:classappend="${game.status == '취소' ? 'cancelled' : (game.status == '완료' ? 'completed' : 'scheduled')}"
+                                 th:text="${game.status == '취소' ? '경기 취소' : (game.status == '완료' ? '경기 종료' : '예정')}">
+                                경기 종료
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="noMatches" class="no-matches" th:style="${#lists.isEmpty(yesterdayGames)} ? 'display: block;' : 'display: none;'">
+                    <h4>😔 <span th:text="${gameDate}">어제</span> 경기가 없습니다</h4>
+                    <p th:if="${gameDate.dayOfWeek.value == 1}">월요일은 일반적으로 경기가 없는 날입니다.</p>
+                    <p th:unless="${gameDate.dayOfWeek.value == 1}">다른 날짜를 선택해보세요.</p>
+                </div>
+            </div>
+
+            <button id="startSimulation" class="start-simulation-btn" disabled>
+                🎮 시뮬레이션 시작
+            </button>
+        </div>
+    </div>
+</th:block>
+
+<th:block layout:fragment="script">
+    <script>
+        let selectedMatch = null;
+        let matchesData = [];
+
+        $(document).ready(function() {
+            console.log('Real Match Mode 초기화');
+            
+            // 날짜 버튼 클릭 이벤트
+            $('.date-btn').on('click', function() {
+                $('.date-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                const selectedDate = $(this).data('date');
+                loadMatches(selectedDate);
+            });
+
+            // 초기 어제 경기 로드
+            loadMatches('yesterday');
+
+            // 시뮬레이션 시작 버튼
+            $('#startSimulation').on('click', function() {
+                if (selectedMatch) {
+                    startSimulation(selectedMatch);
+                }
+            });
+        });
+
+        function loadMatches(dateType) {
+            $('#loadingMatches').show();
+            $('#matchesGrid').hide();
+            $('#noMatches').hide();
+            $('#startSimulation').prop('disabled', true);
+            selectedMatch = null;
+
+            // 임시 데이터 (실제로는 서버에서 크롤링된 데이터를 가져와야 함)
+            setTimeout(() => {
+                const mockMatches = generateMockMatches(dateType);
+                displayMatches(mockMatches);
+                $('#loadingMatches').hide();
+                $('#matchesGrid').show();
+            }, 1500);
+        }
+
+        function generateMockMatches(dateType) {
+            const teams = [
+                { name: 'LG 트윈스', logo: '🦅' },
+                { name: '삼성 라이온즈', logo: '🦁' },
+                { name: '두산 베어스', logo: '🐻' },
+                { name: 'KIA 타이거즈', logo: '🐅' },
+                { name: 'NC 다이노스', logo: '🦕' },
+                { name: '한화 이글스', logo: '🦅' },
+                { name: 'SSG 랜더스', logo: '⚡' },
+                { name: 'KT 위즈', logo: '🧙' },
+                { name: '롯데 자이언츠', logo: '⚾' },
+                { name: '키움 히어로즈', logo: '🦸' }
+            ];
+
+            const matches = [];
+            const numMatches = dateType === 'yesterday' ? 5 : 3;
+
+            for (let i = 0; i < numMatches; i++) {
+                const homeTeam = teams[i * 2];
+                const awayTeam = teams[i * 2 + 1];
+                
+                matches.push({
+                    id: i + 1,
+                    homeTeam: homeTeam,
+                    awayTeam: awayTeam,
+                    time: dateType === 'yesterday' ? '경기 종료' : '18:30',
+                    stadium: homeTeam.name.split(' ')[0] + ' 홈구장',
+                    status: dateType === 'yesterday' ? 'finished' : 'scheduled'
+                });
+            }
+
+            return matches;
+        }
+
+        function displayMatches(matches) {
+            const $grid = $('#matchesGrid');
+            $grid.empty();
+
+            if (matches.length === 0) {
+                $('#noMatches').show();
+                return;
+            }
+
+            matches.forEach(match => {
+                const $matchCard = $(`
+                    <div class="match-card" data-match-id="${match.id}">
+                        <div class="match-teams">
+                            <div class="team">
+                                <div class="team-logo">${match.awayTeam.logo}</div>
+                                <div class="team-name">${match.awayTeam.name}</div>
+                            </div>
+                            <div class="vs-text">VS</div>
+                            <div class="team">
+                                <div class="team-logo">${match.homeTeam.logo}</div>
+                                <div class="team-name">${match.homeTeam.name}</div>
+                            </div>
+                        </div>
+                        <div class="match-info">
+                            <div class="match-time">${match.time}</div>
+                            <div class="match-stadium">${match.stadium}</div>
+                            <span class="match-status status-${match.status}">
+                                ${match.status === 'finished' ? '경기 종료' : '경기 예정'}
+                            </span>
+                        </div>
+                    </div>
+                `);
+
+                $matchCard.on('click', function() {
+                    $('.match-card').removeClass('selected');
+                    $(this).addClass('selected');
+                    selectedMatch = match;
+                    $('#startSimulation').prop('disabled', false);
+                    console.log('경기 선택:', match);
+                });
+
+                $grid.append($matchCard);
+            });
+
+            matchesData = matches;
+        }
+
+        function startSimulation(match) {
+            console.log('시뮬레이션 시작:', match);
+            
+            // 선택된 경기 정보를 서버로 전송하고 시뮬레이션 페이지로 이동
+            const matchData = {
+                matchId: match.id,
+                homeTeam: match.homeTeam.name,
+                awayTeam: match.awayTeam.name,
+                gameMode: 'real-match'
+            };
+
+            // 임시로 바로 시뮬레이션 화면으로 이동
+            // 실제로는 서버에 매치 정보를 저장하고 시뮬레이션 페이지로 리다이렉트
+            alert(`${match.awayTeam.name} vs ${match.homeTeam.name} 시뮬레이션을 시작합니다!`);
+            
+            // 실제 구현 시에는 아래와 같이 서버로 데이터 전송 후 페이지 이동
+            // window.location.href = `/game/simulation?matchId=${match.id}`;
+            window.location.href = '/game/play'; // 임시로 기본 플레이 화면으로 이동
+        }
+    </script>
+</th:block>
+</html>
+        padding: 1rem 2rem;
+        font-size: 1.2rem;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+      }
+      
+      .action-btn:hover {
+        background: linear-gradient(135deg, #2980b9, #1a5490);
+        color: white;
+        transform: scale(1.05);
+      }
+      
+      .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+    </style>
+  </head>
+
+  <th:block layout:fragment="contents">
+    <div class="real-match-container">
+      <div class="mode-header">
+        <h1 class="mode-title">🏟️ Real Match Mode</h1>
+        <p class="mode-description">
+          실제 KBO 리그의 전날 경기 라인업으로<br>
+          리얼한 야구 시뮬레이션을 경험해보세요!
+        </p>
+      </div>
+
+      <div class="action-card">
+        <div class="icon">⚾</div>
+        <h3 class="mb-3">전날 경기 선택하기</h3>
+        <p class="text-muted mb-4">
+          어제 실제로 열린 KBO 경기들의 라인업을 확인하고<br>
+          원하는 경기를 선택해서 시뮬레이션해보세요.
+        </p>
+        <a href="/real-match/games" class="action-btn">
+          경기 목록 보기
+        </a>
+      </div>
+    </div>
+  </th:block>
+</html>

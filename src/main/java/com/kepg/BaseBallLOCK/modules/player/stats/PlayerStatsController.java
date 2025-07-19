@@ -13,13 +13,13 @@ import lombok.RequiredArgsConstructor;
 
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/ranking")
+@RequestMapping("/api/players")
 public class PlayerStatsController {
 
     private final BatterStatsService batterStatsService;
     private final PitcherStatsService pitcherStatsService;
 
-    @GetMapping("/playerranking-view")
+    @GetMapping("/rankings")
     public String playerRankingView(
             @RequestParam(name = "season", required = false, defaultValue = "2025") int season,
             @RequestParam(name = "sort", required = false, defaultValue = "WAR") String sort,

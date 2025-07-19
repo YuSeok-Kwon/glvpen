@@ -1,102 +1,112 @@
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/reviewDefault}">
-<head>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/userDefault}"
+>
+  <head>
+    <title>게임 모드 선택 - BaseBall LOCK</title>
     <style>
-    
-     body {
-	    background-image: url('/static/game/stadium-bg.png');
-	    background-size: cover;
-	    background-position: center;
-	    background-repeat: no-repeat;
-	    background-attachment: fixed;
+      body {
+        background-image: url('/static/game/stadium-bg.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        font-family: 'Pretendard', sans-serif;
+      }
+      body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+      }
+      .container {
+        height: 69vh;
+      }
+      .overlay {
+        background-color: rgba(0, 0, 0, 0.4);
+        border-radius: 15px;
+        padding: 30px;
+      }
+      .game-menu-card {
+        display: block;
+        background: linear-gradient(135deg, #f8f9fa, #dee2e6);
+        color: #212529;
+        border-radius: 1rem;
+        padding: 2rem 1rem;
+        text-decoration: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+      }
 
-	    font-family: 'Pretendard', sans-serif;
-	  }
-	body::before {
-	  content: '';
-	  position: fixed;
-	  top: 0; left: 0; right: 0; bottom: 0;
-	  background: rgba(0, 0, 0, 0.5); /* 어두운 오버레이 */
-	  z-index: -1;
-	}
-    .container {
-      height : 69vh;
-    }
-    .overlay {
-      background-color: rgba(0, 0, 0, 0.4); /* 살짝 어두운 배경 투명도 */
-      border-radius: 15px;
-      padding: 30px;
-    }
-	.game-menu-card {
-	  display: block;
-	  background: linear-gradient(135deg, #f8f9fa, #dee2e6);
-	  color: #212529;
-	  border-radius: 1rem;
-	  padding: 2rem 1rem;
-	  text-decoration: none;
-	  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-	  transition: all 0.3s ease;
-	  position: relative;
-	}
-	
-	.game-menu-card:hover {
-	  transform: translateY(-6px) scale(1.03);
-	  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
-	}
-	
-	.game-menu-card .emoji {
-	  font-size: 2.5rem;
-	  margin-bottom: 0.75rem;
-	}
-	
-	.game-menu-card .label {
-	  font-size: 1.1rem;
-	  font-weight: 600;
-	}
-	
-	.game-menu-card.start {
-	  background: linear-gradient(135deg, #ffd700, #ff9800);
-	  color: white;
-	  box-shadow: 0 6px 16px rgba(255,152,0,0.4);
-	}
-	</style>
-</head>
-<th:block layout:fragment="contents">
-<div class="container text-center my-5">
-  <div class="overlay">
-  <h2 class="mb-5 fw-bold text-white">⚾ 시뮬레이션 게임 메뉴</h2>
+      .game-menu-card:hover {
+        transform: translateY(-6px) scale(1.03);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      }
 
-  <div class="d-flex row g-4 justify-content-center align-items-center">
-    <div class="col-md-3">
-      <a href="/game/cards-view" class="game-menu-card">
-        <div class="emoji">📇</div>
-        <div class="label">내 카드 보러가기</div>
-      </a>
-    </div>
-    <div class="col-md-3">
-      <a href="/game/draw-view" class="game-menu-card">
-        <div class="emoji">🎴</div>
-        <div class="label">카드 뽑기</div>
-      </a>
-    </div>
-    <div class="col-md-3">
-      <a href="/game/lineup-view" class="game-menu-card">
-        <div class="emoji">🧢</div>
-        <div class="label">라인업 구성</div>
-      </a>
-    </div>
-    <div class="col-md-3">
-      <a href="/game/ready-view" class="game-menu-card">
-        <div class="emoji">🚀</div>
-        <div class="label">시뮬레이션 시작</div>
-      </a>
-    </div>
-  </div>
-  </div>
-</div>
-</th:block>
+      .game-menu-card .emoji {
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+      }
 
+      .game-menu-card .label {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
 
+      .game-menu-card.start {
+        background: linear-gradient(135deg, #ffd700, #ff9800);
+        color: white;
+        box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+      }
+    </style>
+  </head>
+  <th:block layout:fragment="contents">
+    <div class="container text-center my-5">
+      <div class="overlay">
+        <h2 class="mb-5 fw-bold text-white">⚾ 야구 게임 모드 선택</h2>
+
+        <div class="row g-4 justify-content-center">
+          <!-- Real Match Mode -->
+          <div class="col-lg-4 col-md-6">
+            <a href="/game/real-match-mode" class="game-menu-card">
+              <div class="emoji">🏟️</div>
+              <div class="label">Real Match Mode</div>
+              <small class="text-muted"
+                >실제 KBO 스케줄과 라인업으로 진행하는 리얼 시뮬레이션</small
+              >
+            </a>
+          </div>
+
+          <!-- Custom Hitter Mode -->
+          <div class="col-lg-4 col-md-6">
+            <a href="/game/custom-hitter-mode" class="game-menu-card">
+              <div class="emoji">⚔️</div>
+              <div class="label">Custom Hitter Mode</div>
+              <small class="text-muted"
+                >나만의 타자를 키우는 실시간 RPG형 야구 게임</small
+              >
+            </a>
+          </div>
+
+          <!-- Classic Sim Mode -->
+          <div class="col-lg-4 col-md-6">
+            <a href="/game/classic-sim-mode" class="game-menu-card">
+              <div class="emoji">🎲</div>
+              <div class="label">Classic Sim Mode</div>
+              <small class="text-muted"
+                >라인업 구성 후 자동 진행되는 클래식 시뮬레이션</small
+              >
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </th:block>
 </html>

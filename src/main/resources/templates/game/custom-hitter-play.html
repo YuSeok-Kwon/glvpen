@@ -1,0 +1,153 @@
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/userDefault}"
+>
+  <head>
+    <title>커스텀 타자 게임 - BaseBall LOCK</title>
+    <style>
+      body {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        font-family: 'Pretendard', sans-serif;
+        min-height: 100vh;
+      }
+      
+      .game-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+      
+      .player-hud {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      
+      .player-avatar-small {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        font-size: 2rem;
+      }
+      
+      .avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .player-info {
+        flex: 1;
+      }
+      
+      .player-name {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+      }
+      
+      .player-details {
+        display: flex;
+        gap: 2rem;
+        color: #6c757d;
+      }
+      
+      .game-area {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        text-align: center;
+      }
+      
+      .game-title {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 2rem;
+      }
+      
+      .coming-soon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+      }
+      
+      .back-btn {
+        background: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 15px;
+        padding: 1rem 2rem;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-block;
+        margin-top: 2rem;
+      }
+      
+      .back-btn:hover {
+        background: #5a6268;
+        color: white;
+        transform: translateY(-2px);
+      }
+    </style>
+  </head>
+
+  <th:block layout:fragment="contents">
+    <div class="game-container">
+      <!-- 선수 HUD -->
+      <div class="player-hud" th:if="${session.customPlayer}">
+        <div class="player-avatar-small">
+          <img th:if="${session.customPlayer.avatarUrl}" 
+               th:src="${session.customPlayer.avatarUrl}" 
+               class="avatar-img"
+               alt="선수 아바타">
+          <span th:unless="${session.customPlayer.avatarUrl}">👤</span>
+        </div>
+        
+        <div class="player-info">
+          <div class="player-name" th:text="${session.customPlayer.name}">선수 이름</div>
+          <div class="player-details">
+            <span th:text="${session.customPlayer.age + '세'}">25세</span>
+            <span th:text="${session.customPlayer.gender == 'male' ? '남성' : '여성'}">남성</span>
+            <span th:text="${session.customPlayer.position}">CF</span>
+            <span th:text="${session.customPlayer.batting == 'right' ? '우타' : (session.customPlayer.batting == 'left' ? '좌타' : '스위치')}">우타</span>
+            <span th:text="'파워: ' + ${session.customPlayer.stats.power}">파워: 45</span>
+            <span th:text="'컨택: ' + ${session.customPlayer.stats.contact}">컨택: 52</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 게임 영역 -->
+      <div class="game-area">
+        <h1 class="game-title">⚾ RPG 야구 게임</h1>
+        
+        <div class="coming-soon">🚧</div>
+        <h3>게임 개발 중입니다!</h3>
+        <p class="text-muted">
+          곧 여러분의 커스텀 선수와 함께<br>
+          흥미진진한 RPG 야구 게임을 즐기실 수 있습니다.
+        </p>
+        
+        <a href="/game/custom-hitter-start" class="back-btn">
+          ← 선수 정보로 돌아가기
+        </a>
+      </div>
+    </div>
+  </th:block>
+</html>

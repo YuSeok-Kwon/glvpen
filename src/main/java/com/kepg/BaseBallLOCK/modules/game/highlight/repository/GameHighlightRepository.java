@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.kepg.BaseBallLOCK.modules.game.highlight.doamin.GameHighlight;
+import com.kepg.BaseBallLOCK.modules.game.highlight.domain.GameHighlight;
 
 public interface GameHighlightRepository extends JpaRepository<GameHighlight, Integer> {
 	

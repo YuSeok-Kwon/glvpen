@@ -1,0 +1,36 @@
+<header
+  class="position-relative d-flex align-items-end px-5"
+  th:classappend="${session.favoriteTeamId != null ? ' team-bg-' + session.favoriteTeamId : ' team-bg-1'}"
+  style="width: 100%"
+>
+  <!-- 로고 영역 -->
+  <div class="flex-grow-1" style="flex-basis: 33%">
+    <a href="/user/home" style="text-decoration: none">
+      <div class="full-logo-default display-1 team-text">BB LOCK</div>
+    </a>
+  </div>
+
+  <!-- 네비게이션 -->
+  <nav
+    class="flex-grow-2 d-flex justify-content-end fs-3 gap-4 mb-3"
+    style="flex-basis: 67%"
+  >
+    <a href="/schedule/result-view" class="team-nav-link">일정/결과</a>
+    <a href="/ranking/teamranking-view" class="team-nav-link">랭킹</a>
+    <a href="/review/calendar-view" class="team-nav-link">데일리 리뷰</a>
+    <a href="/game/home-view" class="team-nav-link">시뮬레이션</a>
+    <a href="#" class="team-nav-link">락커룸</a>
+  </nav>
+
+  <!-- 로그인 사용자 -->
+  <div
+    class="position-absolute top-0 end-0 mt-2 me-4 d-flex align-items-center gap-1 team-text"
+  >
+    <span
+      class="small fw-bold"
+      th:text="${session.userNickname != null ? session.userNickname + ' 님' : '게스트 님'}"
+      >권유석 님</span
+    >
+    <a href="/user/logout" class="small text-white">로그아웃</a>
+  </div>
+</header>

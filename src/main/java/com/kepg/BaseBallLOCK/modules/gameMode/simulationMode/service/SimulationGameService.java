@@ -12,15 +12,15 @@ import org.springframework.stereotype.Service;
 
 import com.kepg.BaseBallLOCK.modules.player.stats.repository.BatterStatsRepository;
 import com.kepg.BaseBallLOCK.modules.player.stats.repository.PitcherStatsRepository;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.card.playerCard.dto.PlayerCardOverallDTO;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.card.playerCard.overall.repository.PlayerCardOverallRepository;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.card.playerCard.projection.PlayerCardOverallProjection;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerCardOverallDTO;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.repository.PlayerCardOverallRepository;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.PlayerCardOverall;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.GameReadyCardView;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.simulation.domain.SimulationGameSchedule;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.simulation.repository.SimulationGameScheduleRepository;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.userLineup.domain.UserLineup;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.userLineup.dto.UserLineupDTO;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.userLineup.repository.UserLineupRepository;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.SimulationGameSchedule;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.repository.SimulationGameScheduleRepository;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.UserLineup;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.UserLineupDTO;
+import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.repository.UserLineupRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -67,37 +67,35 @@ public class SimulationGameService {
         List<PlayerCardOverallDTO> result = new ArrayList<>();
 
         for (String pos : positions) {
-            PlayerCardOverallProjection projection = pos.equals("P")
+            PlayerCardOverall card = pos.equals("P")
                 ? playerCardOverallRepository.findRandomPitcherByOverallRange(minOverall, maxOverall)
                 : playerCardOverallRepository.findRandomByPositionAndOverallRange(pos, minOverall, maxOverall);
 
-            if (projection != null) {
-                PlayerCardOverallDTO card = convertToDTO(projection);
-                card.setSeason(projection.getSeason());
-                Integer playerId = card.getPlayerId();
+            if (card != null) {
+                PlayerCardOverallDTO cardDTO = convertToDTO(card);
+                Integer playerId = cardDTO.getPlayerId();
 
                 Map<String, Double> statMap;
-                if ("PITCHER".equals(card.getType())) {
-                    card.setPosition("P");
-                    List<Object[]> raw = pitcherStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, projection.getSeason());
+                if ("PITCHER".equals(cardDTO.getType())) {
+                    List<Object[]> raw = pitcherStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, card.getSeason());
                     statMap = convertToStatMap(raw);
-                    card.setWar(statMap.getOrDefault("WAR", 0.0));
-                    card.setEra(statMap.getOrDefault("ERA", 0.0));
-                    card.setWhip(statMap.getOrDefault("WHIP", 0.0));
-                    card.setWins(statMap.getOrDefault("W", 0.0).intValue());
-                    card.setSaves(statMap.getOrDefault("SV", 0.0).intValue());
-                    card.setHolds(statMap.getOrDefault("HLD", 0.0).intValue());
+                    cardDTO.setWar(statMap.getOrDefault("WAR", 0.0));
+                    cardDTO.setEra(statMap.getOrDefault("ERA", 0.0));
+                    cardDTO.setWhip(statMap.getOrDefault("WHIP", 0.0));
+                    cardDTO.setWins(statMap.getOrDefault("W", 0.0).intValue());
+                    cardDTO.setSaves(statMap.getOrDefault("SV", 0.0).intValue());
+                    cardDTO.setHolds(statMap.getOrDefault("HLD", 0.0).intValue());
                 } else {
-                    List<Object[]> raw = batterStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, projection.getSeason());
+                    List<Object[]> raw = batterStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, card.getSeason());
                     statMap = convertToStatMap(raw);
-                    card.setWar(statMap.getOrDefault("WAR", 0.0));
-                    card.setAvg(statMap.getOrDefault("AVG", 0.0));
-                    card.setHr(statMap.getOrDefault("HR", 0.0).intValue());
-                    card.setOps(statMap.getOrDefault("OPS", 0.0));
-                    card.setSb(statMap.getOrDefault("SB", 0.0).intValue());
+                    cardDTO.setWar(statMap.getOrDefault("WAR", 0.0));
+                    cardDTO.setAvg(statMap.getOrDefault("AVG", 0.0));
+                    cardDTO.setHr(statMap.getOrDefault("HR", 0.0).intValue());
+                    cardDTO.setOps(statMap.getOrDefault("OPS", 0.0));
+                    cardDTO.setSb(statMap.getOrDefault("SB", 0.0).intValue());
                 }
 
-                result.add(card);
+                result.add(cardDTO);
             }
         }
 
@@ -123,13 +121,11 @@ public class SimulationGameService {
     }
 
     // Projection → DTO 변환
-    private PlayerCardOverallDTO convertToDTO(PlayerCardOverallProjection p) {
+    private PlayerCardOverallDTO convertToDTO(PlayerCardOverall p) {
         return PlayerCardOverallDTO.builder()
             .id(p.getId())
             .playerId(p.getPlayerId())
             .season(p.getSeason())
-            .playerName(p.getPlayerName())
-            .position(p.getPosition())
             .type(p.getType())
             .overall(p.getOverall())
             .grade(p.getGrade())
@@ -152,15 +148,15 @@ public class SimulationGameService {
             Integer playerId = dto.getPlayerId();
             Integer season = dto.getSeason();
 
-            Optional<PlayerCardOverallProjection> projection = playerCardOverallRepository
+            Optional<PlayerCardOverall> cardOpt = playerCardOverallRepository
                 .findByPlayerIdAndSeason(playerId, season);
 
-            if (projection.isEmpty()) {
-                System.out.println("PlayerCardOverallProjection 없음");
+            if (cardOpt.isEmpty()) {
+                System.out.println("PlayerCardOverall 없음");
                 continue;
             }
 
-            PlayerCardOverallDTO card = convertToDTO(projection.get());
+            PlayerCardOverallDTO card = convertToDTO(cardOpt.get());
 
             Map<String, Double> statMap;
             if ("PITCHER".equals(card.getType())) {
