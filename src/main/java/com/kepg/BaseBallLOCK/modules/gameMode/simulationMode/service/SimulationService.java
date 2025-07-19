@@ -7,12 +7,10 @@ import java.util.Random;
 import org.springframework.stereotype.Service;
 
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerCardOverallDTO;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.SimulationGameService;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.InningOutcome;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.InningResultDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.SimulationResultDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.BaseState;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.UserLineupService;
 
 import lombok.RequiredArgsConstructor;
 

@@ -240,8 +240,15 @@ public class StatizGameCrawler {
             Integer awayScore = null;
             Integer homeScore = null;
             try {
-                awayScore = Integer.parseInt(awayTds.get(13).selectFirst(".score").ownText().trim());
-                homeScore = Integer.parseInt(homeTds.get(13).selectFirst(".score").ownText().trim());
+                Element awayScoreElement = awayTds.get(13).selectFirst(".score");
+                Element homeScoreElement = homeTds.get(13).selectFirst(".score");
+                
+                if (awayScoreElement != null) {
+                    awayScore = Integer.parseInt(awayScoreElement.ownText().trim());
+                }
+                if (homeScoreElement != null) {
+                    homeScore = Integer.parseInt(homeScoreElement.ownText().trim());
+                }
             } catch (Exception e) {
                 System.out.println("점수 파싱 실패");
             }
@@ -284,15 +291,32 @@ public class StatizGameCrawler {
                 homeScores.add(homeText.equals("-") ? 0 : Integer.parseInt(homeText));
             }
 
-            int awayR = Integer.parseInt(awayTds.get(13).selectFirst(".score").ownText().trim());
-            int awayH = Integer.parseInt(awayTds.get(14).selectFirst(".score").ownText().trim());
-            int awayE = Integer.parseInt(awayTds.get(15).selectFirst(".score").ownText().trim());
-            int awayB = Integer.parseInt(awayTds.get(16).selectFirst(".score").ownText().trim());
-
-            int homeR = Integer.parseInt(homeTds.get(13).selectFirst(".score").ownText().trim());
-            int homeH = Integer.parseInt(homeTds.get(14).selectFirst(".score").ownText().trim());
-            int homeE = Integer.parseInt(homeTds.get(15).selectFirst(".score").ownText().trim());
-            int homeB = Integer.parseInt(homeTds.get(16).selectFirst(".score").ownText().trim());
+            int awayR = 0, awayH = 0, awayE = 0, awayB = 0;
+            int homeR = 0, homeH = 0, homeE = 0, homeB = 0;
+            
+            try {
+                Element awayRElement = awayTds.get(13).selectFirst(".score");
+                Element awayHElement = awayTds.get(14).selectFirst(".score");
+                Element awayEElement = awayTds.get(15).selectFirst(".score");
+                Element awayBElement = awayTds.get(16).selectFirst(".score");
+                
+                Element homeRElement = homeTds.get(13).selectFirst(".score");
+                Element homeHElement = homeTds.get(14).selectFirst(".score");
+                Element homeEElement = homeTds.get(15).selectFirst(".score");
+                Element homeBElement = homeTds.get(16).selectFirst(".score");
+                
+                if (awayRElement != null) awayR = Integer.parseInt(awayRElement.ownText().trim());
+                if (awayHElement != null) awayH = Integer.parseInt(awayHElement.ownText().trim());
+                if (awayEElement != null) awayE = Integer.parseInt(awayEElement.ownText().trim());
+                if (awayBElement != null) awayB = Integer.parseInt(awayBElement.ownText().trim());
+                
+                if (homeRElement != null) homeR = Integer.parseInt(homeRElement.ownText().trim());
+                if (homeHElement != null) homeH = Integer.parseInt(homeHElement.ownText().trim());
+                if (homeEElement != null) homeE = Integer.parseInt(homeEElement.ownText().trim());
+                if (homeBElement != null) homeB = Integer.parseInt(homeBElement.ownText().trim());
+            } catch (Exception e) {
+                System.out.println("스코어보드 통계 파싱 실패: " + e.getMessage());
+            }
 
             String winPitcher = getPitcherName(doc, ".game_result .win a");
             String losePitcher = getPitcherName(doc, ".game_result .lose a");

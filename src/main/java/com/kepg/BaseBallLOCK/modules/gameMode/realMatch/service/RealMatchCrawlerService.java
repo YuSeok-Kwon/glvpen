@@ -131,7 +131,7 @@ public class RealMatchCrawlerService {
     /**
      * Statiz에서 라인업 데이터를 크롤링합니다.
      */
-    private void crawlLineupFromStatiz(Long scheduleId) {
+    private void crawlLineupFromStatiz(int scheduleId) {
         WebDriver driver = null;
         try {
             ChromeOptions options = new ChromeOptions();
@@ -168,7 +168,7 @@ public class RealMatchCrawlerService {
     /**
      * HTML에서 라인업 데이터를 파싱합니다.
      */
-    private void parseLineupData(Document doc, Long scheduleId) {
+    private void parseLineupData(Document doc, int scheduleId) {
         try {
             // 라인업 테이블 파싱 로직
             Elements lineupTables = doc.select("table.lineup");

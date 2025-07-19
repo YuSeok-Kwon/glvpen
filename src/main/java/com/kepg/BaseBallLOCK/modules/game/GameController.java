@@ -12,14 +12,12 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerDTO;
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
-import com.kepg.BaseBallLOCK.modules.team.service.TeamService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +29,6 @@ import java.util.Map;
 public class GameController {
 
 	private final ScheduleService scheduleService;
-	private final TeamService teamService;
 
 	@GetMapping("/home-view")
 	public String home() {

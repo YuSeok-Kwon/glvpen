@@ -82,7 +82,12 @@ public class StatizScheduleCrawler {
             for (Element game : games) {
                 try {
                 	// 경기 일시
-                	String boxHead = game.selectFirst(".box_head").text(); // 예: "정규 05-07 18:30 (고척) 경기전"
+                	Element boxHeadElement = game.selectFirst(".box_head");
+                	if (boxHeadElement == null) {
+                	    System.out.println("box_head 요소를 찾을 수 없습니다.");
+                	    continue;
+                	}
+                	String boxHead = boxHeadElement.text(); // 예: "정규 05-07 18:30 (고척) 경기전"
                 	String dateTimePart = boxHead.replaceAll(".*?(\\d{2}-\\d{2})\\s+(\\d{2}:\\d{2}).*", "$1 $2"); // "05-07 18:30"
                 	String[] dateTimeTokens = dateTimePart.split(" "); // ["05-07", "18:30"]
 
@@ -97,8 +102,20 @@ public class StatizScheduleCrawler {
                     
                     // 팀 이름
                     Elements rows = game.select(".table_type03 tbody tr");
-                    String awayTeam = rows.get(0).selectFirst("td").text().trim();
-                    String homeTeam = rows.get(1).selectFirst("td").text().trim();
+                    if (rows.size() < 2) {
+                        System.out.println("팀 정보 행이 부족합니다.");
+                        continue;
+                    }
+                    
+                    Element awayTeamElement = rows.get(0).selectFirst("td");
+                    Element homeTeamElement = rows.get(1).selectFirst("td");
+                    if (awayTeamElement == null || homeTeamElement == null) {
+                        System.out.println("팀 이름 요소를 찾을 수 없습니다.");
+                        continue;
+                    }
+                    
+                    String awayTeam = awayTeamElement.text().trim();
+                    String homeTeam = homeTeamElement.text().trim();
                     
                  // 점수 
                     Integer awayScore = null;

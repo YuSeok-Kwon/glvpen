@@ -128,10 +128,14 @@ public class StatizPlayerGameRecordCrawler {
         Elements logBoxes = doc.select("div.box_type_boared .log_box");
         for (Element box : logBoxes) {
             for (Element div : box.select("div.log_div")) {
-                if (div.selectFirst("strong") != null && div.selectFirst("strong").text().contains("도루성공")) {
+                Element strongElement = div.selectFirst("strong");
+                if (strongElement != null && strongElement.text().contains("도루성공")) {
                     for (Element span : div.select("span")) {
-                        String name = span.selectFirst("a").text().trim();
-                        sbMap.put(name, sbMap.getOrDefault(name, 0) + 1);
+                        Element aElement = span.selectFirst("a");
+                        if (aElement != null) {
+                            String name = aElement.text().trim();
+                            sbMap.put(name, sbMap.getOrDefault(name, 0) + 1);
+                        }
                     }
                 }
             }

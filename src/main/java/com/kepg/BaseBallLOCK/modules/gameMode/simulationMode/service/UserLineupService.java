@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.kepg.BaseBallLOCK.modules.player.domain.Player;
 import com.kepg.BaseBallLOCK.modules.player.repository.PlayerRepository;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerCardOverallDTO;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.PlayerCardOverallService;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.UserLineup;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.UserLineupDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.repository.UserLineupRepository;

@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerCardOverallDTO;
-import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.PlayerCardOverallService;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.GameResult;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.GameResultDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerPerformanceDTO;

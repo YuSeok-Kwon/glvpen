@@ -97,7 +97,19 @@ public class StatizGameSummaryCrawler {
                     continue;
                 }
 
-                String datePart = doc.selectFirst(".callout_box .txt").text().split(",")[1].trim();
+                Element dateElement = doc.selectFirst(".callout_box .txt");
+                if (dateElement == null) {
+                    System.out.println("날짜 정보 없음: " + statizId);
+                    continue;
+                }
+                
+                String[] dateParts = dateElement.text().split(",");
+                if (dateParts.length < 2) {
+                    System.out.println("날짜 파싱 실패: " + statizId);
+                    continue;
+                }
+                
+                String datePart = dateParts[1].trim();
                 int year = statizId / 10000;
                 LocalDate matchDate = LocalDate.parse(year + "-" + datePart, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
                 Timestamp matchDateTime = Timestamp.valueOf(matchDate.atStartOfDay());
@@ -149,7 +161,15 @@ public class StatizGameSummaryCrawler {
     }
 
     private int getInt(Element td) {
-        return Integer.parseInt(td.selectFirst(".score").ownText().trim());
+        Element scoreElement = td.selectFirst(".score");
+        if (scoreElement == null) {
+            return 0; // 기본값 반환
+        }
+        try {
+            return Integer.parseInt(scoreElement.ownText().trim());
+        } catch (NumberFormatException e) {
+            return 0; // 파싱 실패 시 기본값 반환
+        }
     }
 
     private void saveScoreBoard(Integer scheduleId, List<Integer> homeScores, List<Integer> awayScores,
