@@ -4,29 +4,29 @@
       layout:decorate="~{layouts/default}">
 
 <th:block layout:fragment="contents">
-  <div class="container py-5">
+  <div class="container-fluid px-2 px-md-4 py-5">
     
     <!-- 날짜 및 네비게이션 -->
-	<div class="text-center mb-4 d-flex justify-content-center align-items-center gap-3">
+	<div class="text-center mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 gap-md-3">
 	  <a th:if="${prevStatizId != null}"
 	     th:href="@{/schedule/detail-view(statizId=${prevStatizId})}"
-	     class="btn btn-outline-secondary">
-	    &laquo;
+	     class="btn btn-outline-secondary order-1 order-md-0">
+	    &laquo; 이전
 	  </a>
-      <div class="fs-3 fw-bold" th:text="${#temporals.format(game.matchDate.toLocalDateTime(), 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
+      <div class="fs-4 fs-md-3 fw-bold order-0 order-md-1" th:text="${#temporals.format(game.matchDate.toLocalDateTime(), 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
 	  <a th:if="${nextStatizId != null}"
 	     th:href="@{/schedule/detail-view(statizId=${nextStatizId})}"
-	     class="btn btn-outline-secondary">
-	    &raquo;
+	     class="btn btn-outline-secondary order-2">
+	    다음 &raquo;
 	  </a>
 	</div>
 
     <!-- 전체 경기 결과 요약 -->
-	<div class="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
-	  <div class="border rounded px-3 py-2 text-center bg-light"
+	<div class="d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-4">
+	  <div class="border rounded px-2 px-md-3 py-2 text-center bg-light"
 	       th:each="g : ${otherGames}"
 	       th:onclick="|location.href='@{/schedule/detail-view(statizId=${g.statizId})}'|"
-	       style="cursor: pointer; width: 220px;">
+	       style="cursor: pointer; min-width: 180px; max-width: 220px; flex: 1 1 180px;">
 	    
 	    <!-- 원정팀 -->
 	    <div class="d-flex flex-column align-items-center mb-1">
@@ -85,32 +85,32 @@
 	<div th:if="${game.status == '종료'}">
 	
 	  <!-- 메인 경기 박스 -->
-	  <div class="border bg-warning-subtle rounded text-center py-4 px-2 mb-4 shadow-sm">
+	  <div class="border bg-warning-subtle rounded text-center py-3 py-md-4 px-5 mb-4 mx-4 shadow-sm">
 		    <!-- 상단: 경기 팀 정보 -->
-		    <div class="fs-3 mb-4 d-flex justify-content-center align-items-center text-center" style="width: 100%;">
+		    <div class="fs-4 fs-md-3 mb-3 mb-md-4 d-flex flex-column flex-md-row justify-content-center align-items-center text-center gap-2 gap-md-0" style="width: 100%;">
 		    
 				<!-- 원정팀 -->
-				<div class="d-flex align-items-center justify-content-end gap-2" style="flex: 1;">
+				<div class="d-flex align-items-center justify-content-center justify-content-md-end gap-2 order-0 order-md-0" style="flex: 1;">
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" class="table-team-logo mb-1 me-2">  
-				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-4 fw-bold">기아 타이거즈</span>
-				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-4">기아 타이거즈</span>
+				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-5 fs-md-4 fw-bold">기아 타이거즈</span>
+				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-5 fs-md-4">기아 타이거즈</span>
 				
-				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-3 fw-bold text-dark">3</span>
-				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-3 text-dark">3</span>
+				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-4 fs-md-3 fw-bold text-dark">3</span>
+				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-4 fs-md-3 text-dark">3</span>
 				</div>
 				
 				<!-- VS -->
-				<div style="flex: 0 0 100px;">
-				  <span class="text-secondary fs-3">VS</span>
+				<div class="order-1 order-md-1 mx-3 mx-md-4" style="flex: 0 0 auto;">
+				  <span class="text-secondary fs-4 fs-md-3">VS</span>
 				</div>
 				
 				<!-- 홈팀 -->
-				<div class="d-flex align-items-center justify-content-start gap-2" style="flex: 1;">
-				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-3 fw-bold text-dark">6</span>
-				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-3 text-dark">6</span>
+				<div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 order-2 order-md-2" style="flex: 1;">
+				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-4 fs-md-3 fw-bold text-dark">6</span>
+				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-4 fs-md-3 text-dark">6</span>
 				
-				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-4 fw-bold">롯데 자이언츠 (홈)</span>
-				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-4">롯데 자이언츠 (홈)</span>
+				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-5 fs-md-4 fw-bold">롯데 자이언츠 (홈)</span>
+				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-5 fs-md-4">롯데 자이언츠 (홈)</span>
 				
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" class="table-team-logo mb-1 me-2">
 				</div>
@@ -119,35 +119,35 @@
 
 	    <!-- 이닝별 점수 테이블 -->
 	    <div class="table-responsive">
-	      <table class="table table-bordered text-center bg-white fs-5"
-			     style="table-layout: fixed; width: 100%;">
-			<thead class="table-light fs-5">
+	      <table class="table table-bordered text-center bg-white fs-6 fs-md-5"
+			     style="table-layout: auto; min-width: 600px;">
+			<thead class="table-light fs-6 fs-md-5">
 			  <tr style="background-color: #fff3cd;">
-			   <th style="width: 180px;" class="bg-light">팀</th>
-			   <th th:each="i : ${#numbers.sequence(1, 9)}" style="width: 60px;" th:text="${i}">1</th>
-			   <th style="width: 70px;">R</th>
-			   <th style="width: 70px;">H</th>
-			   <th style="width: 70px;">E</th>
+			   <th style="min-width: 120px;" class="bg-light">팀</th>
+			   <th th:each="i : ${#numbers.sequence(1, 9)}" style="min-width: 40px;" th:text="${i}">1</th>
+			   <th style="min-width: 50px;">R</th>
+			   <th style="min-width: 50px;">H</th>
+			   <th style="min-width: 50px;">E</th>
 			  </tr>
 			</thead>
 			<tbody>
 			  <tr style="background-color: #f3f6f9;">
-			     <th class="fs-5 text-white"
+			     <th class="fs-6 fs-md-5 text-white"
 					 th:style="'background-color:' + ${game.awayTeamColor}"
 					 th:text="${game.awayTeamName}">기아</th>
-			   <td th:each="score : ${game.awayInningScores}" th:text="${score}" style="width: 60px;">0</td>
-			   <td style="width: 70px;" th:text="${game.awayTeamScore}">3</td>
-			   <td style="width: 70px;" th:text="${game.awayH}">7</td>
-			   <td style="width: 70px;" th:text="${game.awayE}">0</td>
+			   <td th:each="score : ${game.awayInningScores}" th:text="${score}" style="min-width: 40px;">0</td>
+			   <td style="min-width: 50px;" th:text="${game.awayTeamScore}">3</td>
+			   <td style="min-width: 50px;" th:text="${game.awayH}">7</td>
+			   <td style="min-width: 50px;" th:text="${game.awayE}">0</td>
 			 </tr>
 			 <tr style="background-color: #f3f6f9;">
-			  <th class="fs-5 text-white"
+			  <th class="fs-6 fs-md-5 text-white"
     		      th:style="'background-color:' + ${game.homeTeamColor}"
     			  th:text="${game.homeTeamName + ' (홈)'}">롯데</th>
-			   <td th:each="score : ${game.homeInningScores}" th:text="${score}" style="width: 60px;">0</td>
-			   <td style="width: 70px;" th:text="${game.homeTeamScore}">6</td>
-			   <td style="width: 70px;" th:text="${game.homeH}">9</td>
-			   <td style="width: 70px;" th:text="${game.homeE}">1</td>
+			   <td th:each="score : ${game.homeInningScores}" th:text="${score}" style="min-width: 40px;">0</td>
+			   <td style="min-width: 50px;" th:text="${game.homeTeamScore}">6</td>
+			   <td style="min-width: 50px;" th:text="${game.homeH}">9</td>
+			   <td style="min-width: 50px;" th:text="${game.homeE}">1</td>
 			 </tr>
 		  </tbody>
 		</table>
@@ -169,16 +169,16 @@
 			  <h5 class="mb-0 fw-bold text-dark">결정적 장면 Best 5</h5>
 			</div>
 		    <div class="card-body p-0">
-		      <table class="table table-bordered mb-0 text-center align-middle">
+		      <div class="table-responsive-xl">
+		        <table class="table table-bordered mb-0 text-center align-middle" style="min-width: 700px;">
 		        <thead class="table-light">
 		         <tr class="align-middle">
 		            <th style="width: 6%;">순위</th>
 		            <th style="width: 10%;">이닝</th>
 		            <th style="width: 14%;">투수</th>
 		            <th style="width: 14%;">타자</th>
-		            <th style="width: 14%;">투구 수</th>
-		            <th style="width: 18%;">결과</th>
 		            <th style="width: 12%;">이전 상황</th>
+		            <th style="width: 18%;">결과</th>
 		            <th style="width: 12%;">이후 상황</th>
 		          </tr>
 		        </thead>
@@ -188,13 +188,13 @@
 		            <td class="fw-bold text-warning-emphasis" th:text="${highlight.inning}">2회초</td>
 		            <td th:text="${highlight.pitcherName}">김도현</td>
 		            <td th:text="${highlight.batterName}">김형준</td>
-		            <td th:text="${highlight.pitchCount}">3 (1-1)</td>
-		            <td class="text-center ps-3" th:text="${highlight.result}">좌익수 뒤 홈런</td>
 		            <td th:text="${highlight.beforeSituation}">2사 1,3루 0:0</td>
+		            <td class="text-center ps-3" th:text="${highlight.result}">좌익수 뒤 홈런</td>
 		            <td class="fw-bold text-warning-emphasis" th:text="${highlight.afterSituation}">2사 3:0</td>
 		          </tr>
 		        </tbody>
-		      </table>
+		        </table>
+		      </div>
 		    </div>
 		</div>
   </div>
@@ -202,18 +202,19 @@
  </div> 
 
 		<!-- 홈팀 타자 기록 -->
-		<div class="row mx-4" th:if="${game.status == '종료'}">
+		<div class="row mx-4 mx-md-4" th:if="${game.status == '종료'}">
 		 <div class="col-md-6">
 		  <div class="border p-3 rounded"
 	       	   th:if="${game.homeTeamColor != null}"
 	           th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.homeTeamColor, 0.3)});|">
 		    <h5 class="fw-bold mb-3" th:text="${game.homeTeamName + ' 타자 기록'}">홈 타자</h5>
-		    <table class="table table-sm text-center">
-		      <thead>
-		        <tr>
-		          <th>이름</th><th>타석</th><th>타수</th><th>안타</th><th>타점</th><th>홈런</th><th>도루</th><th>삼진</th><th>볼넷</th>
-		        </tr>
-		      </thead>
+		    <div class="table-responsive-xl">
+		      <table class="table table-sm text-center" style="min-width: 500px;">
+		        <thead>
+		          <tr>
+		            <th>이름</th><th>타석</th><th>타수</th><th>안타</th><th>타점</th><th>홈런</th><th>도루</th><th>삼진</th><th>볼넷</th>
+		          </tr>
+		        </thead>
 		      <tbody>
 		        <tr th:each="record : ${game.homeBatterRecords}">
 		          <td th:text="${record.playerName}">권유석</td>
@@ -227,7 +228,8 @@
 		          <td th:text="${record.bb}">1</td>
 		        </tr>
 		      </tbody>
-		    </table>
+		      </table>
+		    </div>
 		  </div>
 	    </div>
 	
@@ -237,12 +239,13 @@
          	   th:if="${game.homeTeamColor != null}"
                th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.awayTeamColor, 0.3)});|">
 	        <h5 class="fw-bold mb-3" th:text="${game.awayTeamName + ' 타자 기록'}">원정 타자</h5>
-	      	<table class="table table-sm text-center">
-	          <thead>
-	          	<tr>
-	          	  <th>이름</th><th>타석</th><th>타수</th><th>안타</th><th>타점</th><th>홈런</th><th>도루</th><th>삼진</th><th>볼넷</th>
-	            </tr>
-	          </thead>
+	        <div class="table-responsive-xl">
+	      	  <table class="table table-sm text-center" style="min-width: 500px;">
+	            <thead>
+	          	  <tr>
+	          	    <th>이름</th><th>타석</th><th>타수</th><th>안타</th><th>타점</th><th>홈런</th><th>도루</th><th>삼진</th><th>볼넷</th>
+	              </tr>
+	            </thead>
 	          <tbody>
 	            <tr th:each="record : ${game.awayBatterRecords}">
 	              <td th:text="${record.playerName}">홍길동</td>
@@ -256,23 +259,25 @@
 	              <td th:text="${record.bb}">1</td>
 	            </tr>
 	          </tbody>
-	        </table>
+	          </table>
+	        </div>
 	      </div>
 	    </div>
 	  </div>
 	
   <!-- 홈팀 투수 기록 -->
-	<div class="row mt-4 mx-4" th:if="${game.status == '종료'}">	  <div class="col-md-6">
+	<div class="row mt-4 mx-1 mx-md-4" th:if="${game.status == '종료'}">	  <div class="col-md-6">
 		<div class="border p-3 rounded"
 	       	 th:if="${game.homeTeamColor != null}"
 	         th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.homeTeamColor, 0.3)});|">
 	      <h5 class="fw-bold mb-3" th:text="${game.homeTeamName + ' 투수 기록'}">홈 투수</h5>
-	      <table class="table table-sm text-center">
-	        <thead>
-	          <tr>
-	            <th>선수</th><th>이닝</th><th>탈삼진</th><th>안타</th><th>사구</th><th>실점</th><th>자책점</th><th>피안타</th><th>피홈런</th><th>기록</th>
-	          </tr>
-	        </thead>
+	      <div class="table-responsive-xl">
+	        <table class="table table-sm text-center" style="min-width: 600px;">
+	          <thead>
+	            <tr>
+	              <th>선수</th><th>이닝</th><th>탈삼진</th><th>안타</th><th>사구</th><th>실점</th><th>자책점</th><th>피안타</th><th>피홈런</th><th>기록</th>
+	            </tr>
+	          </thead>
 	        <tbody>
 	          <tr th:each="record : ${game.homePitcherRecords}">
 	            <td th:text="${record.playerName}">권유석</td>
@@ -287,7 +292,8 @@
 	            <td th:text="${record.decision}">승</td>
 	          </tr>
 	        </tbody>
-	      </table>
+	        </table>
+	      </div>
 	    </div>
 	  </div>
 	
@@ -297,12 +303,13 @@
 		     th:if="${game.homeTeamColor != null}"
 		     th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.awayTeamColor, 0.3)});|">
 	      <h5 class="fw-bold mb-3" th:text="${game.awayTeamName + ' 투수 기록'}">원정 투수</h5>
-	      <table class="table table-sm text-center">
-	        <thead>
-	          <tr>
-	            <th>선수</th><th>이닝</th><th>탈삼진</th><th>안타</th><th>사구</th><th>실점</th><th>자책점</th><th>피안타</th><th>피홈런</th><th>기록</th>
-	          </tr>
-	        </thead>
+	      <div class="table-responsive-xl">
+	        <table class="table table-sm text-center" style="min-width: 600px;">
+	          <thead>
+	            <tr>
+	              <th>선수</th><th>이닝</th><th>탈삼진</th><th>안타</th><th>사구</th><th>실점</th><th>자책점</th><th>피안타</th><th>피홈런</th><th>기록</th>
+	            </tr>
+	          </thead>
 	        <tbody>
 	          <tr th:each="record : ${game.awayPitcherRecords}">
 	            <td th:text="${record.playerName}">김영민</td>
@@ -317,7 +324,8 @@
 	            <td th:text="${record.decision}">패</td>
 	          </tr>
 	        </tbody>
-	      </table>
+	        </table>
+	      </div>
 	    </div>
 	  </div>
   </div>

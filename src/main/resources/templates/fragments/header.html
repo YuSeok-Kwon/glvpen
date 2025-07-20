@@ -1,11 +1,20 @@
-<header class="position-relative d-flex align-items-end px-5" style="width: 100%;">
-  <div class="flex-grow-1" style="flex-basis: 33%;">
-    <a href="/user/home" style="text-decoration: none;">
+<header
+  class="position-relative d-flex align-items-end px-3 px-md-5"
+  style="width: 100%"
+>
+  <div
+    class="flex-grow-1 d-flex justify-content-center justify-content-md-start"
+    style="flex-basis: 33%"
+  >
+    <a href="/user/home" style="text-decoration: none">
       <div class="full-logo-default display-1">BB LOCK</div>
     </a>
   </div>
 
-  <nav class="flex-grow-2 d-flex justify-content-end fs-3 gap-4 mb-3" style="flex-basis: 67%;">
+  <nav
+    class="flex-grow-2 d-flex justify-content-center justify-content-md-end fs-5 fs-md-2 gap-2 gap-md-4 mb-3 flex-wrap"
+    style="flex-basis: 67%"
+  >
     <a href="/schedule/result-view" class="nav-outline">일정/결과</a>
     <a href="/ranking/teamranking-view" class="nav-outline">랭킹</a>
     <a href="/review/calendar-view" class="nav-outline">데일리 리뷰</a>
@@ -13,8 +22,14 @@
     <a href="#" class="nav-outline">락커룸</a>
   </nav>
 
-  <div class="position-absolute top-0 end-0 mt-2 me-4 d-flex align-items-center gap-1">
-    <span class="text-dark small fw-bold" th:text="${session.userNickname + ' 님'}">권유석 님</span>
+  <div
+    class="position-absolute position-md-absolute top-0 end-0 mt-2 me-2 me-md-4 d-flex align-items-center gap-1"
+  >
+    <span
+      class="text-dark small fw-bold d-none d-sm-inline"
+      th:text="${session.userNickname + ' 님'}"
+      >권유석 님</span
+    >
     <a href="/user/logout" class="small text-warning">로그아웃</a>
   </div>
 </header>

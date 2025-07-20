@@ -9,13 +9,13 @@
     
         
     <!-- 월 이동 -->
-    <div class="text-center mb-4 d-flex align-items-center">
-      <a th:href="@{/schedule/result-view(year=${prevYear}, month=${prevMonth})}" class="btn btn-outline-secondary me-2" style="background-color: #FACC15;">&laquo; 이전</a>	  
-	  <strong class="fs-3 month-title" onclick="openDatePicker(this)" 
+    <div class="text-center mb-4 d-flex flex-column flex-sm-row align-items-center justify-content-center gap-2">
+      <a th:href="@{/schedule/result-view(year=${prevYear}, month=${prevMonth})}" class="btn btn-outline-secondary order-1 order-sm-0" style="background-color: #FACC15;">&laquo; 이전</a>	  
+	  <strong class="fs-3 fs-md-3 month-title order-0 order-sm-1" onclick="openDatePicker(this)" 
               th:text="${year + '년 ' + month + '월'}">2025년 4월</strong>
       <!-- 달력용 input -->
       <input type="date" id="hiddenDatePicker" class="d-none" onchange="goToSelectedDate()" />      
-      <a th:href="@{/schedule/result-view(year=${nextYear}, month=${nextMonth})}" class="btn btn-outline-secondary ms-2" style="background-color: #FACC15;">다음 &raquo;</a>
+      <a th:href="@{/schedule/result-view(year=${nextYear}, month=${nextMonth})}" class="btn btn-outline-secondary order-2" style="background-color: #FACC15;">다음 &raquo;</a>
     </div>
 
     <!-- 날짜별 카드 -->
@@ -44,7 +44,7 @@
             <div class="row align-items-center">
 
               <!-- 원정팀 -->
-              <div class="col-5 text-end d-flex align-items-center justify-content-end gap-2 fs-3">
+              <div class="col-5 text-end d-flex align-items-center justify-content-end gap-1 gap-md-2 fs-4 fs-md-3">
 				  <span th:classappend="${game.awayTeamScore > game.homeTeamScore} ? 'fw-bold' : 'fw-light'">
 				    <span th:text="${game.awayTeamName}">SSG</span>
 				    <span th:if="${game.awayTeamScore != null}" th:text="'(' + ${game.awayTeamScore} + ')'"> (2)</span>
@@ -52,10 +52,10 @@
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" class="table-team-logo">  
 			  </div>
               <!-- VS -->
-              <div class="col-2 text-center text-secondary fs-3 fw-bold">VS</div>
+              <div class="col-2 text-center text-secondary fs-4 fs-md-3 fw-bold">VS</div>
 
               <!-- 홈팀 -->
-              <div class="col-5 text-start d-flex align-items-center justify-content-start gap-2 fs-3">
+              <div class="col-5 text-start d-flex align-items-center justify-content-start gap-1 gap-md-2 fs-4 fs-md-3">
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" class="table-team-logo">
 				  <span th:classappend="${game.homeTeamScore > game.awayTeamScore} ? 'fw-bold' : 'fw-light'">
 				      <span th:if="${game.homeTeamScore != null}" th:text="'(' + ${game.homeTeamScore} + ')'"> (3)</span>

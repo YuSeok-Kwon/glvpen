@@ -8,9 +8,10 @@
     .calendar-table {
 	  width: 100%;
 	  table-layout: fixed;
+	  min-width: 800px;
 	}
 	.calendar-table th, .calendar-table td {
-	  padding: 0.75rem;
+	  padding: 0.5rem;
 	  overflow: hidden;
 	  text-overflow: ellipsis;
 	  white-space: nowrap;
@@ -21,6 +22,60 @@
 	  overflow: hidden;
 	  white-space: normal;
 	}
+	
+	@media (max-width: 768px) {
+	  .calendar-table {
+	    min-width: 600px;
+	  }
+	  .calendar-table th, .calendar-table td {
+	    padding: 0.25rem;
+	    font-size: 0.8rem;
+	  }
+	  .custom-cell {
+	    height: 100px;
+	  }
+	}
+	
+	@media (max-width: 480px) {
+	  .calendar-table {
+	    min-width: 500px;
+	  }
+	  .calendar-table th, .calendar-table td {
+	    padding: 0.2rem;
+	    font-size: 0.7rem;
+	  }
+	  .custom-cell {
+	    height: 80px;
+	  }
+	}
+	
+	/* 기본적으로 축약 팀 이름 표시 */
+	.team-name-short {
+	  display: block;
+	}
+	.team-name-full {
+	  display: none;
+	}
+	
+	/* 버튼 반응형 크기 조절 */
+	.btn-sm {
+	  font-size: 0.875rem;
+	  padding: 0.25rem 0.5rem;
+	}
+	
+	@media (max-width: 768px) {
+	  .btn-sm {
+	    font-size: 0.75rem;
+	    padding: 0.2rem 0.4rem;
+	  }
+	}
+	
+	@media (max-width: 480px) {
+	  .btn-sm {
+	    font-size: 0.7rem;
+	    padding: 0.15rem 0.3rem;
+	  }
+	}
     </style>
 </head>
 
@@ -28,9 +83,9 @@
 <div class="container-fluid py-5 d-flex flex-column justify-content-center" 
      style="background-color: white;">
   <!-- 상단 연/월 + 이동 버튼 -->
-  <div class="d-flex justify-content-center align-items-center mb-4">
+  <div class="d-flex justify-content-center align-items-center mb-4 gap-2 gap-md-4">
     <a th:href="@{/review/calendar-view(year=${prevYear}, month=${prevMonth})}" class="btn btn-outline-light">&laquo;</a>
-    <h2 id="calendar-title" class="mx-5" th:text="${year} + '년 ' + ${month} + '월'">2025년 4월</h2>
+    <h2 id="calendar-title" class="fs-4 fs-md-2 text-center" th:text="${year} + '년 ' + ${month} + '월'">2025년 4월</h2>
     <a th:href="@{/review/calendar-view(year=${nextYear}, month=${nextMonth})}" class="btn btn-outline-light">&raquo;</a>
   </div>
 	
@@ -66,12 +121,42 @@
 	                <!-- 스코어 있는 경우 -->
 	                <div th:if="${game.homeScore != null and game.awayScore != null}" class="d-flex align-items-center justify-content-center">
 	                  <div>
-	                    <div class="fw-bold" th:text="${game.homeTeamName}"></div>
+	                    <div class="fw-bold">
+	                      <span class="team-name-full" th:text="${game.homeTeamName}"></span>
+	                      <span class="team-name-short" th:switch="${game.homeTeamName}">
+	                        <span th:case="'두산 베어스'">두산</span>
+	                        <span th:case="'KT 위즈'">KT</span>
+	                        <span th:case="'삼성 라이온즈'">삼성</span>
+	                        <span th:case="'기아 타이거즈'">기아</span>
+	                        <span th:case="'한화 이글스'">한화</span>
+	                        <span th:case="'롯데 자이언츠'">롯데</span>
+	                        <span th:case="'NC 다이노스'">NC</span>
+	                        <span th:case="'키움 히어로즈'">키움</span>
+	                        <span th:case="'LG 트윈스'">LG</span>
+	                        <span th:case="'SSG 랜더스'">SSG</span>
+	                        <span th:case="*" th:text="${game.homeTeamName}"></span>
+	                      </span>
+	                    </div>
 	                    <div class="small text-muted" th:text="'(' + ${game.homeScore} + ')'"></div>
 	                  </div>
 	                  <div class="fw-bold mx-1 text-muted">VS</div>
 	                  <div>
-	                    <div class="fw-bold" th:text="${game.awayTeamName}"></div>
+	                    <div class="fw-bold">
+	                      <span class="team-name-full" th:text="${game.awayTeamName}"></span>
+	                      <span class="team-name-short" th:switch="${game.awayTeamName}">
+	                        <span th:case="'두산 베어스'">두산</span>
+	                        <span th:case="'KT 위즈'">KT</span>
+	                        <span th:case="'삼성 라이온즈'">삼성</span>
+	                        <span th:case="'기아 타이거즈'">기아</span>
+	                        <span th:case="'한화 이글스'">한화</span>
+	                        <span th:case="'롯데 자이언츠'">롯데</span>
+	                        <span th:case="'NC 다이노스'">NC</span>
+	                        <span th:case="'키움 히어로즈'">키움</span>
+	                        <span th:case="'LG 트윈스'">LG</span>
+	                        <span th:case="'SSG 랜더스'">SSG</span>
+	                        <span th:case="*" th:text="${game.awayTeamName}"></span>
+	                      </span>
+	                    </div>
 	                    <div class="small text-muted" th:text="'(' + ${game.awayScore} + ')'"></div>
 	                  </div>
 	                </div>
@@ -82,9 +167,39 @@
 	                    취소된 경기입니다
 	                  </div>
 	                  <div th:if="${day.date != null and (day.date.isEqual(today) or day.date.isAfter(today))}" class="d-flex align-items-center">
-	                    <div class="fw-bold" th:text="${game.homeTeamName}"></div>
+	                    <div class="fw-bold">
+	                      <span class="team-name-full" th:text="${game.homeTeamName}"></span>
+	                      <span class="team-name-short" th:switch="${game.homeTeamName}">
+	                        <span th:case="'두산 베어스'">두산</span>
+	                        <span th:case="'KT 위즈'">KT</span>
+	                        <span th:case="'삼성 라이온즈'">삼성</span>
+	                        <span th:case="'기아 타이거즈'">기아</span>
+	                        <span th:case="'한화 이글스'">한화</span>
+	                        <span th:case="'롯데 자이언츠'">롯데</span>
+	                        <span th:case="'NC 다이노스'">NC</span>
+	                        <span th:case="'키움 히어로즈'">키움</span>
+	                        <span th:case="'LG 트윈스'">LG</span>
+	                        <span th:case="'SSG 랜더스'">SSG</span>
+	                        <span th:case="*" th:text="${game.homeTeamName}"></span>
+	                      </span>
+	                    </div>
 	                    <div class="fw-bold mx-1 text-muted">VS</div>
-	                    <div class="fw-bold" th:text="${game.awayTeamName}"></div>
+	                    <div class="fw-bold">
+	                      <span class="team-name-full" th:text="${game.awayTeamName}"></span>
+	                      <span class="team-name-short" th:switch="${game.awayTeamName}">
+	                        <span th:case="'두산 베어스'">두산</span>
+	                        <span th:case="'KT 위즈'">KT</span>
+	                        <span th:case="'삼성 라이온즈'">삼성</span>
+	                        <span th:case="'기아 타이거즈'">기아</span>
+	                        <span th:case="'한화 이글스'">한화</span>
+	                        <span th:case="'롯데 자이언츠'">롯데</span>
+	                        <span th:case="'NC 다이노스'">NC</span>
+	                        <span th:case="'키움 히어로즈'">키움</span>
+	                        <span th:case="'LG 트윈스'">LG</span>
+	                        <span th:case="'SSG 랜더스'">SSG</span>
+	                        <span th:case="*" th:text="${game.awayTeamName}"></span>
+	                      </span>
+	                    </div>
 	                  </div>
 	                </div>
 	
@@ -105,7 +220,7 @@
 					     th:href="@{/review/write-view(scheduleId=${game.scheduleId})}"
 					     class="btn btn-sm btn-outline-primary mt-1 text-white"
 					     th:style="'background-color:' + ${teamColor}">
-					    리뷰를 남겨주세요
+					    리뷰 쓰기
 					  </a>
 					
 					  <span th:if="${!day.date.isBefore(today)
@@ -122,21 +237,21 @@
 	      </th:block>
 	
 	      <!-- 요약 버튼 칸 -->
-		<th:block th:if="${week[0] != null}">
+		<th:block th:with="currentMonthDate=${#lists.isEmpty(#lists.toList(week).?[# != null and #.date.monthValue == month]) ? null : #lists.toList(week).?[# != null and #.date.monthValue == month][0]}">
 		  <td class="align-middle text-center"
 		      th:style="'width: 140px; background-color: white; border: 1px solid ' + ${teamColor}">
 		  
-		    <div th:if="${summaryExistMap != null and summaryExistMap[week[0].date] != null}">
+		    <div th:if="${currentMonthDate != null and summaryExistMap != null and summaryExistMap[currentMonthDate.date] != null}">
 		      
 		      <!-- 요약 있음 -->
-		      <a th:if="${summaryExistMap[week[0].date] == true}"
-		         th:href="@{/review/summary-view(startDate=${week[0].date})}"
+		      <a th:if="${summaryExistMap[currentMonthDate.date] == true}"
+		         th:href="@{/review/summary-view(startDate=${currentMonthDate.date})}"
 		         class="btn btn-sm btn-outline-secondary">
 		        요약 보기
 		      </a>
 		
 		      <!-- 요약 없음 + 오늘 이전만 노출 -->
-		      <span th:if="${summaryExistMap[week[0].date] != true and week[0].date.isBefore(today)}"
+		      <span th:if="${summaryExistMap[currentMonthDate.date] != true and currentMonthDate.date.isBefore(today)}"
 		            class="text-muted small">
 		        리뷰를 2개 이상<br> 남겨주세요
 		      </span>
@@ -152,7 +267,8 @@
 </th:block>
 
 <th:block layout:fragment="script">
-	<script >
+	<script th:inline="javascript">
+	  const teamId = /*[[${session.favoriteTeamId}]]*/ 0;
 	  
 	  document.addEventListener('DOMContentLoaded', function() {
 	    if (teamId > 0) {

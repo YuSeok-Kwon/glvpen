@@ -27,22 +27,55 @@
       }
       .container {
         height: 69vh;
+        min-height: 500px;
       }
       .overlay {
         background-color: rgba(0, 0, 0, 0.4);
         border-radius: 15px;
-        padding: 30px;
+        padding: 20px;
       }
       .game-menu-card {
         display: block;
         background: linear-gradient(135deg, #f8f9fa, #dee2e6);
         color: #212529;
         border-radius: 1rem;
-        padding: 2rem 1rem;
+        padding: 1.5rem 1rem;
         text-decoration: none;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
         transition: all 0.3s ease;
         position: relative;
+        height: 100%;
+        min-height: 180px;
+      }
+
+      @media (max-width: 768px) {
+        .overlay {
+          padding: 15px;
+        }
+        .game-menu-card {
+          padding: 1rem 0.75rem;
+          min-height: 150px;
+        }
+        .game-menu-card .emoji {
+          font-size: 2rem !important;
+        }
+        .game-menu-card .label {
+          font-size: 1rem !important;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          height: auto;
+          min-height: 400px;
+        }
+        .overlay {
+          padding: 10px;
+        }
+        .game-menu-card {
+          padding: 0.75rem 0.5rem;
+          min-height: 120px;
+        }
       }
 
       .game-menu-card:hover {

@@ -30,8 +30,8 @@ try {
 //    LocalDate endDate = today;                // 오늘까지
     
     // 다른 방법
-     LocalDate startDate = LocalDate.of(2024, 7, 3); // 특정 날짜
-     LocalDate endDate = LocalDate.of(2024, 7, 6);   // 특정 날짜까지
+     LocalDate startDate = LocalDate.of(2025, 7, 3); // 특정 날짜
+     LocalDate endDate = LocalDate.of(2025, 7, 6);   // 특정 날짜까지
     
     // 크롤링 옵션
     boolean crawlTeam = false;    // 팀 데이터 크롤링 여부

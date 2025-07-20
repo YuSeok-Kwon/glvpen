@@ -14,11 +14,11 @@
 			<!-- 원정팀 -->
 			<div class="d-flex align-items-center justify-content-end gap-2" style="flex: 1;">
 			  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" class="table-team-logo mb-1 me-2">  
-			  <span th:if="${game.awayScore > game.homeScore}" th:text="${game.awayTeamName}" class="fs-2 fw-bold">기아 타이거즈</span>
-			  <span th:unless="${game.awayScore > game.homeScore}" th:text="${game.awayTeamName}" class="fs-2">기아 타이거즈</span>
+			  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-2 fw-bold">기아 타이거즈</span>
+			  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-2">기아 타이거즈</span>
 			
-			  <span th:if="${game.awayScore > game.homeScore}" th:text="${game.awayScore}" class="fs-2 fw-bold text-dark">3</span>
-			  <span th:unless="${game.awayScore > game.homeScore}" th:text="${game.awayScore}" class="fs-2 text-dark">3</span>
+			  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-2 fw-bold text-dark">3</span>
+			  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-2 text-dark">3</span>
 			</div>
 			
 			<!-- VS -->
@@ -28,11 +28,11 @@
 			
 			<!-- 홈팀 -->
 			<div class="d-flex align-items-center justify-content-start gap-2" style="flex: 1;">
-			  <span th:if="${game.homeScore > game.awayScore}" th:text="${game.homeScore}" class="fs-2 fw-bold text-dark">6</span>
-			  <span th:unless="${game.homeScore > game.awayScore}" th:text="${game.homeScore}" class="fs-2 text-dark">6</span>
+			  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-2 fw-bold text-dark">6</span>
+			  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-2 text-dark">6</span>
 			
-			  <span th:if="${game.homeScore > game.awayScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-2 fw-bold">롯데 자이언츠 (홈)</span>
-			  <span th:unless="${game.homeScore > game.awayScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-2">롯데 자이언츠 (홈)</span>
+			  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-2 fw-bold">롯데 자이언츠 (홈)</span>
+			  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-2">롯데 자이언츠 (홈)</span>
 			
 			  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" class="table-team-logo mb-1 me-2">
 			</div>
@@ -57,18 +57,18 @@
 					 th:style="'background-color:' + ${game.awayTeamColor}"
 					 th:text="${game.awayTeamName}">기아</th>
 			   <td th:each="score : ${game.awayInningScores}" th:text="${score}" style="width: 60px;">0</td>
-			   <td style="width: 70px;" th:text="${game.awayScore}">3</td>
-			   <td style="width: 70px;" th:text="${game.awayHits}">7</td>
-			   <td style="width: 70px;" th:text="${game.awayErrors}">0</td>
+			   <td style="width: 70px;" th:text="${game.awayTeamScore}">3</td>
+			   <td style="width: 70px;" th:text="${game.awayH}">7</td>
+			   <td style="width: 70px;" th:text="${game.awayE}">0</td>
 			 </tr>
 			 <tr style="background-color: #f3f6f9;">
 			  <th class="fs-5 text-white"
     		      th:style="'background-color:' + ${game.homeTeamColor}"
     			  th:text="${game.homeTeamName + ' (홈)'}">롯데</th>
 			   <td th:each="score : ${game.homeInningScores}" th:text="${score}" style="width: 60px;">0</td>
-			   <td style="width: 70px;" th:text="${game.homeScore}">6</td>
-			   <td style="width: 70px;" th:text="${game.homeHits}">9</td>
-			   <td style="width: 70px;" th:text="${game.homeErrors}">1</td>
+			   <td style="width: 70px;" th:text="${game.homeTeamScore}">6</td>
+			   <td style="width: 70px;" th:text="${game.homeH}">9</td>
+			   <td style="width: 70px;" th:text="${game.homeE}">1</td>
 			 </tr>
 		  </tbody>
 		</table>
@@ -97,9 +97,8 @@
 		            <th style="width: 10%;">이닝</th>
 		            <th style="width: 14%;">투수</th>
 		            <th style="width: 14%;">타자</th>
-		            <th style="width: 14%;">투구 수</th>
-		            <th style="width: 18%;">결과</th>
 		            <th style="width: 12%;">이전 상황</th>
+		            <th style="width: 18%;">결과</th>
 		            <th style="width: 12%;">이후 상황</th>
 		          </tr>
 		        </thead>
@@ -109,10 +108,9 @@
 		            <td class="fw-bold text-warning-emphasis" th:text="${highlight.inning}">2회초</td>
 		            <td th:text="${highlight.pitcherName}">김도현</td>
 		            <td th:text="${highlight.batterName}">김형준</td>
-		            <td th:text="${highlight.pitchCount}">3 (1-1)</td>
-		            <td class="text-center ps-3" th:text="${highlight.result}">좌익수 뒤 홈런</td>
 		            <td th:text="${highlight.beforeSituation}">2사 1,3루 0:0</td>
-		            <td th:text="${highlight.afterSituation}">2사 3:0</td>
+		            <td class="text-center ps-3" th:text="${highlight.result}">좌익수 뒤 홈런</td>
+		            <td class="fw-bold" th:text="${highlight.afterSituation}">2사 3:0</td>
 		          </tr>
 		        </tbody>
 		      </table>
@@ -204,9 +202,9 @@
 </th:block>
 
 <th:block layout:fragment="script">
-<script>
+<script th:inline="javascript">
 document.addEventListener('DOMContentLoaded', function() {
-    const teamColor = "[[${teamColor}]]" || '#000000';
+    const teamColor = /*[[${teamColor}]]*/ '#000000';
 
     // 감정 선택
     const feelingList = document.getElementById('feelingList');

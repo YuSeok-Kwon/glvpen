@@ -1,10 +1,13 @@
 <header
-  class="position-relative d-flex align-items-end px-5"
+  class="position-relative d-flex align-items-end px-3 px-md-5"
   th:classappend="${session.favoriteTeamId != null ? ' team-bg-' + session.favoriteTeamId : ' team-bg-1'}"
   style="width: 100%"
 >
   <!-- 로고 영역 -->
-  <div class="flex-grow-1" style="flex-basis: 33%">
+  <div
+    class="flex-grow-1 d-flex justify-content-center justify-content-md-start"
+    style="flex-basis: 33%"
+  >
     <a href="/user/home" style="text-decoration: none">
       <div class="full-logo-default display-1 team-text">BB LOCK</div>
     </a>
@@ -12,7 +15,7 @@
 
   <!-- 네비게이션 -->
   <nav
-    class="flex-grow-2 d-flex justify-content-end fs-3 gap-4 mb-3"
+    class="flex-grow-2 d-flex justify-content-center justify-content-md-end fs-5 fs-md-2 gap-2 gap-md-4 mb-3 flex-wrap"
     style="flex-basis: 67%"
   >
     <a href="/schedule/result-view" class="team-nav-link">일정/결과</a>
@@ -24,10 +27,10 @@
 
   <!-- 로그인 사용자 -->
   <div
-    class="position-absolute top-0 end-0 mt-2 me-4 d-flex align-items-center gap-1 team-text"
+    class="position-absolute position-md-absolute top-0 end-0 mt-2 me-2 me-md-4 d-flex align-items-center gap-1 team-text"
   >
     <span
-      class="small fw-bold"
+      class="small fw-bold d-none d-sm-inline"
       th:text="${session.userNickname != null ? session.userNickname + ' 님' : '게스트 님'}"
       >권유석 님</span
     >

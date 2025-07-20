@@ -1,4 +1,10 @@
-<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layouts/default}">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz	let currentBatterData = [];
+	let currentPitcherData = [];
+	let filteredBatterData = [];
+	let filteredPitcherData = [];
+	let batterCurrentPage = 1;
+	let pitcherCurrentPage = 1;
+	const itemsPerPage = 10;eleaf/layout" layout:decorate="~{layouts/default}">
 <th:block layout:fragment="contents">
     <div class="container-fluid py-5 px-3">
 
@@ -37,10 +43,10 @@
         </div>
 
         <!-- 버튼 및 포지션 드롭다운 -->
-        <div class="text-start mb-3 mx-4 d-flex">
-            <button id="showBatterTableBtn" class="btn btn-primary mx-2" style="background-color: #FACC15;">타자 기록</button>
-            <button id="showPitcherTableBtn" class="btn btn-primary mx-2" style="background-color: #FACC15;">투수 기록</button>
-            <form class="d-flex align-items-center mx-2 seasonSelectBox">
+        <div class="text-start mb-3 mx-4 d-flex flex-wrap align-items-center gap-2">
+            <button id="showBatterTableBtn" class="btn btn-primary" style="background-color: #FACC15;">타자 기록</button>
+            <button id="showPitcherTableBtn" class="btn btn-primary" style="background-color: #FACC15;">투수 기록</button>
+            <form class="d-flex align-items-center seasonSelectBox">
                 <select class="form-select season-select" name="season" style="width:120px;" onchange="changeSeason(this)">
                     <option value="2025">2025</option>
                     <option value="2024">2024</option>
@@ -50,7 +56,7 @@
                     <option value="2020">2020</option>
                 </select>
             </form>
-            <form id="positionChoiceBox" class="d-flex align-items-center mx-2">
+            <form id="positionChoiceBox" class="d-flex align-items-center">
                 <select id="position-select" class="form-select" onchange="filterByPosition()">
                     <option value="">모든 포지션</option>
                     <option value="C">C (포수)</option>
@@ -64,18 +70,35 @@
                     <option value="DH">DH (지명타자)</option>
                 </select>
             </form>
-            <button id="filterQualifiedBtn" class="btn btn-outline-secondary mx-2" style="background-color: #FACC15;">규정 선수만 보기 / 현재 : 전체선수</button>
+            <button id="filterQualifiedBtn" class="btn btn-outline-secondary" style="background-color: #FACC15;">규정 선수만 보기 / 현재 : 전체선수</button>
+            
+            <!-- 선수 검색 -->
+            <div class="d-flex align-items-center">
+                <input type="text" id="player-search" class="form-control" placeholder="선수명 검색..." style="width: 150px;" onkeyup="searchPlayer()" />
+                <button type="button" class="btn btn-outline-secondary ms-1" onclick="clearSearch()" title="검색 초기화">
+                    ✕
+                </button>
+            </div>
         </div>
 
         <!-- 기록 테이블 -->
         <div id="batter-ranking-table-wrapper" class="ranking-table mt-2 mx-5"></div>
         <div id="pitcher-ranking-table-wrapper" class="ranking-table mt-2 mx-5 d-none"></div>
+        
+        <!-- 페이지네이션 -->
+        <div id="batter-pagination" class="d-flex justify-content-center mt-4"></div>
+        <div id="pitcher-pagination" class="d-flex justify-content-center mt-4 d-none"></div>
     </div>
 </th:block>
 
 <th:block layout:fragment="script">
 <script>
 	let isQualifiedFilterOn = false;
+	let currentBatterData = [];
+	let currentPitcherData = [];
+	let batterCurrentPage = 1;
+	let pitcherCurrentPage = 1;
+	const itemsPerPage = 15;
 
 	$(document).ready(function() {
 	    // 화면 처음 로딩 시
@@ -86,12 +109,16 @@
 	        $('#batter-ranking-table-wrapper').removeClass('d-none');
 	        $('#pitcher-ranking-table-wrapper').addClass('d-none');
 	        $('#positionChoiceBox').removeClass('d-none');
+	        $('#batter-pagination').removeClass('d-none');
+	        $('#pitcher-pagination').addClass('d-none');
 	    });
 	
 	    $('#showPitcherTableBtn').click(function() {
 	        $('#pitcher-ranking-table-wrapper').removeClass('d-none');
 	        $('#batter-ranking-table-wrapper').addClass('d-none');
 	        $('#positionChoiceBox').addClass('d-none');
+	        $('#batter-pagination').addClass('d-none');
+	        $('#pitcher-pagination').removeClass('d-none');
 	    });
 	
 	    // 시즌 드롭다운 초기화
@@ -128,18 +155,31 @@
 	
 	// 포지션 필터링
 	function filterByPosition() {
-    const selectedPosition = $('#position-select').val();
-
-    $('#batter-ranking-table-wrapper table tbody tr').each(function () {
-        const position = $(this).find('td').eq(2).text().trim(); // 포지션 컬럼
-
-        if (selectedPosition === "" || position === selectedPosition) {
-            $(this).show();
-        } else {
-            $(this).hide();
-        }
-    });
-}
+	    // 원본 데이터에서 검색 필터 먼저 적용
+	    var searchTerm = $('#player-search').val().toLowerCase().trim();
+	    
+	    if (searchTerm === '') {
+	        filteredBatterData = [...currentBatterData];
+	    } else {
+	        filteredBatterData = currentBatterData.filter(function(player) {
+	            return player.playerName && player.playerName.toLowerCase().includes(searchTerm);
+	        });
+	    }
+	    
+	    // 포지션 필터 적용
+	    var selectedPosition = $('#position-select').val();
+	    if (selectedPosition) {
+	        filteredBatterData = filteredBatterData.filter(function(player) {
+	            return player.position === selectedPosition;
+	        });
+	    }
+	    
+	    // 페이지를 1로 리셋하고 테이블 재렌더링
+	    batterCurrentPage = 1;
+	    var currentSort = $('#current-sort').val();
+	    var currentDirection = $('#current-direction').val();
+	    renderBatterTable(filteredBatterData, currentSort, currentDirection);
+	}
 	
 	// 선수 랭킹 가져오기
 	function fetchPlayerRanking(season) {
@@ -162,8 +202,14 @@
 	        success: function(data) {
 	            renderTopBatterList(data.topBatters);
 	            renderTopPitcherList(data.topPitchers);
-	            renderBatterTable(data.batterRankingList, data.currentSort, data.sortDirection);
-	            renderPitcherTable(data.pitcherRankingList, data.currentSort, data.sortDirection);
+	            currentBatterData = data.batterRankingList;
+	            currentPitcherData = data.pitcherRankingList;
+	            filteredBatterData = [...currentBatterData];
+	            filteredPitcherData = [...currentPitcherData];
+	            batterCurrentPage = 1;
+	            pitcherCurrentPage = 1;
+	            renderBatterTable(filteredBatterData, data.currentSort, data.sortDirection);
+	            renderPitcherTable(filteredPitcherData, data.currentSort, data.sortDirection);
 	        },
 	        error: function(xhr, status, error) {
 	            console.error('데이터 불러오기 실패:', error);
@@ -227,7 +273,11 @@
 	        success: function(data) {
 	            $('#current-sort').val(sortKey);
 	            $('#current-direction').val(newDirection);
-	            renderBatterTable(data.batterRankingList, sortKey, newDirection);
+	            currentBatterData = data.batterRankingList;
+	            filteredBatterData = [...currentBatterData];
+	            applyCurrentFilters();
+	            batterCurrentPage = 1;
+	            renderBatterTable(filteredBatterData, sortKey, newDirection);
 	        },
 	        error: function(xhr, status, error) {
 	            console.error('타자 테이블 정렬 실패:', error);
@@ -238,7 +288,15 @@
 	// 타자 테이블 그리기
 	function renderBatterTable(list, currentSort, sortDirection) {
 	    var directionArrow = sortDirection === 'ASC' ? '▼' : '▲';
-	    var html = '<table class="table table-bordered table-striped text-center"><thead><tr>';
+	    
+	    // 페이지네이션 계산
+	    var totalItems = list.length;
+	    var totalPages = Math.ceil(totalItems / itemsPerPage);
+	    var startIndex = (batterCurrentPage - 1) * itemsPerPage;
+	    var endIndex = startIndex + itemsPerPage;
+	    var currentPageData = list.slice(startIndex, endIndex);
+	    
+	    var html = '<div class="table-responsive"><table class="table table-bordered table-striped text-center" style="min-width: 1200px;"><thead><tr>';
 	
 	    html += '<th>순위</th>';
 	    html += '<th>선수명</th>';
@@ -261,9 +319,10 @@
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'wRC+\')">wRC+' + (currentSort === 'WRCPLUS' ? directionArrow : '') + '</a></th>';
 	    html += '</tr></thead><tbody>';
 	
-	    list.forEach(function(batter, index) {
+	    currentPageData.forEach(function(batter, index) {
+	        var actualRank = startIndex + index + 1;
 	        html += '<tr>';
-	        html += '<td>' + (index + 1) + '</td>';
+	        html += '<td>' + actualRank + '</td>';
 	        html += '<td class="d-flex align-items-center gap-2"><img src="' + getLogoPath(batter.logoName) + '" style="width:28px;height:28px;">' + batter.playerName + '</td>';
 	        html += '<td>' + (batter.position || '-') + '</td>';
 	        html += '<td>' + formatDecimal(batter.war, 2) + '</td>';
@@ -285,9 +344,11 @@
 	        html += '</tr>';
 	    });
 	
-	    html += '</tbody></table>';
+	    html += '</tbody></table></div>';
 	    $('#batter-ranking-table-wrapper').html(html);
-	    filterByPosition();
+	    
+	    // 페이지네이션 렌더링
+	    renderBatterPagination(totalPages);
 	}
 	
 	// 투수 테이블 정렬
@@ -312,7 +373,11 @@
 	        success: function(data) {
 	            $('#current-sort').val(sortKey);
 	            $('#current-direction').val(newDirection);
-	            renderPitcherTable(data.pitcherRankingList, sortKey, newDirection);
+	            currentPitcherData = data.pitcherRankingList;
+	            filteredPitcherData = [...currentPitcherData];
+	            applyCurrentFilters();
+	            pitcherCurrentPage = 1;
+	            renderPitcherTable(filteredPitcherData, sortKey, newDirection);
 	        },
 	        error: function(xhr, status, error) {
 	            console.error('투수 테이블 정렬 실패:', error);
@@ -323,7 +388,15 @@
 	// 투수 테이블 그리기
 	function renderPitcherTable(list, currentSort, sortDirection) {
 	    var directionArrow = sortDirection === 'ASC' ? '▲' : '▼';
-	    var html = '<table class="table table-bordered table-striped text-center"><thead><tr>';
+	    
+	    // 페이지네이션 계산
+	    var totalItems = list.length;
+	    var totalPages = Math.ceil(totalItems / itemsPerPage);
+	    var startIndex = (pitcherCurrentPage - 1) * itemsPerPage;
+	    var endIndex = startIndex + itemsPerPage;
+	    var currentPageData = list.slice(startIndex, endIndex);
+	    
+	    var html = '<div class="table-responsive"><table class="table table-bordered table-striped text-center" style="min-width: 1000px;"><thead><tr>';
 	
 	    html += '<th>순위</th>';
 	    html += '<th>선수명</th>';
@@ -341,9 +414,10 @@
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'HR\')">피홈런' + (currentSort === 'HR' ? directionArrow : '') + '</a></th>';
 	    html += '</tr></thead><tbody>';
 	
-	    list.forEach(function(pitcher, index) {
+	    currentPageData.forEach(function(pitcher, index) {
+	        var actualRank = startIndex + index + 1;
 	        html += '<tr>';
-	        html += '<td>' + (index + 1) + '</td>';
+	        html += '<td>' + actualRank + '</td>';
 	        html += '<td class="d-flex align-items-center gap-2"><img src="' + getLogoPath(pitcher.logoName) + '" style="width:28px;height:28px;">' + pitcher.playerName + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.war, 2) + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.era, 2) + '</td>';
@@ -360,8 +434,11 @@
 	        html += '</tr>';
 	    });
 	
-	    html += '</tbody></table>';
+	    html += '</tbody></table></div>';
 	    $('#pitcher-ranking-table-wrapper').html(html);
+	    
+	    // 페이지네이션 렌더링
+	    renderPitcherPagination(totalPages);
 	}
 	
 	
@@ -427,6 +504,196 @@
 	        return 'format-integer';
 	    }
 	    return 'format-decimal-2';
+	}
+	
+	// 타자 페이지네이션 렌더링
+	function renderBatterPagination(totalPages) {
+	    if (totalPages <= 1) {
+	        $('#batter-pagination').html('');
+	        return;
+	    }
+	    
+	    var html = '<nav aria-label="타자 페이지네이션"><ul class="pagination pagination-sm">';
+	    
+	    // 이전 페이지 버튼
+	    if (batterCurrentPage > 1) {
+	        html += '<li class="page-item"><a class="page-link text-secondary" href="javascript:void(0);" onclick="changeBatterPage(' + (batterCurrentPage - 1) + ')">이전</a></li>';
+	    } else {
+	        html += '<li class="page-item disabled"><span class="page-link text-muted">이전</span></li>';
+	    }
+	    
+	    // 페이지 번호 버튼들
+	    var startPage = Math.max(1, batterCurrentPage - 2);
+	    var endPage = Math.min(totalPages, batterCurrentPage + 2);
+	    
+	    if (startPage > 1) {
+	        html += '<li class="page-item"><a class="page-link text-dark" href="javascript:void(0);" onclick="changeBatterPage(1)">1</a></li>';
+	        if (startPage > 2) {
+	            html += '<li class="page-item disabled"><span class="page-link text-muted">...</span></li>';
+	        }
+	    }
+	    
+	    for (var i = startPage; i <= endPage; i++) {
+	        if (i === batterCurrentPage) {
+	            html += '<li class="page-item active"><span class="page-link text-dark bg-warning border-warning">' + i + '</span></li>';
+	        } else {
+	            html += '<li class="page-item"><a class="page-link text-dark" href="javascript:void(0);" onclick="changeBatterPage(' + i + ')">' + i + '</a></li>';
+	        }
+	    }
+	    
+	    if (endPage < totalPages) {
+	        if (endPage < totalPages - 1) {
+	            html += '<li class="page-item disabled"><span class="page-link text-muted">...</span></li>';
+	        }
+	        html += '<li class="page-item"><a class="page-link text-dark" href="javascript:void(0);" onclick="changeBatterPage(' + totalPages + ')">' + totalPages + '</a></li>';
+	    }
+	    
+	    // 다음 페이지 버튼
+	    if (batterCurrentPage < totalPages) {
+	        html += '<li class="page-item"><a class="page-link text-secondary" href="javascript:void(0);" onclick="changeBatterPage(' + (batterCurrentPage + 1) + ')">다음</a></li>';
+	    } else {
+	        html += '<li class="page-item disabled"><span class="page-link text-muted">다음</span></li>';
+	    }
+	    
+	    html += '</ul></nav>';
+	    $('#batter-pagination').html(html);
+	}
+	
+	// 투수 페이지네이션 렌더링
+	function renderPitcherPagination(totalPages) {
+	    if (totalPages <= 1) {
+	        $('#pitcher-pagination').html('');
+	        return;
+	    }
+	    
+	    var html = '<nav aria-label="투수 페이지네이션"><ul class="pagination pagination-sm">';
+	    
+	    // 이전 페이지 버튼
+	    if (pitcherCurrentPage > 1) {
+	        html += '<li class="page-item"><a class="page-link text-secondary" href="javascript:void(0);" onclick="changePitcherPage(' + (pitcherCurrentPage - 1) + ')">이전</a></li>';
+	    } else {
+	        html += '<li class="page-item disabled"><span class="page-link text-muted">이전</span></li>';
+	    }
+	    
+	    // 페이지 번호 버튼들
+	    var startPage = Math.max(1, pitcherCurrentPage - 2);
+	    var endPage = Math.min(totalPages, pitcherCurrentPage + 2);
+	    
+	    if (startPage > 1) {
+	        html += '<li class="page-item"><a class="page-link text-dark" href="javascript:void(0);" onclick="changePitcherPage(1)">1</a></li>';
+	        if (startPage > 2) {
+	            html += '<li class="page-item disabled"><span class="page-link text-muted">...</span></li>';
+	        }
+	    }
+	    
+	    for (var i = startPage; i <= endPage; i++) {
+	        if (i === pitcherCurrentPage) {
+	            html += '<li class="page-item active"><span class="page-link text-dark bg-warning border-warning">' + i + '</span></li>';
+	        } else {
+	            html += '<li class="page-item"><a class="page-link text-dark" href="javascript:void(0);" onclick="changePitcherPage(' + i + ')">' + i + '</a></li>';
+	        }
+	    }
+	    
+	    if (endPage < totalPages) {
+	        if (endPage < totalPages - 1) {
+	            html += '<li class="page-item disabled"><span class="page-link text-muted">...</span></li>';
+	        }
+	        html += '<li class="page-item"><a class="page-link text-dark" href="javascript:void(0);" onclick="changePitcherPage(' + totalPages + ')">' + totalPages + '</a></li>';
+	    }
+	    
+	    // 다음 페이지 버튼
+	    if (pitcherCurrentPage < totalPages) {
+	        html += '<li class="page-item"><a class="page-link text-secondary" href="javascript:void(0);" onclick="changePitcherPage(' + (pitcherCurrentPage + 1) + ')">다음</a></li>';
+	    } else {
+	        html += '<li class="page-item disabled"><span class="page-link text-muted">다음</span></li>';
+	    }
+	    
+	    html += '</ul></nav>';
+	    $('#pitcher-pagination').html(html);
+	}
+	
+	// 타자 페이지 변경
+	function changeBatterPage(page) {
+	    batterCurrentPage = page;
+	    var currentSort = $('#current-sort').val();
+	    var currentDirection = $('#current-direction').val();
+	    renderBatterTable(filteredBatterData, currentSort, currentDirection);
+	}
+	
+	// 투수 페이지 변경
+	function changePitcherPage(page) {
+	    pitcherCurrentPage = page;
+	    var currentSort = $('#current-sort').val();
+	    var currentDirection = $('#current-direction').val();
+	    renderPitcherTable(filteredPitcherData, currentSort, currentDirection);
+	}
+	
+	// 선수 검색 기능
+	function searchPlayer() {
+	    var searchTerm = $('#player-search').val().toLowerCase().trim();
+	    
+	    if (searchTerm === '') {
+	        // 검색어가 없으면 원본 데이터로 복원
+	        filteredBatterData = [...currentBatterData];
+	        filteredPitcherData = [...currentPitcherData];
+	    } else {
+	        // 검색어가 있으면 필터링
+	        filteredBatterData = currentBatterData.filter(function(player) {
+	            return player.playerName && player.playerName.toLowerCase().includes(searchTerm);
+	        });
+	        
+	        filteredPitcherData = currentPitcherData.filter(function(player) {
+	            return player.playerName && player.playerName.toLowerCase().includes(searchTerm);
+	        });
+	    }
+	    
+	    // 포지션 필터도 적용
+	    applyPositionFilter();
+	    
+	    // 페이지를 1로 리셋하고 테이블 재렌더링
+	    batterCurrentPage = 1;
+	    pitcherCurrentPage = 1;
+	    
+	    var currentSort = $('#current-sort').val();
+	    var currentDirection = $('#current-direction').val();
+	    renderBatterTable(filteredBatterData, currentSort, currentDirection);
+	    renderPitcherTable(filteredPitcherData, currentSort, currentDirection);
+	}
+	
+	// 검색 초기화
+	function clearSearch() {
+	    $('#player-search').val('');
+	    searchPlayer();
+	}
+	
+	// 현재 적용된 모든 필터 재적용
+	function applyCurrentFilters() {
+	    // 검색 필터 적용
+	    var searchTerm = $('#player-search').val().toLowerCase().trim();
+	    if (searchTerm !== '') {
+	        filteredBatterData = currentBatterData.filter(function(player) {
+	            return player.playerName && player.playerName.toLowerCase().includes(searchTerm);
+	        });
+	        
+	        filteredPitcherData = currentPitcherData.filter(function(player) {
+	            return player.playerName && player.playerName.toLowerCase().includes(searchTerm);
+	        });
+	    }
+	    
+	    // 포지션 필터 적용
+	    applyPositionFilter();
+	}
+	
+	// 포지션 필터 적용
+	function applyPositionFilter() {
+	    var selectedPosition = $('#position-select').val();
+	    
+	    if (selectedPosition) {
+	        var tempFilteredBatterData = filteredBatterData.filter(function(player) {
+	            return player.position === selectedPosition;
+	        });
+	        filteredBatterData = tempFilteredBatterData;
+	    }
 	}
 </script>
 </th:block>

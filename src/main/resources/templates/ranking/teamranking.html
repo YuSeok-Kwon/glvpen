@@ -4,10 +4,12 @@
 	<div class="container-fluid py-5 px-3">
 	  
 	  <!-- 시즌 선택 -->
-	  <div class="d-flex align-items-center mb-4 mx-4">
-	     <a href="/ranking/teamranking-view" class="btn btn-outline-secondary me-2" style="background-color: #FACC15;">팀 랭킹</a>
-	  	<a href="/ranking/playerranking-view" class="btn btn-outline-primary" style="background-color: #FACC15;">개인 랭킹</a>
-	    <form class="d-flex align-items-center px-4">
+	  <div class="d-flex flex-column flex-md-row align-items-center mb-4 mx-2 mx-md-4 gap-2">
+	     <div class="d-flex gap-2">
+	       <a href="/ranking/teamranking-view" class="btn btn-outline-secondary" style="background-color: #FACC15;">팀 랭킹</a>
+	  	   <a href="/ranking/playerranking-view" class="btn btn-outline-primary" style="background-color: #FACC15;">개인 랭킹</a>
+	     </div>
+	    <form class="d-flex align-items-center">
 	      <select id="season-select" class="form-select" name="season" style="width:120px;" onchange="changeSeason(this.value)">
 	        <option value="2025">2025</option>
 	        <option value="2024">2024</option>
@@ -22,22 +24,22 @@
 	  </div>
 	
 	  <!-- 팀 순위, TOP 스탯 영역 -->
-	  <div class="row gy-4 mx-5">
-	    <div class="col-lg-4">
+	  <div class="row gy-4 mx-2 mx-md-5">
+	    <div class="col-lg-4 col-md-12">
 	      <div class="card border-point shadow-sm p-3">
 	        <h5 class="text-center fw-bold mb-3">KBO 리그 팀 순위</h5>
 	        <div id="team-ranking-list"></div>
 	      </div>
 	    </div>
-	    <div class="col-lg-8">
+	    <div class="col-lg-8 col-md-12">
 	      <div class="row gy-4">
-	        <div class="col-md-6">
+	        <div class="col-md-6 col-12">
 	          <div class="card border-point p-3">
 	            <h5 class="text-center fw-bold mb-3">팀 타자 스탯 Top</h5>
 	            <ul id="top-batter-list" class="list-group border"></ul>
 	          </div>
 	        </div>
-	        <div class="col-md-6">
+	        <div class="col-md-6 col-12">
 	          <div class="card border-point p-3">
 	            <h5 class="text-center fw-bold mb-3">팀 투수 스탯 Top</h5>
 	            <ul id="top-pitcher-list" class="list-group border"></ul>
@@ -133,7 +135,7 @@
 	
 	// 통계 테이블 렌더링
 	function renderStatTable(list, headers, categoryNameMap, currentSort, sortDirection) {
-	  var html = '<table id="ranking-table" class="table table-bordered table-striped text-center">';
+	  var html = '<div class="table-responsive"><table id="ranking-table" class="table table-bordered table-striped text-center" style="min-width: 1200px;">';
 	  html += '<thead><tr><th>순위</th><th>팀명</th>';
 	
 	  for (var j = 0; j < headers.length; j++) {
@@ -172,7 +174,7 @@
 	    html += '</tr>';
 	  }
 	
-	  html += '</tbody></table>';
+	  html += '</tbody></table></div>';
 	
 	  $('#ranking-table-wrapper').html(html);
 	  formatPlayerStats();
@@ -181,7 +183,7 @@
 	// 팀 순위 카드 렌더링
 function renderTeamRankingList(list) {
   var html = '<div class="table-responsive">'; // 스크롤용 wrapper 시작
-  html += '<table class="table text-center">';
+  html += '<table class="table text-center" style="min-width: 500px;">';
   html += '<thead><tr><th>순위</th><th>팀</th><th>경기</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>승차</th></tr></thead><tbody>';
 
   for (var i = 0; i < list.length; i++) {

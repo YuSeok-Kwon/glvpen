@@ -4,24 +4,27 @@
       layout:decorate="~{layouts/default}">
 
 <th:block layout:fragment="contents">
-  <div class="container-fluid bg-light-gray min-vh-100 py-5">
-    <div class="row justify-content-center px-3 gap-4">
+  <div class="container-fluid bg-light-gray min-vh-100 py-5" 
+       style="padding-left: 10px !important; padding-right: 10px !important;">
+    <div class="row justify-content-center gap-3"
+         style="margin-left: 0 !important; margin-right: 0 !important; padding-left: 0 !important; padding-right: 0 !important;">
 
       <!-- 팀 순위 카드 -->
-      <div class="col-12 col-md-6 col-lg-5 mb-4">
+      <div class="col-12 col-lg-6 col-xl-5 mb-4">
         <div class="card border-warning shadow-sm h-100">
-          <div class="card-body py-3 px-4">
+          <div class="card-body py-3" style="padding-left: 10px; padding-right: 10px;">
             <h5 class="card-title text-center fs-1 fw-bold my-4">KBO 리그 팀 순위</h5>
-            <table class="table table-hover table-striped text-center mt-2 mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>순위</th><th>팀</th><th>경기</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>승차</th>
-                </tr>
-              </thead>
+            <div class="table-responsive">
+              <table class="table table-hover table-striped text-center mt-2 mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>순위</th><th>팀</th><th>경기</th><th>승</th><th>패</th><th>무</th><th>승률</th><th>승차</th>
+                  </tr>
+                </thead>
               <tbody>
                 <tr th:each="team : ${rankingList}">
                   <td th:text="${team.ranking}">1</td>
-                  <td class="d-flex align-items-center gap-2">
+                  <td class="d-flex align-items-center gap-2 text-nowrap">
                      <img th:src="@{/static/emblems/{logo}.svg(logo=${team.logoName})}" alt="로고" class="table-team-logo">
 					  <span th:text="${team.teamName}">팀명</span>
                   </td>
@@ -34,16 +37,17 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 오른쪽 박스 묶음 (My Team + 주요 선수) -->
-      <div class="col-12 col-md-6 col-lg-5 d-flex flex-column gap-3">
+      <div class="col-12 col-lg-6 col-xl-5 d-flex flex-column gap-3">
 
         <!-- My Team -->
         <div class="card border-0 shadow-sm">
-          <div class="card-body px-4 py-4">
+          <div class="card-body py-4" style="padding-left: 10px; padding-right: 10px;">
             <h5 class="card-title text-center fw-bold fs-4 mb-4">My Team 오늘의 경기</h5>
 
             <!-- 경기가 있는 경우 -->
@@ -58,16 +62,16 @@
 			  <!-- 경기 대진 -->
 			  <div class="text-center mb-4">
 				
-				<div class="d-flex justify-content-center gap-5 align-items-start">
+				<div class="d-flex flex-column flex-md-row justify-content-center gap-3 gap-md-5 align-items-center align-items-md-start">
 				    
 				  <!-- My Team -->
 				  <div class="text-center">
 				     <img th:src="@{/static/emblems/{logo}.svg(logo=${myTeam.logoName})}" class="rounded team-logo-box mb-2">
-				     <div class="fs-2 fw-bold" th:text="${myTeam.name}">우리팀</div>
-				     <div class="fs-6 mb-2 text-muted" th:text="'상대전적 : ' + ${myRecord}">(5승 3패)</div>
-				     <div class="fs-4 d-flex justify-content-center align-items-center gap-2">
+				     <div class="fs-3 fs-md-2 fw-bold text-nowrap" th:text="${myTeam.name}">우리팀</div>
+				     <div class="fs-6 mb-2 text-muted text-nowrap" th:text="'상대전적 : ' + ${myRecord}">(5승 3패)</div>
+				     <div class="fs-5 fs-md-4 d-flex justify-content-center align-items-center gap-2">
 					    <span th:each="result, stat : ${myRecentResults}" th:switch="${result}"
-						      th:style="|font-size: ${1 + stat.index * 0.2}rem;|">
+						      th:style="|font-size: ${1 + stat.index * 0.1}rem;|">
 						  <span th:case="'승'" class="text-success fw-bold">승</span>
 						  <span th:case="'패'" class="text-danger fw-bold">패</span>
 						  <span th:case="'무'" class="text-secondary fw-bold">무</span>
@@ -76,16 +80,16 @@
 				  </div>
 				
 				  <!-- VS -->
-				  <div class="fs-2 mt-5 text-secondary d-flex align-items-center">VS</div>
+				  <div class="fs-3 fs-md-2 text-secondary d-flex align-items-center">VS</div>
 				
 				  <!-- 상대 Team -->
 				  <div class="text-center">
 				      <img th:src="@{/static/emblems/{logo}.svg(logo=${opponentTeam.logoName})}" class="rounded team-logo-box mb-2">
-				      <div class="fs-2 fw-bold" th:text="${opponentTeam.name}">상대팀</div>
-				      <div class="fs-6 mb-2 text-muted" th:text="'상대전적 : ' + ${opponentRecord}">(3승 5패)</div>
-				      <div class="fs-4 d-flex justify-content-center align-items-center gap-2">
+				      <div class="fs-3 fs-md-2 fw-bold text-nowrap" th:text="${opponentTeam.name}">상대팀</div>
+				      <div class="fs-6 mb-2 text-muted text-nowrap" th:text="'상대전적 : ' + ${opponentRecord}">(3승 5패)</div>
+				      <div class="fs-5 fs-md-4 d-flex justify-content-center align-items-center gap-2">
 				        <span th:each="result, stat : ${opponentRecentResults}" th:switch="${result}"
-						      th:style="|font-size: ${1 + (opponentRecentResults.size() - 1 - stat.index) * 0.2}rem;|">
+						      th:style="|font-size: ${1 + (opponentRecentResults.size() - 1 - stat.index) * 0.1}rem;|">
 						  <span th:case="'승'" class="text-success fw-bold">승</span>
 						  <span th:case="'패'" class="text-danger fw-bold">패</span>
 						  <span th:case="'무'" class="text-secondary fw-bold">무</span>
@@ -109,18 +113,18 @@
 
         <!-- 주요 선수 -->
 		<div class="card border-0 shadow-sm">
-		  <div class="card-body px-4 py-4">  
+		  <div class="card-body py-4" style="padding-left: 10px; padding-right: 10px;">  
 		    <h5 class="card-title fw-bold text-center fs-4 mb-4">주요 선수</h5>
 		    <div class="d-flex justify-content-between text-center gap-4">
 		
 		      <!-- 타자 -->
 		      <div class="flex-fill bg-light rounded py-3 px-2" th:if="${topHitter != null}">
-		        <div class="text-secondary fw-semibold mb-1">타자</div>
-		        <div class="fs-4 fw-bold mb-1" th:text="${topHitter.name}">타자이름</div>
-		        <div class="text-primary fw-bold mb-1">
+		        <div class="text-secondary fw-semibold mb-1 text-nowrap">타자</div>
+		        <div class="fs-4 fw-bold mb-1 text-nowrap-custom" th:text="${topHitter.name}">타자이름</div>
+		        <div class="text-primary fw-bold mb-1 text-nowrap">
 		          WAR : <span th:text="${topHitter.war}">0.0</span>
 		        </div>
-		        <div class="text-muted small">
+		        <div class="text-muted small text-nowrap-custom">
 		          <span th:text="${topHitter.avg}">.000</span> /
 		          <span th:text="${topHitter.hr}">0</span>HR /
 		          OPS <span th:text="${topHitter.ops}">.000</span>
@@ -129,12 +133,12 @@
 		
 		      <!-- 투수 -->
 		      <div class="flex-fill bg-light rounded py-3 px-2" th:if="${topPitcher != null}">
-		        <div class="text-secondary fw-semibold mb-1">투수</div>
-		        <div class="fs-4 fw-bold mb-1" th:text="${topPitcher.name}">투수이름</div>
-		        <div class="text-primary fw-bold mb-1">
+		        <div class="text-secondary fw-semibold mb-1 text-nowrap">투수</div>
+		        <div class="fs-4 fw-bold mb-1 text-nowrap-custom" th:text="${topPitcher.name}">투수이름</div>
+		        <div class="text-primary fw-bold mb-1 text-nowrap">
 		          WAR : <span th:text="${topPitcher.war}">0.0</span>
 		        </div>
-		        <div class="text-muted small">
+		        <div class="text-muted small text-nowrap-custom">
 		          WHIP <span th:text="${topPitcher.whip}">0.00</span> /
 		          <span th:text="${topPitcher.bestStatValue}">0</span>
 		          <span th:text="${topPitcher.bestStatLabel}">W</span> /
