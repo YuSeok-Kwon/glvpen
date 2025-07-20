@@ -33,7 +33,7 @@
 
           <!-- 경기 한 줄 -->
           <div th:each="game : ${entry.value}" class="mb-3 border-bottom pb-2" style="cursor: pointer;"
-               th:onclick="|location.href='@{/schedule/detail-view(matchId=${game.id})}'|">
+               th:onclick="|location.href='@{/schedule/detail-view(statizId=${game.statizId})}'|">
 
             <!-- 경기장 -->
             <div class="text-center text-muted fs-6 ps-3 mt-2" th:text="${game.stadium}">

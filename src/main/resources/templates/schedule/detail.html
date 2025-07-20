@@ -8,13 +8,14 @@
     
     <!-- 날짜 및 네비게이션 -->
 	<div class="text-center mb-4 d-flex justify-content-center align-items-center gap-3">
-	  <a th:if="${prevMatchId != null}"
-	     th:href="@{/schedule/detail-view(matchId=${prevMatchId})}"
+	  <a th:if="${prevStatizId != null}"
+	     th:href="@{/schedule/detail-view(statizId=${prevStatizId})}"
 	     class="btn btn-outline-secondary">
 	    &laquo;
 	  </a>
-      <div class="fs-3 fw-bold" th:text="${#temporals.format(game.matchDate.toLocalDateTime(), 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>	  <a th:if="${nextMatchId != null}"
-	     th:href="@{/schedule/detail-view(matchId=${nextMatchId})}"
+      <div class="fs-3 fw-bold" th:text="${#temporals.format(game.matchDate.toLocalDateTime(), 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
+	  <a th:if="${nextStatizId != null}"
+	     th:href="@{/schedule/detail-view(statizId=${nextStatizId})}"
 	     class="btn btn-outline-secondary">
 	    &raquo;
 	  </a>
@@ -24,7 +25,7 @@
 	<div class="d-flex flex-wrap justify-content-center align-items-center gap-3 mb-4">
 	  <div class="border rounded px-3 py-2 text-center bg-light"
 	       th:each="g : ${otherGames}"
-	       th:onclick="|location.href='@{/schedule/detail-view(matchId=${g.id})}'|"
+	       th:onclick="|location.href='@{/schedule/detail-view(statizId=${g.statizId})}'|"
 	       style="cursor: pointer; width: 220px;">
 	    
 	    <!-- 원정팀 -->
@@ -69,12 +70,12 @@
 
 	<!-- 경기 취소 / 예정 상태 메시지 -->
 	<div class="text-center mt-3 fs-5 fw-bold"
-         th:classappend="|${game.status == '취소' ? 'alert alert-danger' : ''} ${game.status == '예정' ? 'alert alert-primary' : ''}|">
+         th:class="|text-center mt-3 fs-5 fw-bold ${game.status == '취소' ? 'alert alert-danger' : ''} ${game.status == '예정' ? 'alert alert-primary' : ''}|">
 	
 	  <span th:if="${game.status == '예정'}">
 	    예정된 경기입니다.
 	    <span id="countdownText"
-	          th:data-datetime="|${#dates.format(game.matchDate, 'yyyy-MM-dd''T''HH:mm:ss')}|"></span>
+	          th:data-datetime="${#dates.format(game.matchDate, 'yyyy-MM-dd\'T\'HH:mm:ss')}"></span>
 	  </span>
 	
 	  <span th:if="${game.status == '취소'}">취소된 경기입니다.</span>
@@ -91,11 +92,11 @@
 				<!-- 원정팀 -->
 				<div class="d-flex align-items-center justify-content-end gap-2" style="flex: 1;">
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" class="table-team-logo mb-1 me-2">  
-				  <span th:if="${game.awayScore > game.homeScore}" th:text="${game.awayTeamName}" class="fs-4 fw-bold">기아 타이거즈</span>
-				  <span th:unless="${game.awayScore > game.homeScore}" th:text="${game.awayTeamName}" class="fs-4">기아 타이거즈</span>
+				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-4 fw-bold">기아 타이거즈</span>
+				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-4">기아 타이거즈</span>
 				
-				  <span th:if="${game.awayScore > game.homeScore}" th:text="${game.awayScore}" class="fs-3 fw-bold text-dark">3</span>
-				  <span th:unless="${game.awayScore > game.homeScore}" th:text="${game.awayScore}" class="fs-3 text-dark">3</span>
+				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-3 fw-bold text-dark">3</span>
+				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-3 text-dark">3</span>
 				</div>
 				
 				<!-- VS -->
@@ -105,11 +106,11 @@
 				
 				<!-- 홈팀 -->
 				<div class="d-flex align-items-center justify-content-start gap-2" style="flex: 1;">
-				  <span th:if="${game.homeScore > game.awayScore}" th:text="${game.homeScore}" class="fs-3 fw-bold text-dark">6</span>
-				  <span th:unless="${game.homeScore > game.awayScore}" th:text="${game.homeScore}" class="fs-3 text-dark">6</span>
+				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-3 fw-bold text-dark">6</span>
+				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-3 text-dark">6</span>
 				
-				  <span th:if="${game.homeScore > game.awayScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-4 fw-bold">롯데 자이언츠 (홈)</span>
-				  <span th:unless="${game.homeScore > game.awayScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-4">롯데 자이언츠 (홈)</span>
+				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-4 fw-bold">롯데 자이언츠 (홈)</span>
+				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-4">롯데 자이언츠 (홈)</span>
 				
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" class="table-team-logo mb-1 me-2">
 				</div>
@@ -135,18 +136,18 @@
 					 th:style="'background-color:' + ${game.awayTeamColor}"
 					 th:text="${game.awayTeamName}">기아</th>
 			   <td th:each="score : ${game.awayInningScores}" th:text="${score}" style="width: 60px;">0</td>
-			   <td style="width: 70px;" th:text="${game.awayScore}">3</td>
-			   <td style="width: 70px;" th:text="${game.awayHits}">7</td>
-			   <td style="width: 70px;" th:text="${game.awayErrors}">0</td>
+			   <td style="width: 70px;" th:text="${game.awayTeamScore}">3</td>
+			   <td style="width: 70px;" th:text="${game.awayH}">7</td>
+			   <td style="width: 70px;" th:text="${game.awayE}">0</td>
 			 </tr>
 			 <tr style="background-color: #f3f6f9;">
 			  <th class="fs-5 text-white"
     		      th:style="'background-color:' + ${game.homeTeamColor}"
     			  th:text="${game.homeTeamName + ' (홈)'}">롯데</th>
 			   <td th:each="score : ${game.homeInningScores}" th:text="${score}" style="width: 60px;">0</td>
-			   <td style="width: 70px;" th:text="${game.homeScore}">6</td>
-			   <td style="width: 70px;" th:text="${game.homeHits}">9</td>
-			   <td style="width: 70px;" th:text="${game.homeErrors}">1</td>
+			   <td style="width: 70px;" th:text="${game.homeTeamScore}">6</td>
+			   <td style="width: 70px;" th:text="${game.homeH}">9</td>
+			   <td style="width: 70px;" th:text="${game.homeE}">1</td>
 			 </tr>
 		  </tbody>
 		</table>

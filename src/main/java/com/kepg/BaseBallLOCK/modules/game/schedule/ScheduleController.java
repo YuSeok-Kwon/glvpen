@@ -64,8 +64,8 @@ public class ScheduleController {
     }
 
     @GetMapping("/detail-view")
-    public String gameDetail(@RequestParam int matchId, Model model) {
-        GameDetailCardView detail = scheduleService.getGameDetail(matchId);
+    public String gameDetail(@RequestParam int statizId, Model model) {
+        GameDetailCardView detail = scheduleService.getGameDetailByStatizId(statizId);
         if (detail == null) {
             return "redirect:/schedule/result-view";
         }
@@ -73,11 +73,11 @@ public class ScheduleController {
         LocalDate date = detail.getMatchDate().toLocalDateTime().toLocalDate();
         List<ScheduleCardView> allGames = scheduleService.getSchedulesByDate(date);
         
-        Integer prevMatchId = scheduleService.getPrevMatchId(matchId);
-        Integer nextMatchId = scheduleService.getNextMatchId(matchId);
+        Integer prevStatizId = scheduleService.getPrevStatizId(statizId);
+        Integer nextStatizId = scheduleService.getNextStatizId(statizId);
         
-        model.addAttribute("prevMatchId", prevMatchId);
-        model.addAttribute("nextMatchId", nextMatchId);
+        model.addAttribute("prevStatizId", prevStatizId);
+        model.addAttribute("nextStatizId", nextStatizId);
         model.addAttribute("game", detail);
         model.addAttribute("otherGames", allGames);
         return "schedule/detail";
@@ -87,8 +87,11 @@ public class ScheduleController {
     public String redirectToMatchDetail(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         List<ScheduleCardView> schedules = scheduleService.getSchedulesByDate(date);
         if (!schedules.isEmpty()) {
-            int firstMatchId = schedules.get(0).getId();
-            return "redirect:/schedule/detail-view?matchId=" + firstMatchId;
+            // statizId를 사용하여 리다이렉트
+            Integer firstStatizId = schedules.get(0).getStatizId();
+            if (firstStatizId != null) {
+                return "redirect:/schedule/detail-view?statizId=" + firstStatizId;
+            }
         }
         return "redirect:/schedule/result-view?year=" + date.getYear() + "&month=" + date.getMonthValue();
     }

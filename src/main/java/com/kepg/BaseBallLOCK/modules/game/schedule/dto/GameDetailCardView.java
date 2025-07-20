@@ -20,23 +20,31 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class GameDetailCardView {
+    private Integer id;
+    private Integer statizId;
     private Timestamp matchDate;
     private String stadium;
     private String status;
     
+    private Integer homeTeamId;
+    private Integer awayTeamId;
     private String homeTeamName;
     private String homeTeamLogo;
-    private Integer homeScore;
+    private Integer homeTeamScore;
     private List<Integer> homeInningScores;
-    private Integer homeHits;
-    private Integer homeErrors;
+    private Integer homeR;
+    private Integer homeH;
+    private Integer homeE;
+    private Integer homeB;
 
     private String awayTeamName;
     private String awayTeamLogo;
-    private Integer awayScore;
+    private Integer awayTeamScore;
     private List<Integer> awayInningScores;
-    private Integer awayHits;
-    private Integer awayErrors;
+    private Integer awayR;
+    private Integer awayH;
+    private Integer awayE;
+    private Integer awayB;
 
     private List<BatterLineupDTO> homeBatterLineup;
     private List<BatterLineupDTO> awayBatterLineup;

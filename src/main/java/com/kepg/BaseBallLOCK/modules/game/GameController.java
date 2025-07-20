@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerDTO;
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
+import com.kepg.BaseBallLOCK.modules.team.service.TeamService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.Map;
 public class GameController {
 
 	private final ScheduleService scheduleService;
+	private final TeamService teamService;
 
 	@GetMapping("/home-view")
 	public String home() {
@@ -57,8 +60,12 @@ public class GameController {
 		
 		List<Schedule> yesterdayGames = scheduleService.getSchedulesByDateRange(startOfDay, endOfDay);
 		
+		// 날짜 포맷팅
+		String formattedDate = yesterday.format(DateTimeFormatter.ofPattern("yy년 MM월 dd일"));
+		
 		model.addAttribute("yesterdayGames", yesterdayGames);
 		model.addAttribute("gameDate", yesterday);
+		model.addAttribute("formattedGameDate", formattedDate);
 		
 		return "game/real-match";
 	}

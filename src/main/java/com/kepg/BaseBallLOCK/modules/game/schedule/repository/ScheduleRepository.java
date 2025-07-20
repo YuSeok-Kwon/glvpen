@@ -136,4 +136,7 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     
     @Query(value = "SELECT id FROM schedule WHERE statizId = :statizId", nativeQuery = true)
     Integer findIdByStatizId(@Param("statizId") int statizId);
+    
+    @Query(value = "SELECT * FROM schedule WHERE statizId = :statizId", nativeQuery = true)
+    Optional<Schedule> findByStatizId(@Param("statizId") int statizId);
 }

@@ -69,6 +69,7 @@ public class StatizScheduleCrawler {
         try {
             String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             String url = "https://statiz.sporki.com/schedule/?m=daily&date=" + dateStr;
+            System.out.println("스케줄 크롤링 URL: " + url);
 
             ChromeOptions options = new ChromeOptions();
             options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
@@ -78,6 +79,18 @@ public class StatizScheduleCrawler {
 
             Document doc = Jsoup.parse(driver.getPageSource());
             Elements games = doc.select(".box_type_boared .item_box");
+            
+            System.out.println("스케줄 경기 박스 개수: " + games.size());
+            
+            if (games.isEmpty()) {
+                System.out.println("경기 박스가 없습니다. 다른 셀렉터를 시도합니다.");
+                Elements allBoxes = doc.select(".item_box");
+                System.out.println("전체 item_box 개수: " + allBoxes.size());
+                
+                if (!allBoxes.isEmpty()) {
+                    games = allBoxes; // fallback
+                }
+            }
 
             for (Element game : games) {
                 try {
@@ -91,8 +104,9 @@ public class StatizScheduleCrawler {
                 	String dateTimePart = boxHead.replaceAll(".*?(\\d{2}-\\d{2})\\s+(\\d{2}:\\d{2}).*", "$1 $2"); // "05-07 18:30"
                 	String[] dateTimeTokens = dateTimePart.split(" "); // ["05-07", "18:30"]
 
-                	int year = 2025;
-                	String fullDateStr = year + "-" + dateTimeTokens[0]; // "2025-05-07"
+                	// 크롤링 중인 날짜의 연도를 사용
+                	int year = date.getYear();
+                	String fullDateStr = year + "-" + dateTimeTokens[0]; // "2024-05-07"
                 	String timeStr = dateTimeTokens[1]; // "18:30"
 
                 	LocalDate matchDate = LocalDate.parse(fullDateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
