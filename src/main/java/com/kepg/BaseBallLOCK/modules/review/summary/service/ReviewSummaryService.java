@@ -138,9 +138,29 @@ public class ReviewSummaryService {
 	}
 	
 	// 특정 주차(weekStartDate)에 대한 요약이 이미 존재하는지 여부 확인
+	// 리뷰가 2개 이상 있고 요약이 생성되었을 때만 true 반환
 	public boolean summaryExistsForWeek(int userId, LocalDate weekStartDate) {
+	    // 1. 먼저 해당 주차에 리뷰가 2개 이상 있는지 확인
+	    LocalDate weekEnd = weekStartDate.plusDays(6);
+	    LocalDateTime startDateTime = weekStartDate.atStartOfDay();
+	    LocalDateTime endDateTime = weekEnd.atTime(LocalTime.MAX);
+	    
+	    List<Review> weeklyReviews = reviewRepository.findByUserIdAndScheduleMatchDateBetween(
+	        userId, startDateTime, endDateTime
+	    );
+	    
+	    System.out.println("summaryExistsForWeek - userId: " + userId + ", weekStart: " + weekStartDate + ", 리뷰 개수: " + (weeklyReviews != null ? weeklyReviews.size() : 0));
+	    
+	    if (weeklyReviews == null || weeklyReviews.size() < 2) {
+	        System.out.println("리뷰가 2개 미만이므로 요약 불가");
+	        return false; // 리뷰가 2개 미만이면 요약 불가
+	    }
+	    
+	    // 2. 리뷰가 2개 이상이면 요약이 생성되었는지 확인
 	    Date sqlDate = Date.valueOf(weekStartDate);
-	    return reviewSummaryRepository.existsByUserIdAndWeekStartDate(userId, sqlDate);
+	    boolean exists = reviewSummaryRepository.existsByUserIdAndWeekStartDate(userId, sqlDate);
+	    System.out.println("요약 존재 여부: " + exists);
+	    return exists;
 	}
 	
 	// "이름 (횟수회)" 형식으로 BEST/WORST 선수 통계를 문자열로 정리

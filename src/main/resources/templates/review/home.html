@@ -111,11 +111,13 @@
 	      <th:block th:each="day : ${week}">
 	        <td class="align-top position-relative text-center bg-white custom-cell"
                 th:style="'border: 1px solid ' + ${teamColor}">
-	          <div th:if="${day != null}">
-	            <!-- 날짜 -->
-	            <div class="fw-bold text-center" th:text="${day.dayOfMonth}"></div>
-	
-	            <!-- 경기 정보들 -->
+	          <div>
+	            <!-- 날짜 (현재 달이 아닌 경우 흐리게 표시) -->
+	            <div class="fw-bold text-center" 
+	                 th:class="${day.date.monthValue == month ? 'fw-bold text-center' : 'fw-bold text-center text-muted'}" 
+	                 th:text="${day.dayOfMonth}"></div>
+
+	            <!-- 경기 정보들 (모든 날짜에 표시) -->
 	            <div th:each="game : ${day.games}" class="small mt-1">
 	              <div th:if="${game != null}">
 	                <!-- 스코어 있는 경우 -->
@@ -237,21 +239,20 @@
 	      </th:block>
 	
 	      <!-- 요약 버튼 칸 -->
-		<th:block th:with="currentMonthDate=${#lists.isEmpty(#lists.toList(week).?[# != null and #.date.monthValue == month]) ? null : #lists.toList(week).?[# != null and #.date.monthValue == month][0]}">
+		<th:block>
 		  <td class="align-middle text-center"
 		      th:style="'width: 140px; background-color: white; border: 1px solid ' + ${teamColor}">
 		  
-		    <div th:if="${currentMonthDate != null and summaryExistMap != null and summaryExistMap[currentMonthDate.date] != null}">
-		      
-		      <!-- 요약 있음 -->
-		      <a th:if="${summaryExistMap[currentMonthDate.date] == true}"
-		         th:href="@{/review/summary-view(startDate=${currentMonthDate.date})}"
+		    <div th:with="mondayDate=${week[0].date}, mondayLocalDate=${week[0].date}">
+		      <!-- 요약이 있는 경우 -->
+		      <a th:if="${summaryExistMap != null and summaryExistMap.get(mondayLocalDate) == true}"
+		         th:href="@{/review/summary-view(startDate=${mondayDate})}"
 		         class="btn btn-sm btn-outline-secondary">
 		        요약 보기
 		      </a>
-		
-		      <!-- 요약 없음 + 오늘 이전만 노출 -->
-		      <span th:if="${summaryExistMap[currentMonthDate.date] != true and currentMonthDate.date.isBefore(today)}"
+
+		      <!-- 요약이 없고 오늘 이전인 경우 -->
+		      <span th:if="${mondayDate.isBefore(today) and (summaryExistMap == null or summaryExistMap.get(mondayLocalDate) != true)}"
 		            class="text-muted small">
 		        리뷰를 2개 이상<br> 남겨주세요
 		      </span>

@@ -52,9 +52,53 @@ public class ReviewService {
 
         List<CalendarDayDTO> week = new ArrayList<>();
 
-        // 앞쪽 빈칸 채우기
-        for (int i = 0; i < dayIndex; i++) {
-            week.add(null);
+        // 이전 달의 마지막 날들로 앞쪽 빈칸 채우기
+        YearMonth prevMonth = yearMonth.minusMonths(1);
+        int prevMonthDays = prevMonth.lengthOfMonth();
+        
+        for (int i = dayIndex - 1; i >= 0; i--) {
+            int prevDay = prevMonthDays - i;
+            LocalDate prevDate = LocalDate.of(prevMonth.getYear(), prevMonth.getMonthValue(), prevDay);
+            
+            CalendarDayDTO dayDto = new CalendarDayDTO();
+            dayDto.setDayOfMonth(prevDay);
+            dayDto.setDate(prevDate);
+            dayDto.setScheduleId(null);
+
+            // 이전 달 날짜에도 리뷰가 있는지 확인
+            Optional<Review> reviewOpt = reviewRepository.findByUserIdAndMatchDate(userId, prevDate);
+            if (reviewOpt.isPresent()) {
+                dayDto.setHasReview(true);
+                dayDto.setReviewId(reviewOpt.get().getId());
+            } else {
+                dayDto.setHasReview(false);
+            }
+
+            // 이전 달 날짜에도 경기 정보 세팅
+            List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(prevDate, myTeamId);
+            List<GameInfoDTO> games = new ArrayList<>();
+
+            for (Schedule schedule : schedules) {
+                int homeTeamId = schedule.getHomeTeamId();
+                int awayTeamId = schedule.getAwayTeamId();
+                
+                if (!schedules.isEmpty()) {
+                    dayDto.setScheduleId(schedules.get(0).getId());
+                }
+                
+                if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
+                    GameInfoDTO game = new GameInfoDTO();
+                    game.setScheduleId(schedule.getId());
+                    game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
+                    game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
+                    game.setHomeScore(schedule.getHomeTeamScore());
+                    game.setAwayScore(schedule.getAwayTeamScore());
+                    games.add(game);
+                }
+            }
+            
+            dayDto.setGames(games);
+            week.add(dayDto);
         }
 
         // 실제 날짜 채우기
@@ -109,10 +153,54 @@ public class ReviewService {
             }
         }
 
-        // 마지막 주 빈칸 채우기
+        // 다음 달의 첫 날들로 마지막 주 빈칸 채우기
         if (!week.isEmpty()) {
+            YearMonth nextMonth = yearMonth.plusMonths(1);
+            int nextDay = 1;
+            
             while (week.size() < 7) {
-                week.add(null);
+                LocalDate nextDate = LocalDate.of(nextMonth.getYear(), nextMonth.getMonthValue(), nextDay);
+                
+                CalendarDayDTO dayDto = new CalendarDayDTO();
+                dayDto.setDayOfMonth(nextDay);
+                dayDto.setDate(nextDate);
+                dayDto.setScheduleId(null);
+
+                // 다음 달 날짜에도 리뷰가 있는지 확인
+                Optional<Review> reviewOpt = reviewRepository.findByUserIdAndMatchDate(userId, nextDate);
+                if (reviewOpt.isPresent()) {
+                    dayDto.setHasReview(true);
+                    dayDto.setReviewId(reviewOpt.get().getId());
+                } else {
+                    dayDto.setHasReview(false);
+                }
+
+                // 다음 달 날짜에도 경기 정보 세팅
+                List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(nextDate, myTeamId);
+                List<GameInfoDTO> games = new ArrayList<>();
+
+                for (Schedule schedule : schedules) {
+                    int homeTeamId = schedule.getHomeTeamId();
+                    int awayTeamId = schedule.getAwayTeamId();
+                    
+                    if (!schedules.isEmpty()) {
+                        dayDto.setScheduleId(schedules.get(0).getId());
+                    }
+                    
+                    if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
+                        GameInfoDTO game = new GameInfoDTO();
+                        game.setScheduleId(schedule.getId());
+                        game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
+                        game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
+                        game.setHomeScore(schedule.getHomeTeamScore());
+                        game.setAwayScore(schedule.getAwayTeamScore());
+                        games.add(game);
+                    }
+                }
+                
+                dayDto.setGames(games);
+                week.add(dayDto);
+                nextDay++;
             }
             calendar.add(week);
         }

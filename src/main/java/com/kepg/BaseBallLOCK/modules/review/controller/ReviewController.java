@@ -73,7 +73,21 @@ public class ReviewController {
         for (List<CalendarDayDTO> week : calendar) {
             if (week.get(0) != null) {
                 LocalDate date = week.get(0).getDate();
+                
+                System.out.println("달력 주차 처리 - 월요일 날짜: " + date);
+                
+                // 먼저 요약이 존재하는지 확인
                 boolean exists = reviewSummaryService.summaryExistsForWeek(userId, date);
+                
+                // 요약이 없는 경우 자동 생성 시도
+                if (!exists) {
+                    System.out.println("요약이 없어서 생성 시도");
+                    ReviewSummary weeklySummary = reviewSummaryService.generateWeeklyReviewSummary(userId, date);
+                    exists = (weeklySummary != null); // 생성에 성공했으면 true
+                    System.out.println("요약 생성 결과: " + (weeklySummary != null ? "성공" : "실패"));
+                }
+                
+                System.out.println("최종 summaryExistMap[" + date + "] = " + exists);
                 summaryExistMap.put(date, exists);
             }
         }
