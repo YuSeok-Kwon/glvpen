@@ -40,6 +40,11 @@ public class ReviewSummaryService {
 	    return list.isEmpty() ? null : list.get(0);
     }
 	
+	// 요약 삭제
+	public void deleteSummary(int summaryId) {
+		reviewSummaryRepository.deleteById(summaryId);
+	}
+	
 	// 유저 특정 주차(weekStart~weekEnd) 동안 작성된 리뷰들을 기반으로 주간 요약 생성 또는 수정
 	public ReviewSummary generateWeeklyReviewSummary(Integer userId, LocalDate weekStart) {
 	    LocalDate weekEnd = weekStart.plusDays(6);

@@ -11,15 +11,19 @@ import com.kepg.BaseBallLOCK.common.ai.GeminiClient;
 import com.kepg.BaseBallLOCK.modules.review.domain.Review;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AiSummaryService {
 
     private final GeminiClient geminiClient;
 
     // 날짜별 감정 흐름을 GPT를 통해 요약
     public String summarizeFeelings(Map<LocalDate, List<String>> dailyFeelings) {
+        log.info("감정 요약 시작 - 날짜 수: {}", dailyFeelings.size());
+        
         StringBuilder prompt = new StringBuilder();
         prompt.append("다음은 한 야구팬이 일주일 동안 남긴 감정 기록입니다.\n")
         		.append("각 날짜별 감정 흐름을 분석해서 아래 형식처럼 위트 있게 요약해주세요:\n")
@@ -37,11 +41,16 @@ public class AiSummaryService {
             prompt.append("\n");
         });
 
-        return geminiClient.callGemini(prompt.toString());
+        log.info("감정 요약 프롬프트 길이: {}", prompt.length());
+        String result = geminiClient.callGemini(prompt.toString());
+        log.info("감정 요약 결과: {}", result);
+        
+        return result;
     }
 
     // 주간 리뷰 요약 생성 (summary 필드를 기반으로 요약문 생성)
     public String generateFullSummary(List<Review> reviews) {
+        log.info("전체 요약 시작 - 리뷰 수: {}", reviews.size());
         StringBuilder prompt = new StringBuilder();
         prompt.append("다음은 사용자가 일주일 동안 남긴 야구 리뷰 요약입니다.\n")
         .append("전체적인 감정 흐름과 전반적인 분위기를 분석해 주세요.\n")
@@ -65,6 +74,10 @@ public class AiSummaryService {
             }
         }
 
-        return geminiClient.callGemini(prompt.toString());
+        log.info("전체 요약 프롬프트 길이: {}", prompt.length());
+        String result = geminiClient.callGemini(prompt.toString());
+        log.info("전체 요약 결과: {}", result);
+        
+        return result;
     }
 }
