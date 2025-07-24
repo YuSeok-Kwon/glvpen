@@ -180,15 +180,15 @@ public class ReviewController {
         List<List<CalendarDayDTO>> calendar = reviewService.generateCalendar(year, month, userId, teamId);
 
         // 주간 요약 조회 시도
-        System.out.println("기존 요약 조회 시도...");
+        System.out.println("기존 요약 조회 시도");
         ReviewSummary summary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
 
         if (summary == null) {
-            System.out.println("기존 요약이 없어서 새로 생성 시도...");
+            System.out.println("기존 요약이 없어서 새로 생성 시도");
             reviewSummaryService.generateWeeklyReviewSummary(userId, weekStart);
             summary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
         } else if (summary.getFeelingSummary() != null && summary.getFeelingSummary().contains("Gemini 응답을 불러오지 못했습니다")) {
-            System.out.println("기존 요약이 실패한 상태이므로 삭제하고 새로 생성...");
+            System.out.println("기존 요약이 실패한 상태이므로 삭제하고 새로 생성");
             reviewSummaryService.deleteSummary(summary.getId());
             reviewSummaryService.generateWeeklyReviewSummary(userId, weekStart);
             summary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);

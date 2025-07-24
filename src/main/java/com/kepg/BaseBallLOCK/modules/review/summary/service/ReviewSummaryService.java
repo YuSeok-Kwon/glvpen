@@ -34,7 +34,7 @@ public class ReviewSummaryService {
 	
 	// 특정 주차의 ReviewSummary를 userId와 weekStartDate 기준으로 조회
 	public ReviewSummary getWeeklySummaryByStartDate(int userId, LocalDate weekStartDate) {
-        // LocalDate → java.sql.Date 변환
+        // LocalDate → Date 변환
 		Date sqlStartDate = Date.valueOf(weekStartDate);
 	    List<ReviewSummary> list = reviewSummaryRepository.findByUserIdAndWeekStartDate(userId, sqlStartDate);
 	    return list.isEmpty() ? null : list.get(0);

@@ -98,7 +98,7 @@ public class ReviewRestController {
                 // 기존 요약 조회
                 ReviewSummary existingSummary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
                 if (existingSummary != null) {
-                    System.out.println("리뷰 변경으로 인한 기존 요약 삭제: summaryId=" + existingSummary.getId() + ", weekStart=" + weekStart);
+                    System.out.println("리뷰 변경 -> 기존 요약 삭제: summaryId=" + existingSummary.getId() + ", weekStart=" + weekStart);
                     reviewSummaryService.deleteSummary(existingSummary.getId());
                 }
             }
