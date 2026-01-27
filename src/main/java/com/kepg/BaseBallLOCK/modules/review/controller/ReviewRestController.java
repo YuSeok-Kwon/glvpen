@@ -67,8 +67,9 @@ public class ReviewRestController {
     
     @GetMapping("/players")
     public ResponseEntity<Map<String, Object>> getPlayersBySchedule(@RequestParam int scheduleId, HttpSession session) {
-    	
-        int myTeamId = (Integer) session.getAttribute("favoriteTeamId");
+
+        User user = (User) session.getAttribute("loginUser");
+        int myTeamId = user != null ? user.getFavoriteTeamId() : 0;
 
         Map<String, Object> response = new HashMap<>();
         try {

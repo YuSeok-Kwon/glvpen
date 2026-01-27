@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.UserCardViewDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.UserCardService;
+import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +27,11 @@ public class UserCardController {
 	
     @GetMapping("/cards-view")
     public String viewMyCards(Model model, HttpSession session) {
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
         List<UserCardViewDTO> cards = userCardService.getUserCardViewList(userId);
         model.addAttribute("cards", cards);
-        
+
         return "user/my-cards"; // 연결 경로
     }
     
@@ -38,7 +40,8 @@ public class UserCardController {
     public ResponseEntity<Void> deleteCard(@RequestParam Integer playerId,
                                            @RequestParam Integer season,
                                            HttpSession session) {
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
         userCardService.deleteCard(userId, playerId, season);
         return ResponseEntity.ok().build();
     }

@@ -23,6 +23,7 @@ import com.kepg.BaseBallLOCK.modules.review.domain.ReviewSummary;
 import com.kepg.BaseBallLOCK.modules.review.dto.CalendarDayDTO;
 import com.kepg.BaseBallLOCK.modules.review.service.ReviewService;
 import com.kepg.BaseBallLOCK.modules.review.summary.service.ReviewSummaryService;
+import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -41,9 +42,10 @@ public class ReviewController {
                                   @RequestParam(value = "month", required = false) Integer month,
                                   HttpSession session,
                                   Model model) {
-    	
-        int userId = (Integer) session.getAttribute("userId");
-        Integer myTeamId = (Integer) session.getAttribute("favoriteTeamId");
+
+        User user = (User) session.getAttribute("loginUser");
+        int userId = user != null ? user.getId() : 0;
+        Integer myTeamId = user != null ? user.getFavoriteTeamId() : null;
         if (myTeamId == null) {
             myTeamId = 999;
         }
@@ -112,11 +114,13 @@ public class ReviewController {
             @RequestParam(value = "reviewId", required = false) Integer reviewId,
     		HttpSession session,
     		Model model) {
-        Integer myTeamId = (Integer) session.getAttribute("favoriteTeamId");
+
+        User user = (User) session.getAttribute("loginUser");
+        Integer myTeamId = user != null ? user.getFavoriteTeamId() : null;
         if (myTeamId == null) {
             myTeamId = 999;
         }
-        int userId = (Integer) session.getAttribute("userId");
+        int userId = user != null ? user.getId() : 0;
         
         if (scheduleId == null) {
             return "redirect:/review/calendar-view";
@@ -167,8 +171,9 @@ public class ReviewController {
         LocalDate weekStart = startDate.with(DayOfWeek.MONDAY);
         System.out.println("계산된 weekStart: " + weekStart);
 
-        int userId = (Integer) session.getAttribute("userId");
-        Integer teamId = (Integer) session.getAttribute("favoriteTeamId");
+        User user = (User) session.getAttribute("loginUser");
+        int userId = user != null ? user.getId() : 0;
+        Integer teamId = user != null ? user.getFavoriteTeamId() : null;
         if (teamId == null) teamId = 999;
         
         System.out.println("userId: " + userId + ", teamId: " + teamId);

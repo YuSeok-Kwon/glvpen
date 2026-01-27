@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerCardDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.PlayerCardSaveRequest;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.PlayerCardService;
+import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,8 @@ public class PlayerCardRestController {
 	
 	@PostMapping("/save")
 	public ResponseEntity<Void> saveCard(@RequestBody PlayerCardSaveRequest dto, HttpSession session) {
-	    Integer userId = (Integer) session.getAttribute("userId"); 
+	    User user = (User) session.getAttribute("loginUser");
+	    Integer userId = user != null ? user.getId() : null;
 
 	    if (userId == null) {
 	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

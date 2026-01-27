@@ -16,6 +16,7 @@ import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.SimulationG
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.SimulationResultDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.SimulationService;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.UserLineupService;
+import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,8 @@ public class SimulationGameController {
 	
 	@GetMapping("/play-view")
 	public String showResult(@RequestParam(defaultValue = "normal") String difficulty, Model model, HttpSession session) {
-	    int userId = (Integer) session.getAttribute("userId");
+	    User user = (User) session.getAttribute("loginUser");
+	    int userId = user != null ? user.getId() : 0;
 
 	    List<PlayerCardOverallDTO> userLineup = userLineupService.getSavedLineup(userId);
 
