@@ -1,9 +1,6 @@
 package com.kepg.BaseBallLOCK.modules.user.controller;
 
-import java.time.LocalDate;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.stereotype.Controller;
@@ -14,16 +11,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
-import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
-import com.kepg.BaseBallLOCK.modules.game.service.GameService;
-import com.kepg.BaseBallLOCK.modules.player.dto.TopPlayerCardView;
-import com.kepg.BaseBallLOCK.modules.player.stats.service.BatterStatsService;
-import com.kepg.BaseBallLOCK.modules.player.stats.service.PitcherStatsService;
-import com.kepg.BaseBallLOCK.modules.team.domain.Team;
-import com.kepg.BaseBallLOCK.modules.team.service.TeamService;
-import com.kepg.BaseBallLOCK.modules.team.teamRanking.dto.TeamRankingCardView;
 import com.kepg.BaseBallLOCK.modules.user.domain.User;
+import com.kepg.BaseBallLOCK.modules.user.dto.UserHomeDTO;
+import com.kepg.BaseBallLOCK.modules.user.service.UserHomeService;
 import com.kepg.BaseBallLOCK.modules.user.service.UserService;
 
 import jakarta.servlet.http.HttpSession;
@@ -34,12 +24,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final TeamService teamService;
-    private final ScheduleService scheduleService;
-    private final GameService gameService;
-    private final BatterStatsService batterStatsService;
-    private final PitcherStatsService pitcherStatsService;
     private final UserService userService;
+    private final UserHomeService userHomeService;
 
 
     @GetMapping("/login-view")
@@ -105,45 +91,20 @@ public class UserController {
             return "redirect:/user/login-view";
         }
 
-        int myTeamId = user.getFavoriteTeamId();
-        int season = LocalDate.now().getYear();
-        
-        // 내 팀 정보
-        Team myTeam = teamService.getTeamById(myTeamId);
-        model.addAttribute("myTeam", myTeam);
+        // Service에서 홈 화면 데이터 조회
+        UserHomeDTO homeData = userHomeService.getUserHomeData(user);
 
-        // 오늘 경기
-        Schedule schedule = scheduleService.getTodayScheduleByTeam(myTeamId);
-        model.addAttribute("schedule", schedule);
-
-        if (schedule != null) {
-            int opponentId = schedule.getHomeTeamId() == myTeamId ? schedule.getAwayTeamId() : schedule.getHomeTeamId();
-
-            Team opponentTeam = teamService.getTeamById(opponentId);
-            model.addAttribute("opponentTeam", opponentTeam);
-
-            // 최근 전적
-            List<String> myRecentResults = scheduleService.getRecentResults(myTeamId);
-            List<String> opponentRecentResults = scheduleService.getRecentResults(opponentId);
-            model.addAttribute("myRecentResults", myRecentResults);
-            Collections.reverse(opponentRecentResults);
-            model.addAttribute("opponentRecentResults", opponentRecentResults);
-
-            // 상대 전적
-            String myRecord = scheduleService.getHeadToHeadRecord(myTeamId, opponentId);
-            String opponentRecord = scheduleService.getHeadToHeadRecord(opponentId, myTeamId);
-            model.addAttribute("myRecord", myRecord);
-            model.addAttribute("opponentRecord", opponentRecord);
-        }
-
-        // 주요 선수
-        TopPlayerCardView hitter = batterStatsService.getTopHitter(myTeamId, season);
-        TopPlayerCardView pitcher = pitcherStatsService.getTopPitcher(myTeamId, season);
-        model.addAttribute("topHitter", hitter);
-        model.addAttribute("topPitcher", pitcher);
-
-        List<TeamRankingCardView> rankingList = gameService.getTeamRankingCardViews(season);
-        model.addAttribute("rankingList", rankingList);
+        // Model에 데이터 추가
+        model.addAttribute("myTeam", homeData.getMyTeam());
+        model.addAttribute("schedule", homeData.getSchedule());
+        model.addAttribute("opponentTeam", homeData.getOpponentTeam());
+        model.addAttribute("myRecentResults", homeData.getMyRecentResults());
+        model.addAttribute("opponentRecentResults", homeData.getOpponentRecentResults());
+        model.addAttribute("myRecord", homeData.getMyRecord());
+        model.addAttribute("opponentRecord", homeData.getOpponentRecord());
+        model.addAttribute("topHitter", homeData.getTopHitter());
+        model.addAttribute("topPitcher", homeData.getTopPitcher());
+        model.addAttribute("rankingList", homeData.getRankingList());
 
         return "user/home";
     }
