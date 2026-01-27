@@ -243,12 +243,18 @@ public class SimulationService {
     
     // 라인업에서 투수 정보 가져오기
     private PlayerCardOverallDTO findPitcherFromLineup(List<PlayerCardOverallDTO> lineup) {
+        if (lineup == null || lineup.isEmpty()) {
+            throw new IllegalArgumentException("라인업이 비어있습니다.");
+        }
+
         for (PlayerCardOverallDTO card : lineup) {
             if ("P".equals(card.getPosition())) {
                 return card;
             }
         }
-        return null; // or throw new IllegalStateException("투수가 없습니다");
+
+        // 투수가 없는 경우 예외 발생
+        throw new IllegalStateException("라인업에 투수(P)가 없습니다. 올바른 라인업을 구성해주세요.");
     }
     
 

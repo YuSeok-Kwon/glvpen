@@ -13,6 +13,6 @@ public class UserLineupDTO {
     private Integer playerId;
     private String playerName;
     private String position;
-    private String orderNum;
+    private Integer orderNum;
     private Integer season;
 }

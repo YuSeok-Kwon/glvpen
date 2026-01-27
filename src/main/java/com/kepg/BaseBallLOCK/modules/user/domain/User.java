@@ -19,7 +19,6 @@ import lombok.Setter;
 @Entity
 @Table(name = "user")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder(toBuilder = true)
@@ -27,13 +26,13 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int id;
+    private Integer id;
     private String loginId;
     private String password;
     private String name;
     private String email;
     private String nickname;
-    private int favoriteTeamId;
+    private Integer favoriteTeamId;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -41,4 +40,13 @@ public class User {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    /**
+     * 비밀번호 변경 메소드
+     * 비밀번호 재설정 시에만 사용됩니다.
+     *
+     * @param password 새로운 암호화된 비밀번호
+     */
+    public void setPassword(String password) {
+        this.password = password;
+    }
 }

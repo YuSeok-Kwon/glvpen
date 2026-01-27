@@ -70,7 +70,7 @@ public class SimulationGameRestController {
 	        UserLineupDTO lineup = UserLineupDTO.builder()
 	            .playerId(botCard.getPlayerId())
 	            .position(botCard.getPosition())
-	            .orderNum(String.valueOf(i + 1))
+	            .orderNum(i + 1)
 	            .season(botCard.getSeason())
 	            .build();
 

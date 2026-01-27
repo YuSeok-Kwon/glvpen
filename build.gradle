@@ -51,7 +51,10 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	
+
+	// Spring Security Crypto (BCrypt 암호화를 위해 필요)
+	implementation 'org.springframework.security:spring-security-crypto:6.3.0'
+
 	implementation 'org.jsoup:jsoup:1.15.3'
 	
     implementation 'org.seleniumhq.selenium:selenium-java:4.20.0'

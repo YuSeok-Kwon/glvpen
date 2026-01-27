@@ -12,7 +12,7 @@ public interface UserLineupRepository extends JpaRepository<UserLineup, Integer>
     List<UserLineup> findByUserId(Integer userId);
 
     // 특정 유저가 해당 타순(orderNum)에 라인업을 등록했는지 여부 확인
-    boolean existsByUserIdAndOrderNum(Integer userId, String orderNum);
+    boolean existsByUserIdAndOrderNum(Integer userId, Integer orderNum);
 
     // 특정 유저의 라인업 전체 삭제
     void deleteByUserId(Integer userId); 

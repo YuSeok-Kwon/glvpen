@@ -12,7 +12,7 @@ public class UserLineupResponseDTO {
     private Integer userId;
     private Integer playerId;
     private String position;
-    private String orderNum;
+    private Integer orderNum;
     private Integer season;
     
     public static UserLineupResponseDTO fromEntity(com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.UserLineup entity) {

@@ -179,23 +179,27 @@ public class GameResultService {
 
 	// 결과 저장
 	public void saveGameResult(GameResultDTO dto) {
-	    GameResult entity = new GameResult();
-	    entity.setScheduleId(dto.getScheduleId());
-	    entity.setUserId(dto.getUserId());
-	    entity.setUserScore(dto.getUserScore());
-	    entity.setBotScore(dto.getBotScore());
-	    entity.setWin(dto.isWin());
-	    entity.setMvp(dto.getMvp());
-
 	    // 중요 로그만 필터링해서 JSON으로 저장
 	    List<String> filteredLogs = filterImportantLogs(dto.getGameLog());
-	    entity.setGameLog(new Gson().toJson(filteredLogs));
+	    String gameLogJson = new Gson().toJson(filteredLogs);
 
 	    // 봇 라인업을 JSON으로 저장
+	    String botLineupJson = null;
 	    if (dto.getBotLineup() != null) {
-	        String botLineupJson = new Gson().toJson(dto.getBotLineup());
-	        entity.setBotLineupJson(botLineupJson);
+	        botLineupJson = new Gson().toJson(dto.getBotLineup());
 	    }
+
+	    // Builder 패턴으로 Entity 생성
+	    GameResult entity = GameResult.builder()
+	            .scheduleId(dto.getScheduleId())
+	            .userId(dto.getUserId())
+	            .userScore(dto.getUserScore())
+	            .botScore(dto.getBotScore())
+	            .isWin(dto.isWin())
+	            .mvp(dto.getMvp())
+	            .gameLog(gameLogJson)
+	            .botLineupJson(botLineupJson)
+	            .build();
 
 	    gameResultRepository.save(entity);
 	}

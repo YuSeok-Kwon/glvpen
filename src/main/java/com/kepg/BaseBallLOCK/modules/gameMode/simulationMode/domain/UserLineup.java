@@ -12,9 +12,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Getter @Setter
+@Getter
 @Builder
-@NoArgsConstructor @AllArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserLineup {
 
     @Id
@@ -28,7 +29,7 @@ public class UserLineup {
     private String position; // "1B", "2B", "SS", "OF" 등
 
     @Column(name = "orderNum")
-    private String orderNum;
+    private Integer orderNum; // 타순 번호는 숫자 타입이 적절
 
     private Integer season;
 }

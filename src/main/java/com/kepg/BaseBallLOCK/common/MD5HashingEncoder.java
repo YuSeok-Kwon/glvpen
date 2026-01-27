@@ -3,9 +3,19 @@ package com.kepg.BaseBallLOCK.common;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * @deprecated MD5는 보안 취약점이 있어 더 이상 사용되지 않습니다.
+ * 대신 Spring Security의 BCryptPasswordEncoder를 사용하세요.
+ * @see org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
+ */
+@Deprecated
 public class MD5HashingEncoder {
 
-	// md5를 통한 암호화
+	/**
+	 * @deprecated MD5를 사용한 암호화는 보안상 권장되지 않습니다.
+	 * BCryptPasswordEncoder를 사용하세요.
+	 */
+	@Deprecated
 	public static String encode(String message) {
 		
 		try {

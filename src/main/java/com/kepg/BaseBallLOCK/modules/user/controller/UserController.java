@@ -58,13 +58,10 @@ public class UserController {
         Map<String, String> resultMap = new HashMap<>();
         
         User user = userService.getUser(loginId, password);
-        
+
         if (user != null) {
-            // 로그인 성공
+            // 로그인 성공 - User 객체만 세션에 저장
             session.setAttribute("loginUser", user);
-            session.setAttribute("userId", user.getId());
-            session.setAttribute("userNickname", user.getNickname());
-            session.setAttribute("favoriteTeamId", user.getFavoriteTeamId());
             resultMap.put("result", "success");
         } else {
             // 로그인 실패
@@ -106,13 +103,6 @@ public class UserController {
 
         if (user == null) {
             return "redirect:/user/login-view";
-        }
-
-        // 세션 정보 보장 (로그인 후 직접 URL 접근 시 대비)
-        if (session.getAttribute("userNickname") == null) {
-            session.setAttribute("userId", user.getId());
-            session.setAttribute("userNickname", user.getNickname());
-            session.setAttribute("favoriteTeamId", user.getFavoriteTeamId());
         }
 
         int myTeamId = user.getFavoriteTeamId();

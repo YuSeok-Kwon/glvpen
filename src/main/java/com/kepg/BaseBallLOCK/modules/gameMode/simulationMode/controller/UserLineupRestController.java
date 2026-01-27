@@ -17,6 +17,7 @@ import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.domain.UserLineup;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.UserLineupDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.UserLineupResponseDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.service.UserLineupService;
+import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +32,8 @@ public class UserLineupRestController {
 
     @GetMapping
     public List<UserLineupResponseDTO> getLineup(HttpSession session) {
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
         List<UserLineup> lineups = userLineupService.getLineupByUserId(userId);
         return lineups.stream()
                 .map(UserLineupResponseDTO::fromEntity)
@@ -40,19 +42,20 @@ public class UserLineupRestController {
 
     @PostMapping("/save-all")
     public ResponseEntity<Void> saveAllLineup(@RequestBody List<UserLineupDTO> lineupList, HttpSession session) {
-    	
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
 
-    	userLineupService.clearLineup(userId); // 기존 라인업 삭제
+        userLineupService.clearLineup(userId); // 기존 라인업 삭제
         for (UserLineupDTO dto : lineupList) {
-        	userLineupService.save(dto, userId);
+            userLineupService.save(dto, userId);
         }
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/clear")
     public ResponseEntity<?> clearLineup(HttpSession session) {
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
 
         if (userId == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("로그인이 필요합니다.");
@@ -61,16 +64,18 @@ public class UserLineupRestController {
         userLineupService.clearLineup(userId);
         return ResponseEntity.ok().build();
     }
-    
+
     @GetMapping("/my-cards")
     public List<UserCardViewDTO> getMyCards(HttpSession session) {
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
         return userCardService.getUserCardViewList(userId);
     }
-    
+
     @GetMapping("/my-lineup")
     public ResponseEntity<List<UserLineupDTO>> getMyLineup(HttpSession session) {
-        Integer userId = (Integer) session.getAttribute("userId");
+        User user = (User) session.getAttribute("loginUser");
+        Integer userId = user != null ? user.getId() : null;
         List<UserLineupDTO> lineup = userLineupService.getUserLineup(userId);
         return ResponseEntity.ok(lineup);
     }

@@ -3,9 +3,10 @@ package com.kepg.BaseBallLOCK.modules.user.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.kepg.BaseBallLOCK.common.MD5HashingEncoder;
 import com.kepg.BaseBallLOCK.modules.user.domain.User;
 import com.kepg.BaseBallLOCK.modules.user.repository.UserRepository;
 
@@ -15,28 +16,37 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Service
 public class UserService {
-	
+
 	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
 	
 	// 로그인
 	public User getUser(String loginId, String password) {
-		
-		String encryptPassword = MD5HashingEncoder.encode(password);
-			
-		return userRepository.findByLoginIdAndPassword(loginId, encryptPassword);
-		
+		Optional<User> optionalUser = userRepository.findByLoginId(loginId);
+
+		if (optionalUser.isPresent()) {
+			User user = optionalUser.get();
+			// BCrypt는 matches 메소드로 비밀번호 검증
+			if (passwordEncoder.matches(password, user.getPassword())) {
+				return user;
+			}
+		}
+
+		return null;
 	}
 	
 	// 회원가입
-	public boolean addUser(String loginId, 
-			String password, 
-			String name, 
-			String email, 
+	@Transactional
+	public boolean addUser(String loginId,
+			String password,
+			String name,
+			String email,
 			String nickname,
-			int favoriteTeamId) {
-		
-		String encryptPassword = MD5HashingEncoder.encode(password);
-		
+			Integer favoriteTeamId) {
+
+		// BCrypt를 사용한 비밀번호 암호화
+		String encryptPassword = passwordEncoder.encode(password);
+
 		User user = User.builder()
 				.loginId(loginId)
 				.password(encryptPassword)
@@ -45,7 +55,7 @@ public class UserService {
 				.nickname(nickname)
 				.favoriteTeamId(favoriteTeamId)
 				.build();
-		
+
 		try {
 			userRepository.save(user);
 		}
@@ -93,22 +103,22 @@ public class UserService {
 	}
 	
 	// 비밀번호 재설정
+	@Transactional
 	public boolean resetPassword(String loginId, String password) {
-		
+
 		Optional<User> optionalUser = userRepository.findByLoginId(loginId);
-		
-		String encryptPassword = MD5HashingEncoder.encode(password);
-		
+
+		// BCrypt를 사용한 비밀번호 암호화
+		String encryptPassword = passwordEncoder.encode(password);
+
 		if(optionalUser.isPresent()) {
 			User user = optionalUser.get();
-			
+
 			try {
-				user.toBuilder()
-				.password(encryptPassword)
-				.build();
-				
+				// 버그 수정: setPassword로 직접 변경
+				user.setPassword(encryptPassword);
 				userRepository.save(user);
-				
+
 			} catch(PersistenceException e) {
 				return false;
 			}
