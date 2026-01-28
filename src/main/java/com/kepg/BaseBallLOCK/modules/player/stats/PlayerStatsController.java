@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.kepg.BaseBallLOCK.common.validator.SeasonValidator;
 import com.kepg.BaseBallLOCK.modules.player.stats.service.BatterStatsService;
 import com.kepg.BaseBallLOCK.modules.player.stats.service.PitcherStatsService;
 
@@ -25,6 +26,9 @@ public class PlayerStatsController {
             @RequestParam(name = "sort", required = false, defaultValue = "WAR") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
             Model model) {
+
+        // 입력값 검증
+        SeasonValidator.validate(season);
 
         // 데이터를 모델에 추가
         model.addAttribute("season", season);

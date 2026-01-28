@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kepg.BaseBallLOCK.common.validator.SeasonValidator;
 import com.kepg.BaseBallLOCK.modules.game.service.GameService;
 import com.kepg.BaseBallLOCK.modules.team.teamStats.service.TeamStatsService;
 
@@ -26,6 +27,9 @@ public class TeamRankingRestController {
             @RequestParam(name = "season", required = false, defaultValue = "2025") int season,
             @RequestParam(name = "sort", required = false, defaultValue = "TotalWAR") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction) {
+
+        // 입력값 검증
+        SeasonValidator.validate(season);
 
         Map<String, Object> result = new HashMap<>();
         result.put("rankingList", gameService.getTeamRankingCardViews(season));

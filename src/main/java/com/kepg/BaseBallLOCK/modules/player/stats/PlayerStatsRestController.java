@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.kepg.BaseBallLOCK.common.validator.SeasonValidator;
 import com.kepg.BaseBallLOCK.modules.player.stats.service.BatterStatsService;
 import com.kepg.BaseBallLOCK.modules.player.stats.service.PitcherStatsService;
 import com.kepg.BaseBallLOCK.modules.player.stats.statsDto.BatterRankingDTO;
@@ -31,7 +32,9 @@ public class PlayerStatsRestController {
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
             @RequestParam(name = "type", required = false) String type,
             @RequestParam(name = "qualified", required = false, defaultValue = "false") boolean qualified) {
-    	
+
+        // 입력값 검증
+        SeasonValidator.validate(season);
 
         List<BatterRankingDTO> batters = qualified
             ? batterStatsService.getQualifiedBatters(season, sort, direction)

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.kepg.BaseBallLOCK.common.validator.SeasonValidator;
 import com.kepg.BaseBallLOCK.modules.game.schedule.dto.GameDetailCardView;
 import com.kepg.BaseBallLOCK.modules.game.schedule.dto.ScheduleCardView;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
@@ -68,9 +69,15 @@ public class ReviewController {
         // 오늘 날짜 → 이번 주 시작일 (월요일)
         LocalDate today = LocalDate.now();
         LocalDate weekStart = today.with(DayOfWeek.MONDAY);
-        
+
         int currentYear = (year != null) ? year : today.getYear();
         int currentMonth = (month != null) ? month : today.getMonthValue();
+
+        // 입력값 검증
+        SeasonValidator.validate(currentYear);
+        if (currentMonth < 1 || currentMonth > 12) {
+            throw new IllegalArgumentException("월은 1 ~ 12 사이여야 합니다. 입력값: " + currentMonth);
+        }
 
         YearMonth currentYearMonth = YearMonth.of(currentYear, currentMonth);
         YearMonth prevMonth = currentYearMonth.minusMonths(1);
@@ -136,9 +143,16 @@ public class ReviewController {
             myTeamId = DEFAULT_TEAM_ID;
         }
         int userId = user != null ? user.getId() : 0;
-        
+
+        // 입력값 검증
         if (scheduleId == null) {
             return "redirect:/review/calendar-view";
+        }
+        if (scheduleId <= 0) {
+            throw new IllegalArgumentException("scheduleId는 양수여야 합니다. 입력값: " + scheduleId);
+        }
+        if (reviewId != null && reviewId <= 0) {
+            throw new IllegalArgumentException("reviewId는 양수여야 합니다. 입력값: " + reviewId);
         }
         
         // 경기 상세 정보 가져오기

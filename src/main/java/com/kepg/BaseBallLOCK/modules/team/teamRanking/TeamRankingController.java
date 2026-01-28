@@ -6,6 +6,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.kepg.BaseBallLOCK.common.validator.SeasonValidator;
+
 import lombok.RequiredArgsConstructor;
 
 @Controller
@@ -20,6 +22,9 @@ public class TeamRankingController {
             @RequestParam(name = "sort", required = false, defaultValue = "TotalWAR") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
             Model model) {
+
+        // 입력값 검증
+        SeasonValidator.validate(season);
 
         model.addAttribute("season", season);
         model.addAttribute("currentSort", sort.trim().toUpperCase());
@@ -36,6 +41,9 @@ public class TeamRankingController {
             @RequestParam(name = "sort", required = false, defaultValue = "TotalWAR") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
             Model model) {
+
+        // 입력값 검증
+        SeasonValidator.validate(season);
 
         model.addAttribute("season", season);
         model.addAttribute("currentSort", sort.trim().toUpperCase());

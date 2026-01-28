@@ -40,9 +40,21 @@ public class UserController {
             @RequestParam("loginId") String loginId,
             @RequestParam("password") String password,
             HttpSession session) {
-        
+
         Map<String, String> resultMap = new HashMap<>();
-        
+
+        // 입력값 검증
+        if (loginId == null || loginId.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "아이디를 입력해주세요.");
+            return resultMap;
+        }
+        if (password == null || password.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "비밀번호를 입력해주세요.");
+            return resultMap;
+        }
+
         User user = userService.getUser(loginId, password);
 
         if (user != null) {
