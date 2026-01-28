@@ -17,7 +17,9 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class SimulationService {
-	
+
+	private static final Random RANDOM = new Random();
+
 	private final UserLineupService userLineupService;
 	private final SimulationGameService simulationGameService;
 
@@ -97,17 +99,13 @@ public class SimulationService {
     // 한 타석 결과 시뮬레이션
     public String playAtBat(PlayerCardOverallDTO batter, PlayerCardOverallDTO pitcher, String difficulty) {
 
-
-
-        Random rand = new Random();
-
         double bbProb = calculateWalkProbability(batter, pitcher);
         double kProb = calculateStrikeoutProbability(batter, pitcher, difficulty);
         double hrProb = calculateHomerunProbability(batter, pitcher, difficulty);
         double doubleProb = calculateDoubleProbability(batter, difficulty);
         double hitProb = calculateHitProbability(batter, pitcher);
 
-        double r = rand.nextDouble();
+        double r = RANDOM.nextDouble();
 
         if (r < bbProb) {
             return "볼넷";
@@ -117,7 +115,7 @@ public class SimulationService {
             return "홈런";
         } else if (r < bbProb + kProb + hrProb + doubleProb) {
             // 장타를 분기 처리
-            double longHit = rand.nextDouble();
+            double longHit = RANDOM.nextDouble();
             if (longHit < 0.9) {
                 return "2루타";
             } else {

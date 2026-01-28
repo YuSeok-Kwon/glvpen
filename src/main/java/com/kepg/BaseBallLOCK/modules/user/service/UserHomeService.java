@@ -27,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserHomeService {
 
+    private static final int DEFAULT_TEAM_ID = 999;
+
     private final TeamService teamService;
     private final ScheduleService scheduleService;
     private final GameService gameService;
@@ -40,7 +42,9 @@ public class UserHomeService {
      * @return 홈 화면 데이터 DTO
      */
     public UserHomeDTO getUserHomeData(User user) {
-        int myTeamId = user.getFavoriteTeamId();
+        // NPE 방지: favoriteTeamId가 null인 경우 기본값 사용
+        Integer favoriteTeamId = user != null ? user.getFavoriteTeamId() : null;
+        int myTeamId = favoriteTeamId != null ? favoriteTeamId : DEFAULT_TEAM_ID;
         int season = LocalDate.now().getYear();
 
         // 내 팀 정보

@@ -1,6 +1,8 @@
 package com.kepg.BaseBallLOCK.modules.player.stats.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -285,37 +287,20 @@ public class PitcherStatsService {
 	    return 0.0;
 	}
 	
-	// 투수 랭킹 수동 정렬 (정렬 키 및 방향 기반)
+	// 투수 랭킹 정렬 (정렬 키 및 방향 기반) - O(n log n)
 	public void sortPitcherRankingList(List<PitcherRankingDTO> list, String sort, String direction) {
 	    if (sort == null || direction == null) return;
 
 	    String sortKey = sort.trim().toUpperCase();
 	    String sortDirection = direction.trim().toUpperCase();
 
-	    for (int i = 0; i < list.size() - 1; i++) {
-	        for (int j = 0; j < list.size() - i - 1; j++) {
-	            boolean shouldSwap = false;
+	    Comparator<PitcherRankingDTO> comparator = Comparator.comparingDouble(dto -> getSortValue(dto, sortKey));
 
-	            double value1 = getSortValue(list.get(j), sortKey);
-	            double value2 = getSortValue(list.get(j + 1), sortKey);
-
-	            if (sortDirection.equals("ASC")) {
-	                if (value1 > value2) {
-	                    shouldSwap = true;
-	                }
-	            } else { // DESC
-	                if (value1 < value2) {
-	                    shouldSwap = true;
-	                }
-	            }
-
-	            if (shouldSwap) {
-	                PitcherRankingDTO temp = list.get(j);
-	                list.set(j, list.get(j + 1));
-	                list.set(j + 1, temp);
-	            }
-	        }
+	    if ("DESC".equals(sortDirection)) {
+	        comparator = comparator.reversed();
 	    }
+
+	    Collections.sort(list, comparator);
 	}
 	
 	// 시즌 및 팀 경기 수 기준 규정 이닝 계산
