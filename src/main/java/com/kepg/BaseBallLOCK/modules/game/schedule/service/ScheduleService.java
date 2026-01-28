@@ -521,4 +521,9 @@ public class ScheduleService {
                 .build();
     }
 
+    // 특정 기간 및 팀 기준으로 경기 목록 조회 (N+1 쿼리 방지용)
+    public List<Schedule> findByMatchDateBetweenAndTeam(Timestamp start, Timestamp end, int teamId) {
+        return scheduleRepository.findByMatchDateBetweenAndTeam(start, end, teamId);
+    }
+
 }

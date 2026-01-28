@@ -5,10 +5,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +43,7 @@ public class ReviewService {
     private final LineupService lineupService;
     private final RecordService recordService;
 
-    // 해당 월에 대한 달력 데이터를 생성 (리뷰 여부 및 경기 정보 포함)
+    // 해당 월에 대한 달력 데이터를 생성 (리뷰 여부 및 경기 정보 포함) - N+1 개선
     public List<List<CalendarDayDTO>> generateCalendar(int year, int month, int userId, int myTeamId) {
 
         List<List<CalendarDayDTO>> calendar = new ArrayList<>();
@@ -48,45 +51,54 @@ public class ReviewService {
         YearMonth yearMonth = YearMonth.of(year, month);
         int daysInMonth = yearMonth.lengthOfMonth();
 
+        // 달력 범위 계산 (이전 달 일부 + 현재 달 + 다음 달 일부)
+        YearMonth prevMonth = yearMonth.minusMonths(1);
+        YearMonth nextMonth = yearMonth.plusMonths(1);
+
         LocalDate firstDayOfMonth = LocalDate.of(year, month, 1);
-        int firstDayOfWeek = firstDayOfMonth.getDayOfWeek().getValue(); // 1=월요일 ~ 7=일요일
-        int dayIndex = (firstDayOfWeek + 6) % 7;  // 월요일 시작 보정
+        int firstDayOfWeek = firstDayOfMonth.getDayOfWeek().getValue();
+        int dayIndex = (firstDayOfWeek + 6) % 7;
+
+        // 조회 범위 설정
+        LocalDate startDate = prevMonth.atDay(prevMonth.lengthOfMonth() - dayIndex + 1);
+        LocalDate endDate = nextMonth.atDay(7);
+
+        // 배치 조회: 리뷰 데이터
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+        List<Review> reviews = reviewRepository.findByUserIdAndScheduleMatchDateBetween(userId, startDateTime, endDateTime);
+        Map<LocalDate, Review> reviewMap = reviews.stream()
+            .collect(Collectors.toMap(
+                review -> scheduleService.findMatchDateById(review.getScheduleId()).toLocalDateTime().toLocalDate(),
+                review -> review,
+                (existing, replacement) -> existing
+            ));
+
+        // 배치 조회: 스케줄 데이터
+        Timestamp startTimestamp = Timestamp.valueOf(startDateTime);
+        Timestamp endTimestamp = Timestamp.valueOf(endDateTime);
+        List<Schedule> schedules = scheduleService.findByMatchDateBetweenAndTeam(startTimestamp, endTimestamp, myTeamId);
+        Map<LocalDate, List<Schedule>> scheduleMap = schedules.stream()
+            .collect(Collectors.groupingBy(
+                schedule -> schedule.getMatchDate().toLocalDateTime().toLocalDate()
+            ));
 
         List<CalendarDayDTO> week = new ArrayList<>();
 
         // 이전 달의 마지막 날들로 앞쪽 빈칸 채우기
-        YearMonth prevMonth = yearMonth.minusMonths(1);
         int prevMonthDays = prevMonth.lengthOfMonth();
-        
         for (int i = dayIndex - 1; i >= 0; i--) {
             int prevDay = prevMonthDays - i;
             LocalDate prevDate = LocalDate.of(prevMonth.getYear(), prevMonth.getMonthValue(), prevDay);
-            
-            CalendarDayDTO dayDto = new CalendarDayDTO();
-            dayDto.setDayOfMonth(prevDay);
-            dayDto.setDate(prevDate);
-            dayDto.setScheduleId(null);
 
-            // 헬퍼 메서드로 리뷰 및 경기 정보 설정
-            setReviewInfo(dayDto, userId, prevDate);
-            setGameInfo(dayDto, prevDate, myTeamId);
-
+            CalendarDayDTO dayDto = createCalendarDay(prevDay, prevDate, reviewMap, scheduleMap, myTeamId);
             week.add(dayDto);
         }
 
         // 실제 날짜 채우기
         for (int day = 1; day <= daysInMonth; day++) {
             LocalDate date = LocalDate.of(year, month, day);
-
-            CalendarDayDTO dayDto = new CalendarDayDTO();
-            dayDto.setDayOfMonth(day);
-            dayDto.setDate(date);
-            dayDto.setScheduleId(null);
-
-            // 헬퍼 메서드로 리뷰 및 경기 정보 설정
-            setReviewInfo(dayDto, userId, date);
-            setGameInfo(dayDto, date, myTeamId);
-
+            CalendarDayDTO dayDto = createCalendarDay(day, date, reviewMap, scheduleMap, myTeamId);
             week.add(dayDto);
 
             // 한 주 단위로 분리
@@ -98,21 +110,10 @@ public class ReviewService {
 
         // 다음 달의 첫 날들로 마지막 주 빈칸 채우기
         if (!week.isEmpty()) {
-            YearMonth nextMonth = yearMonth.plusMonths(1);
             int nextDay = 1;
-            
             while (week.size() < 7) {
                 LocalDate nextDate = LocalDate.of(nextMonth.getYear(), nextMonth.getMonthValue(), nextDay);
-                
-                CalendarDayDTO dayDto = new CalendarDayDTO();
-                dayDto.setDayOfMonth(nextDay);
-                dayDto.setDate(nextDate);
-                dayDto.setScheduleId(null);
-
-                // 헬퍼 메서드로 리뷰 및 경기 정보 설정
-                setReviewInfo(dayDto, userId, nextDate);
-                setGameInfo(dayDto, nextDate, myTeamId);
-
+                CalendarDayDTO dayDto = createCalendarDay(nextDay, nextDate, reviewMap, scheduleMap, myTeamId);
                 week.add(dayDto);
                 nextDay++;
             }
@@ -120,6 +121,51 @@ public class ReviewService {
         }
 
         return calendar;
+    }
+
+    // CalendarDayDTO 생성 헬퍼 메서드
+    private CalendarDayDTO createCalendarDay(int dayOfMonth, LocalDate date,
+                                             Map<LocalDate, Review> reviewMap,
+                                             Map<LocalDate, List<Schedule>> scheduleMap,
+                                             int myTeamId) {
+        CalendarDayDTO dayDto = new CalendarDayDTO();
+        dayDto.setDayOfMonth(dayOfMonth);
+        dayDto.setDate(date);
+
+        // 리뷰 정보 설정
+        Review review = reviewMap.get(date);
+        if (review != null) {
+            dayDto.setHasReview(true);
+            dayDto.setReviewId(review.getId());
+        } else {
+            dayDto.setHasReview(false);
+        }
+
+        // 경기 정보 설정
+        List<Schedule> daySchedules = scheduleMap.getOrDefault(date, new ArrayList<>());
+        List<GameInfoDTO> games = new ArrayList<>();
+
+        if (!daySchedules.isEmpty()) {
+            dayDto.setScheduleId(daySchedules.get(0).getId());
+        }
+
+        for (Schedule schedule : daySchedules) {
+            int homeTeamId = schedule.getHomeTeamId();
+            int awayTeamId = schedule.getAwayTeamId();
+
+            if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
+                GameInfoDTO game = new GameInfoDTO();
+                game.setScheduleId(schedule.getId());
+                game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
+                game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
+                game.setHomeScore(schedule.getHomeTeamScore());
+                game.setAwayScore(schedule.getAwayTeamScore());
+                games.add(game);
+            }
+        }
+
+        dayDto.setGames(games);
+        return dayDto;
     }
     
     // 팀 ID를 기반으로 팀 색상을 조회
@@ -179,44 +225,5 @@ public class ReviewService {
         List<String> sorted = new ArrayList<>(names);
         sorted.sort(null); // 가나다순 정렬
         return sorted;
-    }
-
-    // 헬퍼 메서드: 리뷰 정보 설정
-    private void setReviewInfo(CalendarDayDTO dayDto, int userId, LocalDate date) {
-        reviewRepository.findByUserIdAndMatchDate(userId, date)
-            .ifPresentOrElse(
-                review -> {
-                    dayDto.setHasReview(true);
-                    dayDto.setReviewId(review.getId());
-                },
-                () -> dayDto.setHasReview(false)
-            );
-    }
-
-    // 헬퍼 메서드: 경기 정보 설정
-    private void setGameInfo(CalendarDayDTO dayDto, LocalDate date, int myTeamId) {
-        List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(date, myTeamId);
-        List<GameInfoDTO> games = new ArrayList<>();
-
-        if (!schedules.isEmpty()) {
-            dayDto.setScheduleId(schedules.get(0).getId());
-        }
-
-        for (Schedule schedule : schedules) {
-            int homeTeamId = schedule.getHomeTeamId();
-            int awayTeamId = schedule.getAwayTeamId();
-
-            if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
-                GameInfoDTO game = new GameInfoDTO();
-                game.setScheduleId(schedule.getId());
-                game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
-                game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
-                game.setHomeScore(schedule.getHomeTeamScore());
-                game.setAwayScore(schedule.getAwayTeamScore());
-                games.add(game);
-            }
-        }
-
-        dayDto.setGames(games);
     }
 }
