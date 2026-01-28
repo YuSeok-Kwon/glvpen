@@ -11,6 +11,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kepg.BaseBallLOCK.common.enums.PitcherSortType;
+import com.kepg.BaseBallLOCK.common.enums.SortDirection;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
 import com.kepg.BaseBallLOCK.modules.player.dto.TopPitcherCardView;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
@@ -150,11 +152,13 @@ public class PitcherStatsService {
 
 	// 전체 투수 랭킹 리스트 정렬 (규정 조건 없이)
 	public List<PitcherRankingDTO> getPitcherRankingsSorted(int season, String sort, String direction) {
+	    PitcherSortType sortType = PitcherSortType.fromString(sort);
+	    SortDirection sortDirection = SortDirection.fromString(direction);
 
 	    List<Object[]> projections = pitcherStatsRepository.findAllPitchers(season);
 	    List<PitcherRankingDTO> result = new ArrayList<>();
 
-	    
+
 	    if (projections != null && !projections.isEmpty()) {
 	        for (Object[] row : projections) {
 
@@ -196,16 +200,19 @@ public class PitcherStatsService {
 	                        .build();
 
 	                result.add(dto);
-	            } 
+	            }
 	        }
-	    } 
-	    sortPitcherRankingList(result, sort, direction);
+	    }
+	    sortPitcherRankingList(result, sortType, sortDirection);
 
 	    return result;
 	}
 	
 	// 규정 이닝을 충족한 투수 랭킹 리스트 조회 및 정렬
 	public List<PitcherRankingDTO> getQualifiedPitchers(int season, String sort, String direction) {
+	    PitcherSortType sortType = PitcherSortType.fromString(sort);
+	    SortDirection sortDirection = SortDirection.fromString(direction);
+
 	    // 팀별 경기 수를 가져오기
 	    Map<Integer, Integer> teamGamesMap = scheduleService.getTeamGamesPlayedBySeason(season);
 
@@ -265,38 +272,36 @@ public class PitcherStatsService {
 	        }
 	    }
 
-	    sortPitcherRankingList(result, sort, direction);
+	    sortPitcherRankingList(result, sortType, sortDirection);
 
 	    return result;
 	}
-	
+
 	// PitcherRankingDTO 정렬 기준 값 추출용 메서드
-	private double getSortValue(PitcherRankingDTO dto, String sortKey) {
-	    if ("ERA".equalsIgnoreCase(sortKey)) return dto.getEra() != null ? dto.getEra() : Double.MAX_VALUE;
-	    if ("WHIP".equalsIgnoreCase(sortKey)) return dto.getWhip() != null ? dto.getWhip() : Double.MAX_VALUE;
-	    if ("IP".equalsIgnoreCase(sortKey)) return dto.getIp() != null ? dto.getIp() : Double.MIN_VALUE;
-	    if ("W".equalsIgnoreCase(sortKey)) return dto.getWins() != null ? dto.getWins() : Double.MIN_VALUE;
-	    if ("L".equalsIgnoreCase(sortKey)) return dto.getLoses() != null ? dto.getLoses() : Double.MIN_VALUE;
-	    if ("SV".equalsIgnoreCase(sortKey)) return dto.getSaves() != null ? dto.getSaves() : Double.MIN_VALUE;
-	    if ("HLD".equalsIgnoreCase(sortKey)) return dto.getHolds() != null ? dto.getHolds() : Double.MIN_VALUE;
-	    if ("SO".equalsIgnoreCase(sortKey)) return dto.getSo() != null ? dto.getSo() : Double.MIN_VALUE;
-	    if ("BB".equalsIgnoreCase(sortKey)) return dto.getBb() != null ? dto.getBb() : Double.MIN_VALUE;
-	    if ("H".equalsIgnoreCase(sortKey)) return dto.getH() != null ? dto.getH() : Double.MIN_VALUE;
-	    if ("HR".equalsIgnoreCase(sortKey)) return dto.getHr() != null ? dto.getHr() : Double.MIN_VALUE;
-	    if ("WAR".equalsIgnoreCase(sortKey)) return dto.getWar() != null ? dto.getWar() : Double.MIN_VALUE;
-	    return 0.0;
+	private double getSortValue(PitcherRankingDTO dto, PitcherSortType sortType) {
+	    return switch (sortType) {
+	        case ERA -> dto.getEra() != null ? dto.getEra() : Double.MAX_VALUE;
+	        case WHIP -> dto.getWhip() != null ? dto.getWhip() : Double.MAX_VALUE;
+	        case IP -> dto.getIp() != null ? dto.getIp() : Double.MIN_VALUE;
+	        case W -> dto.getWins() != null ? dto.getWins() : Double.MIN_VALUE;
+	        case L -> dto.getLoses() != null ? dto.getLoses() : Double.MIN_VALUE;
+	        case SV -> dto.getSaves() != null ? dto.getSaves() : Double.MIN_VALUE;
+	        case HLD -> dto.getHolds() != null ? dto.getHolds() : Double.MIN_VALUE;
+	        case SO -> dto.getSo() != null ? dto.getSo() : Double.MIN_VALUE;
+	        case BB -> dto.getBb() != null ? dto.getBb() : Double.MIN_VALUE;
+	        case H -> dto.getH() != null ? dto.getH() : Double.MIN_VALUE;
+	        case HR -> dto.getHr() != null ? dto.getHr() : Double.MIN_VALUE;
+	        case WAR -> dto.getWar() != null ? dto.getWar() : Double.MIN_VALUE;
+	    };
 	}
-	
-	// 투수 랭킹 정렬 (정렬 키 및 방향 기반) - O(n log n)
-	public void sortPitcherRankingList(List<PitcherRankingDTO> list, String sort, String direction) {
-	    if (sort == null || direction == null) return;
 
-	    String sortKey = sort.trim().toUpperCase();
-	    String sortDirection = direction.trim().toUpperCase();
+	// 투수 랭킹 정렬 (Enum 기반) - O(n log n)
+	public void sortPitcherRankingList(List<PitcherRankingDTO> list, PitcherSortType sortType, SortDirection direction) {
+	    if (sortType == null || direction == null) return;
 
-	    Comparator<PitcherRankingDTO> comparator = Comparator.comparingDouble(dto -> getSortValue(dto, sortKey));
+	    Comparator<PitcherRankingDTO> comparator = Comparator.comparingDouble(dto -> getSortValue(dto, sortType));
 
-	    if ("DESC".equals(sortDirection)) {
+	    if (direction == SortDirection.DESC) {
 	        comparator = comparator.reversed();
 	    }
 

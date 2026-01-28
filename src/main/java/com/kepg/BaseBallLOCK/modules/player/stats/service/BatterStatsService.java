@@ -10,6 +10,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kepg.BaseBallLOCK.common.enums.BatterSortType;
+import com.kepg.BaseBallLOCK.common.enums.SortDirection;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
 import com.kepg.BaseBallLOCK.modules.player.dto.TopBatterCardView;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
@@ -151,6 +153,9 @@ public class BatterStatsService {
    
     // 전체 타자 랭킹 조회 및 정렬 (필터 없음)
     public List<BatterRankingDTO> getPlayerRankingsSorted(int season, String sort, String direction) {
+        BatterSortType sortType = BatterSortType.fromString(sort);
+        SortDirection sortDirection = SortDirection.fromString(direction);
+
         List<Object[]> projections = batterStatsRepository.findAllBatters(season);
         List<BatterRankingDTO> result = new ArrayList<>();
 
@@ -176,7 +181,7 @@ public class BatterStatsService {
         	Double threeB = getDoubleOrDefault(row[17], 0.0);
         	Double obp = getDoubleOrDefault(row[18], 0.0);
         	Double slg = getDoubleOrDefault(row[19], 0.0);
-            
+
             BatterRankingDTO dto = BatterRankingDTO.builder()
                     .g(g)
                     .pa(pa)
@@ -202,14 +207,17 @@ public class BatterStatsService {
 
             result.add(dto);
         }
-        
-        sortBatterRankingList(result, sort, direction);
+
+        sortBatterRankingList(result, sortType, sortDirection);
 
         return result;
     }
 
     // 규정 타석 충족한 타자만 필터링하여 랭킹 조회 및 정렬
     public List<BatterRankingDTO> getQualifiedBatters(int season, String sort, String direction) {
+        BatterSortType sortType = BatterSortType.fromString(sort);
+        SortDirection sortDirection = SortDirection.fromString(direction);
+
         // 팀별 경기 수 가져오기
         Map<Integer, Integer> teamGamesMap = scheduleService.getTeamGamesPlayedBySeason(season);
 
@@ -258,46 +266,44 @@ public class BatterStatsService {
             }
         }
 
-        sortBatterRankingList(result, sort, direction);
+        sortBatterRankingList(result, sortType, sortDirection);
 
         return result;
     }
 
     // 정렬 기준별 값 추출 (WAR, AVG, OPS 등)
-    private double getSortValue(BatterRankingDTO dto, String sortKey) {
-    	if ("WAR".equals(sortKey)) return dto.getWar() != null ? dto.getWar() : 0.0;  // WAR는 많을수록 좋음
-    	if ("AVG".equals(sortKey)) return dto.getAvg() != null ? dto.getAvg() : 0.0;  // 타율 (AVG)
-    	if ("OPS".equals(sortKey)) return dto.getOps() != null ? dto.getOps() : 0.0;  // OPS
-    	if ("HR".equals(sortKey)) return dto.getHr() != null ? (double) dto.getHr() : 0.0;  // 홈런 (HR)
-    	if ("SB".equals(sortKey)) return dto.getSb() != null ? (double) dto.getSb() : 0.0;  // 도루 (SB)
-    	if ("G".equals(sortKey)) return (double) dto.getG();  // 경기 수 (G)
-    	if ("PA".equals(sortKey)) return (double) dto.getPa();  // 타석 수 (PA)
-    	if ("H".equals(sortKey)) return (double) dto.getH();  // 안타 수 (H)
-    	if ("2B".equals(sortKey)) return dto.getTwoB() != null ? (double) dto.getTwoB() : 0.0;  // 2루타 (2B)
-    	if ("3B".equals(sortKey)) return dto.getThreeB() != null ? (double) dto.getThreeB() : 0.0;  // 3루타 (3B)
-    	if ("RBI".equals(sortKey)) return (double) dto.getRbi();  // 타점 (RBI)
-    	if ("BB".equals(sortKey)) return (double) dto.getBb();  // 볼넷 (BB)
-    	if ("SO".equals(sortKey)) return (double) dto.getSo();  // 삼진 (SO)
-    	if ("OBP".equals(sortKey)) return dto.getObp() != null ? dto.getObp() : 0.0;  // 출루율 (OBP)
-    	if ("SLG".equals(sortKey)) return dto.getSlg() != null ? dto.getSlg() : 0.0;  // 장타율 (SLG)
-    	if ("WRCPLUS".equalsIgnoreCase(sortKey)) return dto.getWrcPlus() != null ? dto.getWrcPlus() : 0.0;
-    	return 0.0; // 기본값
+    private double getSortValue(BatterRankingDTO dto, BatterSortType sortType) {
+        return switch (sortType) {
+            case WAR -> dto.getWar() != null ? dto.getWar() : 0.0;
+            case AVG -> dto.getAvg() != null ? dto.getAvg() : 0.0;
+            case OPS -> dto.getOps() != null ? dto.getOps() : 0.0;
+            case HR -> dto.getHr() != null ? dto.getHr() : 0.0;
+            case SB -> dto.getSb() != null ? dto.getSb() : 0.0;
+            case G -> dto.getG();
+            case PA -> dto.getPa();
+            case H -> dto.getH();
+            case TWO_B -> dto.getTwoB() != null ? dto.getTwoB() : 0.0;
+            case THREE_B -> dto.getThreeB() != null ? dto.getThreeB() : 0.0;
+            case RBI -> dto.getRbi();
+            case BB -> dto.getBb();
+            case SO -> dto.getSo();
+            case OBP -> dto.getObp() != null ? dto.getObp() : 0.0;
+            case SLG -> dto.getSlg() != null ? dto.getSlg() : 0.0;
+            case WRCPLUS -> dto.getWrcPlus() != null ? dto.getWrcPlus() : 0.0;
+        };
     }
-        
-    // DTO 리스트 정렬 (sortKey, direction 기준) - O(n log n)
-    public void sortBatterRankingList(List<BatterRankingDTO> list, String sort, String direction) {
-    	if (sort == null || direction == null) return;
 
-    	String sortKey = sort.trim().toUpperCase();
-    	String sortDirection = direction.trim().toUpperCase();
+    // DTO 리스트 정렬 (Enum 기반) - O(n log n)
+    public void sortBatterRankingList(List<BatterRankingDTO> list, BatterSortType sortType, SortDirection direction) {
+        if (sortType == null || direction == null) return;
 
-    	Comparator<BatterRankingDTO> comparator = Comparator.comparingDouble(dto -> getSortValue(dto, sortKey));
+        Comparator<BatterRankingDTO> comparator = Comparator.comparingDouble(dto -> getSortValue(dto, sortType));
 
-    	if ("DESC".equals(sortDirection)) {
-    		comparator = comparator.reversed();
-    	}
+        if (direction == SortDirection.DESC) {
+            comparator = comparator.reversed();
+        }
 
-    	Collections.sort(list, comparator);
+        Collections.sort(list, comparator);
     }
         
     // 시즌 및 경기 수 기준으로 규정 타석 계산
