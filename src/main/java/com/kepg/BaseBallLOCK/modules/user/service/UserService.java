@@ -14,7 +14,9 @@ import com.kepg.BaseBallLOCK.modules.user.repository.UserRepository;
 
 import jakarta.persistence.PersistenceException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class UserService {
@@ -67,11 +69,11 @@ public class UserService {
 
 		try {
 			userRepository.save(user);
-		}
-		catch(PersistenceException e) {
+			return true;
+		} catch(PersistenceException e) {
+			log.error("회원가입 실패 - loginId: {}, error: {}", loginId, e.getMessage());
 			return false;
 		}
-		return true;
 	}
 	
 	// id 중복확인
@@ -127,14 +129,15 @@ public class UserService {
 				// 버그 수정: setPassword로 직접 변경
 				user.setPassword(encryptPassword);
 				userRepository.save(user);
-
+				return true;
 			} catch(PersistenceException e) {
+				log.error("비밀번호 변경 실패 - loginId: {}, error: {}", loginId, e.getMessage());
 				return false;
 			}
 		} else {
+			log.warn("비밀번호 재설정 실패 - 사용자를 찾을 수 없음: {}", loginId);
 			return false;
 		}
-		return true;
 	}
 	
 	// 모든 유저의 pk_Id정보 찾기

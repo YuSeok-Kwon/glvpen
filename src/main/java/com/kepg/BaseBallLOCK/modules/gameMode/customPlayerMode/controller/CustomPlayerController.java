@@ -12,6 +12,7 @@ import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerR
 import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.service.CustomPlayerService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ import java.util.List;
  * - 커스텀 선수 생성, 편집, 관리
  * - RPG 스타일 선수 성장 시스템
  */
+@Slf4j
 @Controller
 @RequestMapping("/customPlayer")
 @RequiredArgsConstructor
@@ -60,8 +62,12 @@ public class CustomPlayerController {
             CustomPlayerResponseDTO response = CustomPlayerResponseDTO.fromEntity(player);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
+            log.warn("커스텀 선수 생성 실패 - 잘못된 입력값 - userId: {}, playerInfo: {}, error: {}",
+                userId, playerInfo, e.getMessage());
             return ResponseEntity.badRequest().build();
         } catch (Exception e) {
+            log.error("커스텀 선수 생성 실패 - userId: {}, playerInfo: {}, error: {}",
+                userId, playerInfo, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -90,6 +96,7 @@ public class CustomPlayerController {
                     .toList();
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            log.error("커스텀 선수 목록 조회 실패 - userId: {}, error: {}", userId, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -120,6 +127,7 @@ public class CustomPlayerController {
             CustomPlayerResultDTO result = customPlayerService.playCustomPlayerGame(request);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("커스텀 선수 게임 실행 실패 - request: {}, error: {}", request, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

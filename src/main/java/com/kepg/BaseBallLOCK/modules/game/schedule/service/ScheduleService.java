@@ -30,7 +30,9 @@ import com.kepg.BaseBallLOCK.modules.team.domain.Team;
 import com.kepg.BaseBallLOCK.modules.team.service.TeamService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ScheduleService {
@@ -345,6 +347,7 @@ public class ScheduleService {
                 int score = Integer.parseInt(parts[i]);
                 scores.add(score);
             } catch (NumberFormatException e) {
+                log.warn("이닝별 점수 파싱 실패 - 값: '{}', 전체 문자열: '{}'", parts[i], scoreString);
             }
         }
 

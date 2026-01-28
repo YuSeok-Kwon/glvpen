@@ -61,6 +61,8 @@ public class ReviewRestController {
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
+            log.error("리뷰 저장 실패 - userId: {}, scheduleId: {}, error: {}",
+                user.getId(), reviewDTO.getScheduleId(), e.getMessage(), e);
             result.put("success", false);
             result.put("message", "리뷰 저장 중 오류가 발생했습니다.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
@@ -79,6 +81,8 @@ public class ReviewRestController {
             response.put("success", true);
             response.put("players", names != null ? names : new ArrayList<>());
         } catch (Exception e) {
+            log.error("선수 목록 조회 실패 - scheduleId: {}, myTeamId: {}, error: {}",
+                scheduleId, myTeamId, e.getMessage(), e);
             response.put("success", false);
             response.put("message", "선수 목록을 불러오는 데 실패했습니다.");
         }

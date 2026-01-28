@@ -85,6 +85,8 @@ public class GameController {
 			// 성공 시, 클라이언트에서 리디렉션할 수 있도록 success 플래그와 메시지를 보냅니다.
 			return ResponseEntity.ok(Collections.singletonMap("success", true));
 		} catch (Exception e) {
+			log.error("커스텀 선수 생성 실패 - name: {}, error: {}",
+				playerDTO.getName(), e.getMessage(), e);
 			// 실패 시, 에러 메시지를 포함하여 응답합니다.
 			return ResponseEntity.badRequest().body(Collections.singletonMap("success", false));
 		}

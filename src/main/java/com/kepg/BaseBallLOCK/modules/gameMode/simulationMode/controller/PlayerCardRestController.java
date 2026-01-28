@@ -21,7 +21,9 @@ import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/game")
@@ -39,6 +41,7 @@ public class PlayerCardRestController {
 			result.put("cards", cards);
 			return ResponseEntity.ok(result);
 		} catch (Exception e) {
+			log.error("카드 뽑기 실패 - position: {}, error: {}", position, e.getMessage(), e);
 			result.put("result", "error");
 			result.put("message", e.getMessage());
 			result.put("cards", new ArrayList<>());

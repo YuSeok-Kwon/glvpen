@@ -15,12 +15,14 @@ import com.kepg.BaseBallLOCK.modules.gameMode.realMatch.dto.RealMatchResultDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.realMatch.service.RealMatchService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * RealMatch Mode 컨트롤러
  * - 실제 KBO 경기 기반 예측 게임
  * - 경기 일정 연동 및 베팅 시스템
  */
+@Slf4j
 @Controller
 @RequestMapping("/realmatch")
 @RequiredArgsConstructor
@@ -57,6 +59,7 @@ public class RealMatchController {
             RealMatchResultDTO result = realMatchService.playPredictionGame(request);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            log.error("예측 게임 실행 실패 - request: {}, error: {}", request, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -71,6 +74,7 @@ public class RealMatchController {
             var stats = realMatchService.getUserPredictionStats(userId);
             return ResponseEntity.ok(stats);
         } catch (Exception e) {
+            log.error("사용자 예측 통계 조회 실패 - userId: {}, error: {}", userId, e.getMessage(), e);
             return ResponseEntity.badRequest().build();
         }
     }

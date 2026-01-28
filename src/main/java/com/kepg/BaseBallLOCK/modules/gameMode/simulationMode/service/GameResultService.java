@@ -18,7 +18,9 @@ import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.repository.GameResu
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.SimulationResultDTO;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -129,14 +131,32 @@ public class GameResultService {
     // 타자 이름 치환
 	private String replaceBatterName(String playText, List<PlayerCardOverallDTO> lineup) {
 		if (!playText.matches("^[0-9]+번 타자: .*")) return playText;
-		
-			try {
-				int batterIndex = Integer.parseInt(playText.split("번 타자")[0]) - 1;
-				String playerName = (lineup.get(batterIndex) != null) ? lineup.get(batterIndex).getPlayerName() : "???";
-				return playerName + ": " + playText.split(": ")[1];
-				
-			} catch (Exception e) {
+
+		try {
+			int batterIndex = Integer.parseInt(playText.split("번 타자")[0]) - 1;
+
+			if (batterIndex < 0 || batterIndex >= lineup.size()) {
+				log.warn("타자 인덱스 범위 초과 - index: {}, lineup size: {}", batterIndex, lineup.size());
 				return playText;
+			}
+
+			PlayerCardOverallDTO player = lineup.get(batterIndex);
+			String playerName = (player != null) ? player.getPlayerName() : "???";
+
+			String[] parts = playText.split(": ");
+			if (parts.length < 2) {
+				log.warn("잘못된 playText 형식: {}", playText);
+				return playText;
+			}
+
+			return playerName + ": " + parts[1];
+
+		} catch (NumberFormatException e) {
+			log.warn("타자 번호 파싱 실패: {}", playText);
+			return playText;
+		} catch (ArrayIndexOutOfBoundsException e) {
+			log.warn("배열 인덱스 오류 - playText: {}", playText);
+			return playText;
 		}
 	}
 	
