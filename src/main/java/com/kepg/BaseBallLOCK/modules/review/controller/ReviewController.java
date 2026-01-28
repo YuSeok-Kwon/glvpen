@@ -39,6 +39,9 @@ public class ReviewController {
     private final ScheduleService scheduleService;
     private final ReviewSummaryService reviewSummaryService;
 
+    // Magic Number 상수화
+    private static final int DEFAULT_TEAM_ID = 999;
+
     @GetMapping("/calendar-view")
     public String reviewCalendar(@RequestParam(value = "year", required = false) Integer year,
                                   @RequestParam(value = "month", required = false) Integer month,
@@ -49,7 +52,7 @@ public class ReviewController {
         int userId = user != null ? user.getId() : 0;
         Integer myTeamId = user != null ? user.getFavoriteTeamId() : null;
         if (myTeamId == null) {
-            myTeamId = 999;
+            myTeamId = DEFAULT_TEAM_ID;
         }
 
         // 오늘 날짜 → 이번 주 시작일 (월요일)
@@ -120,7 +123,7 @@ public class ReviewController {
         User user = (User) session.getAttribute("loginUser");
         Integer myTeamId = user != null ? user.getFavoriteTeamId() : null;
         if (myTeamId == null) {
-            myTeamId = 999;
+            myTeamId = DEFAULT_TEAM_ID;
         }
         int userId = user != null ? user.getId() : 0;
         

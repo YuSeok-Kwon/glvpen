@@ -24,10 +24,17 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class PitcherStatsService {
-	
+
 	private final PitcherStatsRepository pitcherStatsRepository;
-	private final PlayerService playerService; 
+	private final PlayerService playerService;
 	private final ScheduleService scheduleService;
+
+	// Magic Number 상수화
+	private static final double STAT_NOT_AVAILABLE = -1.0;
+	private static final int STAT_NOT_AVAILABLE_INT = -1;
+	private static final int PITCHER_STATS_COLUMN_COUNT = 16;
+	private static final int CURRENT_SEASON = 2025;
+	private static final int STANDARD_QUALIFIED_IP = 144;
 	
 	// 투수 스탯 저장 또는 업데이트 (playerId + season + category 기준 중복 확인)
 	@Transactional
@@ -81,10 +88,10 @@ public class PitcherStatsService {
 	        playerId = Integer.parseInt(row[4].toString());
 	    }
 
-	    double era = -1.0;
-	    double whip = -1.0;
+	    double era = STAT_NOT_AVAILABLE;
+	    double whip = STAT_NOT_AVAILABLE;
 	    String bestStatLabel = "-";
-	    int bestStatValue = -1;
+	    int bestStatValue = STAT_NOT_AVAILABLE_INT;
 
 	    Optional<String> eraOpt = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "ERA", season);
 	    if (eraOpt.isPresent()) {
@@ -152,7 +159,7 @@ public class PitcherStatsService {
 	    if (projections != null && !projections.isEmpty()) {
 	        for (Object[] row : projections) {
 
-	            if (row.length == 16) { 
+	            if (row.length == PITCHER_STATS_COLUMN_COUNT) { 
 
 	                String playerName = (String) row[0];
 	                String teamName = (String) row[1];
@@ -211,7 +218,7 @@ public class PitcherStatsService {
 	    if (projections != null && !projections.isEmpty()) {
 	        for (Object[] row : projections) {
 
-	            if (row.length == 16) {
+	            if (row.length == PITCHER_STATS_COLUMN_COUNT) {
 	                String playerName = (String) row[0];
 	                String teamName = (String) row[1];
 	                String logoName = (String) row[2];
@@ -316,10 +323,10 @@ public class PitcherStatsService {
 	
 	// 시즌 및 팀 경기 수 기준 규정 이닝 계산
 	public int getQualifiedInnings(int season, int teamGames) {
-	    if (season == 2025) {
+	    if (season == CURRENT_SEASON) {
 	        return teamGames;
 	    } else {
-	        return 144;
+	        return STANDARD_QUALIFIED_IP;
 	    }
 	}
 	

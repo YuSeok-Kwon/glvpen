@@ -26,8 +26,16 @@ import lombok.RequiredArgsConstructor;
 public class BatterStatsService {
 
     private final BatterStatsRepository batterStatsRepository;
-    private final PlayerService playerService; 
+    private final PlayerService playerService;
 	private final ScheduleService scheduleService;
+
+	// Magic Number 상수화
+	private static final double STAT_NOT_AVAILABLE = -1.0;
+	private static final int DEFAULT_HR_VALUE = 0;
+	private static final int BATTER_STATS_COLUMN_COUNT = 21;
+	private static final int CURRENT_SEASON = 2025;
+	private static final double PA_MULTIPLIER = 3.1;
+	private static final int STANDARD_QUALIFIED_PA = 446;
 
 	// 타자 스탯 저장 또는 업데이트 (playerId + season + category 기준 중복 확인)
 	public void saveBatterStats(BatterStatsDTO dto) {
@@ -79,9 +87,9 @@ public class BatterStatsService {
             playerId = Integer.parseInt(row[4].toString());
         }
 
-        double avg = -1.0;
-        int hr = 1;
-        double ops = -1.0;
+        double avg = STAT_NOT_AVAILABLE;
+        int hr = DEFAULT_HR_VALUE;
+        double ops = STAT_NOT_AVAILABLE;
 
         Optional<String> avgOptional = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "AVG", season);
         if (avgOptional.isPresent()) {
@@ -213,7 +221,7 @@ public class BatterStatsService {
         if (rows != null && !rows.isEmpty()) {
             for (Object[] row : rows) {
             	
-            	if (row.length == 21) {
+            	if (row.length == BATTER_STATS_COLUMN_COUNT) {
             	    int teamId = row[20] != null ? ((Number) row[20]).intValue() : 0;
             	    double pa = row[11] != null ? ((Number) row[11]).doubleValue() : 0.0;
 
@@ -311,10 +319,10 @@ public class BatterStatsService {
         
     // 시즌 및 경기 수 기준으로 규정 타석 계산
     public int getQualifiedPA(int season, int teamGames) {
-        if (season == 2025) {
-            return (int) Math.floor(teamGames * 3.1);
+        if (season == CURRENT_SEASON) {
+            return (int) Math.floor(teamGames * PA_MULTIPLIER);
         } else {
-            return 446;
+            return STANDARD_QUALIFIED_PA;
         }
     }
     
