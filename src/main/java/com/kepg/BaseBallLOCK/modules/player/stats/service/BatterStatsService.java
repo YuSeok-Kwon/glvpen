@@ -156,26 +156,26 @@ public class BatterStatsService {
 
         for (Object[] row : projections) {
 
-        	String position = (String) row[0];     
-        	String playerName = (String) row[1];                       // 선수 이름
-        	String teamName = (String) row[2];                         // 팀 이름
-        	String logoName = (String) row[3];                         // 로고 이름
-        	Double war = row[4] != null ? (Double) row[4] : 0.0;       // WAR
-        	Double avg = row[5] != null ? (Double) row[5] : 0.0;       // 타율 (AVG)
-        	Double ops = row[6] != null ? (Double) row[6] : 0.0;       // OPS
-        	Double hr = row[7] != null ? (Double) row[7] : 0.0;        // 홈런 (HR)
-        	Double sb = row[8] != null ? (Double) row[8] : 0.0;        // 도루 (SB)
-        	Double wrcPlus = row[9] != null ? (Double) row[9] : 0.0;   // wRC+
-        	Double g = row[10] != null ? (Double) row[10] : 0.0;       // 경기 수 (G)
-        	Double pa = row[11] != null ? (Double) row[11] : 0.0;      // 타석 (PA)
-        	Double h = row[12] != null ? (Double) row[12] : 0.0;       // 안타 (H)
-        	Double rbi = row[13] != null ? (Double) row[13] : 0.0;     // 타점 (RBI)
-        	Double bb = row[14] != null ? (Double) row[14] : 0.0;      // 볼넷 (BB)
-        	Double so = row[15] != null ? (Double) row[15] : 0.0;      // 삼진 (SO)
-        	Double twoB = row[16] != null ? (Double) row[16] : 0.0;    // 2루타 (2B)
-        	Double threeB = row[17] != null ? (Double) row[17] : 0.0;  // 3루타 (3B)
-        	Double obp = row[18] != null ? (Double) row[18] : 0.0;     // 출루율 (OBP)
-        	Double slg = row[19] != null ? (Double) row[19] : 0.0;     // 장타율 (SLG)
+        	String position = (String) row[0];
+        	String playerName = (String) row[1];
+        	String teamName = (String) row[2];
+        	String logoName = (String) row[3];
+        	Double war = getDoubleOrDefault(row[4], 0.0);
+        	Double avg = getDoubleOrDefault(row[5], 0.0);
+        	Double ops = getDoubleOrDefault(row[6], 0.0);
+        	Double hr = getDoubleOrDefault(row[7], 0.0);
+        	Double sb = getDoubleOrDefault(row[8], 0.0);
+        	Double wrcPlus = getDoubleOrDefault(row[9], 0.0);
+        	Double g = getDoubleOrDefault(row[10], 0.0);
+        	Double pa = getDoubleOrDefault(row[11], 0.0);
+        	Double h = getDoubleOrDefault(row[12], 0.0);
+        	Double rbi = getDoubleOrDefault(row[13], 0.0);
+        	Double bb = getDoubleOrDefault(row[14], 0.0);
+        	Double so = getDoubleOrDefault(row[15], 0.0);
+        	Double twoB = getDoubleOrDefault(row[16], 0.0);
+        	Double threeB = getDoubleOrDefault(row[17], 0.0);
+        	Double obp = getDoubleOrDefault(row[18], 0.0);
+        	Double slg = getDoubleOrDefault(row[19], 0.0);
             
             BatterRankingDTO dto = BatterRankingDTO.builder()
                     .g(g)
@@ -222,8 +222,8 @@ public class BatterStatsService {
             for (Object[] row : rows) {
             	
             	if (row.length == BATTER_STATS_COLUMN_COUNT) {
-            	    int teamId = row[20] != null ? ((Number) row[20]).intValue() : 0;
-            	    double pa = row[11] != null ? ((Number) row[11]).doubleValue() : 0.0;
+            	    int teamId = (int) getDoubleOrDefault(row[20], 0.0);
+            	    double pa = getDoubleOrDefault(row[11], 0.0);
 
             	    // 규정 타석 계산
             	    int teamGames = teamGamesMap.getOrDefault(teamId, 0);
@@ -235,22 +235,22 @@ public class BatterStatsService {
             	            .playerName((String) row[1])
             	            .teamName((String) row[2])
             	            .logoName((String) row[3])
-            	            .war(row[4] != null ? ((Number) row[4]).doubleValue() : 0.0)
-            	            .avg(row[5] != null ? ((Number) row[5]).doubleValue() : 0.0)
-            	            .ops(row[6] != null ? ((Number) row[6]).doubleValue() : 0.0)
-            	            .hr(row[7] != null ? ((Number) row[7]).doubleValue() : 0.0)
-            	            .sb(row[8] != null ? ((Number) row[8]).doubleValue() : 0.0)
-            	            .wrcPlus(row[9] != null ? ((Number) row[9]).doubleValue() : 0.0)
-            	            .g(row[10] != null ? ((Number) row[10]).doubleValue() : 0.0)
+            	            .war(getDoubleOrDefault(row[4], 0.0))
+            	            .avg(getDoubleOrDefault(row[5], 0.0))
+            	            .ops(getDoubleOrDefault(row[6], 0.0))
+            	            .hr(getDoubleOrDefault(row[7], 0.0))
+            	            .sb(getDoubleOrDefault(row[8], 0.0))
+            	            .wrcPlus(getDoubleOrDefault(row[9], 0.0))
+            	            .g(getDoubleOrDefault(row[10], 0.0))
             	            .pa(pa)
-            	            .h(row[12] != null ? ((Number) row[12]).doubleValue() : 0.0)
-            	            .rbi(row[13] != null ? ((Number) row[13]).doubleValue() : 0.0)
-            	            .bb(row[14] != null ? ((Number) row[14]).doubleValue() : 0.0)
-            	            .so(row[15] != null ? ((Number) row[15]).doubleValue() : 0.0)
-            	            .twoB(row[16] != null ? ((Number) row[16]).doubleValue() : 0.0)
-            	            .threeB(row[17] != null ? ((Number) row[17]).doubleValue() : 0.0)
-            	            .obp(row[18] != null ? ((Number) row[18]).doubleValue() : 0.0)
-            	            .slg(row[19] != null ? ((Number) row[19]).doubleValue() : 0.0)
+            	            .h(getDoubleOrDefault(row[12], 0.0))
+            	            .rbi(getDoubleOrDefault(row[13], 0.0))
+            	            .bb(getDoubleOrDefault(row[14], 0.0))
+            	            .so(getDoubleOrDefault(row[15], 0.0))
+            	            .twoB(getDoubleOrDefault(row[16], 0.0))
+            	            .threeB(getDoubleOrDefault(row[17], 0.0))
+            	            .obp(getDoubleOrDefault(row[18], 0.0))
+            	            .slg(getDoubleOrDefault(row[19], 0.0))
             	            .build();
             	        result.add(dto);
             	    }
@@ -329,5 +329,10 @@ public class BatterStatsService {
     // playerId + season 기준 데이터 존재 여부 확인
     public boolean existsByPlayerIdAndSeason(int playerId, int season) {
     	return batterStatsRepository.existsByPlayerIdAndSeason(playerId, season);
+    }
+
+    // 헬퍼 메서드: 배열 요소를 Double로 변환 (null 안전)
+    private double getDoubleOrDefault(Object value, double defaultValue) {
+        return value != null ? ((Number) value).doubleValue() : defaultValue;
     }
 }

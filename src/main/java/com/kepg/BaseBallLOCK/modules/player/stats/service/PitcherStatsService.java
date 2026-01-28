@@ -165,18 +165,18 @@ public class PitcherStatsService {
 	                String teamName = (String) row[1];
 	                String logoName = (String) row[2];
 
-	                Double era = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0;
-	                Double whip = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
-	                Double wins = row[5] != null ? ((Number) row[5]).doubleValue() : 0.0;
-	                Double losses = row[6] != null ? ((Number) row[6]).doubleValue() : 0.0;
-	                Double saves = row[7] != null ? ((Number) row[7]).doubleValue() : 0.0;
-	                Double holds = row[8] != null ? ((Number) row[8]).doubleValue() : 0.0;
-	                Double strikeouts = row[9] != null ? ((Number) row[9]).doubleValue() : 0.0;
-	                Double walks = row[10] != null ? ((Number) row[10]).doubleValue() : 0.0;
-	                Double hitsAllowed = row[11] != null ? ((Number) row[11]).doubleValue() : 0.0;
-	                Double homeRunsAllowed = row[12] != null ? ((Number) row[12]).doubleValue() : 0.0;
-	                Double inningsPitched = row[13] != null ? ((Number) row[13]).doubleValue() : 0.0;
-	                Double war = row[14] != null ? ((Number) row[14]).doubleValue() : 0.0;
+	                Double era = getDoubleOrDefault(row[3], 0.0);
+	                Double whip = getDoubleOrDefault(row[4], 0.0);
+	                Double wins = getDoubleOrDefault(row[5], 0.0);
+	                Double losses = getDoubleOrDefault(row[6], 0.0);
+	                Double saves = getDoubleOrDefault(row[7], 0.0);
+	                Double holds = getDoubleOrDefault(row[8], 0.0);
+	                Double strikeouts = getDoubleOrDefault(row[9], 0.0);
+	                Double walks = getDoubleOrDefault(row[10], 0.0);
+	                Double hitsAllowed = getDoubleOrDefault(row[11], 0.0);
+	                Double homeRunsAllowed = getDoubleOrDefault(row[12], 0.0);
+	                Double inningsPitched = getDoubleOrDefault(row[13], 0.0);
+	                Double war = getDoubleOrDefault(row[14], 0.0);
 
 	                PitcherRankingDTO dto = PitcherRankingDTO.builder()
 	                        .playerName(playerName)
@@ -222,19 +222,19 @@ public class PitcherStatsService {
 	                String playerName = (String) row[0];
 	                String teamName = (String) row[1];
 	                String logoName = (String) row[2];
-	                Double era = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0;
-	                Double whip = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
-	                Double wins = row[5] != null ? ((Number) row[5]).doubleValue() : 0.0;
-	                Double losses = row[6] != null ? ((Number) row[6]).doubleValue() : 0.0;
-	                Double saves = row[7] != null ? ((Number) row[7]).doubleValue() : 0.0;
-	                Double holds = row[8] != null ? ((Number) row[8]).doubleValue() : 0.0;
-	                Double strikeouts = row[9] != null ? ((Number) row[9]).doubleValue() : 0.0;
-	                Double walks = row[10] != null ? ((Number) row[10]).doubleValue() : 0.0;
-	                Double hitsAllowed = row[11] != null ? ((Number) row[11]).doubleValue() : 0.0;
-	                Double homeRunsAllowed = row[12] != null ? ((Number) row[12]).doubleValue() : 0.0;
-	                Double inningsPitched = row[13] != null ? ((Number) row[13]).doubleValue() : 0.0;
-	                Double war = row[14] != null ? ((Number) row[14]).doubleValue() : 0.0;
-	                int teamId = row[15] != null ? ((Number) row[15]).intValue() : 0;
+	                Double era = getDoubleOrDefault(row[3], 0.0);
+	                Double whip = getDoubleOrDefault(row[4], 0.0);
+	                Double wins = getDoubleOrDefault(row[5], 0.0);
+	                Double losses = getDoubleOrDefault(row[6], 0.0);
+	                Double saves = getDoubleOrDefault(row[7], 0.0);
+	                Double holds = getDoubleOrDefault(row[8], 0.0);
+	                Double strikeouts = getDoubleOrDefault(row[9], 0.0);
+	                Double walks = getDoubleOrDefault(row[10], 0.0);
+	                Double hitsAllowed = getDoubleOrDefault(row[11], 0.0);
+	                Double homeRunsAllowed = getDoubleOrDefault(row[12], 0.0);
+	                Double inningsPitched = getDoubleOrDefault(row[13], 0.0);
+	                Double war = getDoubleOrDefault(row[14], 0.0);
+	                int teamId = (int) getDoubleOrDefault(row[15], 0.0);
 
 	                // 규정이닝 계산
 	                int teamGames = teamGamesMap.getOrDefault(teamId, 0);
@@ -334,5 +334,10 @@ public class PitcherStatsService {
 	public boolean existsByPlayerIdAndSeason(int playerId, int season) {
     	return pitcherStatsRepository.existsByPlayerIdAndSeason(playerId, season);
     }
+
+	// 헬퍼 메서드: 배열 요소를 Double로 변환 (null 안전)
+	private double getDoubleOrDefault(Object value, double defaultValue) {
+	    return value != null ? ((Number) value).doubleValue() : defaultValue;
+	}
 }
 

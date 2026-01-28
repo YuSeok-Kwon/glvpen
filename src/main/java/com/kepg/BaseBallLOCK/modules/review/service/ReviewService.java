@@ -26,7 +26,9 @@ import com.kepg.BaseBallLOCK.modules.review.summary.service.ReviewSummaryService
 import com.kepg.BaseBallLOCK.modules.team.service.TeamService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
@@ -65,39 +67,10 @@ public class ReviewService {
             dayDto.setDate(prevDate);
             dayDto.setScheduleId(null);
 
-            // 이전 달 날짜에도 리뷰가 있는지 확인
-            Optional<Review> reviewOpt = reviewRepository.findByUserIdAndMatchDate(userId, prevDate);
-            if (reviewOpt.isPresent()) {
-                dayDto.setHasReview(true);
-                dayDto.setReviewId(reviewOpt.get().getId());
-            } else {
-                dayDto.setHasReview(false);
-            }
+            // 헬퍼 메서드로 리뷰 및 경기 정보 설정
+            setReviewInfo(dayDto, userId, prevDate);
+            setGameInfo(dayDto, prevDate, myTeamId);
 
-            // 이전 달 날짜에도 경기 정보 세팅
-            List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(prevDate, myTeamId);
-            List<GameInfoDTO> games = new ArrayList<>();
-
-            for (Schedule schedule : schedules) {
-                int homeTeamId = schedule.getHomeTeamId();
-                int awayTeamId = schedule.getAwayTeamId();
-                
-                if (!schedules.isEmpty()) {
-                    dayDto.setScheduleId(schedules.get(0).getId());
-                }
-                
-                if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
-                    GameInfoDTO game = new GameInfoDTO();
-                    game.setScheduleId(schedule.getId());
-                    game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
-                    game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
-                    game.setHomeScore(schedule.getHomeTeamScore());
-                    game.setAwayScore(schedule.getAwayTeamScore());
-                    games.add(game);
-                }
-            }
-            
-            dayDto.setGames(games);
             week.add(dayDto);
         }
 
@@ -110,40 +83,10 @@ public class ReviewService {
             dayDto.setDate(date);
             dayDto.setScheduleId(null);
 
-            // 해당 날짜에 리뷰가 있는지 확인
-            Optional<Review> reviewOpt = reviewRepository.findByUserIdAndMatchDate(userId, date);
-            if (reviewOpt.isPresent()) {
-                dayDto.setHasReview(true);
-                dayDto.setReviewId(reviewOpt.get().getId());
-            } else {
-                dayDto.setHasReview(false);
-            }
+            // 헬퍼 메서드로 리뷰 및 경기 정보 설정
+            setReviewInfo(dayDto, userId, date);
+            setGameInfo(dayDto, date, myTeamId);
 
-            // 경기 정보 세팅
-            List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(date, myTeamId);
-            List<GameInfoDTO> games = new ArrayList<>();
-            System.out.println(date + " : " + schedules.size() + "개 스케줄 찾음");
-
-            for (Schedule schedule : schedules) {
-                int homeTeamId = schedule.getHomeTeamId();
-                int awayTeamId = schedule.getAwayTeamId();
-                
-                if (!schedules.isEmpty()) {
-                    dayDto.setScheduleId(schedules.get(0).getId());
-                }
-                
-                if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
-                    GameInfoDTO game = new GameInfoDTO();
-                    game.setScheduleId(schedule.getId());
-                    game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
-                    game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
-                    game.setHomeScore(schedule.getHomeTeamScore());
-                    game.setAwayScore(schedule.getAwayTeamScore());
-                    games.add(game);
-                }
-            }
-
-            dayDto.setGames(games);
             week.add(dayDto);
 
             // 한 주 단위로 분리
@@ -166,39 +109,10 @@ public class ReviewService {
                 dayDto.setDate(nextDate);
                 dayDto.setScheduleId(null);
 
-                // 다음 달 날짜에도 리뷰가 있는지 확인
-                Optional<Review> reviewOpt = reviewRepository.findByUserIdAndMatchDate(userId, nextDate);
-                if (reviewOpt.isPresent()) {
-                    dayDto.setHasReview(true);
-                    dayDto.setReviewId(reviewOpt.get().getId());
-                } else {
-                    dayDto.setHasReview(false);
-                }
+                // 헬퍼 메서드로 리뷰 및 경기 정보 설정
+                setReviewInfo(dayDto, userId, nextDate);
+                setGameInfo(dayDto, nextDate, myTeamId);
 
-                // 다음 달 날짜에도 경기 정보 세팅
-                List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(nextDate, myTeamId);
-                List<GameInfoDTO> games = new ArrayList<>();
-
-                for (Schedule schedule : schedules) {
-                    int homeTeamId = schedule.getHomeTeamId();
-                    int awayTeamId = schedule.getAwayTeamId();
-                    
-                    if (!schedules.isEmpty()) {
-                        dayDto.setScheduleId(schedules.get(0).getId());
-                    }
-                    
-                    if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
-                        GameInfoDTO game = new GameInfoDTO();
-                        game.setScheduleId(schedule.getId());
-                        game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
-                        game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
-                        game.setHomeScore(schedule.getHomeTeamScore());
-                        game.setAwayScore(schedule.getAwayTeamScore());
-                        games.add(game);
-                    }
-                }
-                
-                dayDto.setGames(games);
                 week.add(dayDto);
                 nextDay++;
             }
@@ -265,5 +179,44 @@ public class ReviewService {
         List<String> sorted = new ArrayList<>(names);
         sorted.sort(null); // 가나다순 정렬
         return sorted;
+    }
+
+    // 헬퍼 메서드: 리뷰 정보 설정
+    private void setReviewInfo(CalendarDayDTO dayDto, int userId, LocalDate date) {
+        reviewRepository.findByUserIdAndMatchDate(userId, date)
+            .ifPresentOrElse(
+                review -> {
+                    dayDto.setHasReview(true);
+                    dayDto.setReviewId(review.getId());
+                },
+                () -> dayDto.setHasReview(false)
+            );
+    }
+
+    // 헬퍼 메서드: 경기 정보 설정
+    private void setGameInfo(CalendarDayDTO dayDto, LocalDate date, int myTeamId) {
+        List<Schedule> schedules = scheduleService.findByMatchDateAndTeam(date, myTeamId);
+        List<GameInfoDTO> games = new ArrayList<>();
+
+        if (!schedules.isEmpty()) {
+            dayDto.setScheduleId(schedules.get(0).getId());
+        }
+
+        for (Schedule schedule : schedules) {
+            int homeTeamId = schedule.getHomeTeamId();
+            int awayTeamId = schedule.getAwayTeamId();
+
+            if (homeTeamId == myTeamId || awayTeamId == myTeamId) {
+                GameInfoDTO game = new GameInfoDTO();
+                game.setScheduleId(schedule.getId());
+                game.setHomeTeamName(teamService.getTeamNameById(homeTeamId));
+                game.setAwayTeamName(teamService.getTeamNameById(awayTeamId));
+                game.setHomeScore(schedule.getHomeTeamScore());
+                game.setAwayScore(schedule.getAwayTeamScore());
+                games.add(game);
+            }
+        }
+
+        dayDto.setGames(games);
     }
 }
