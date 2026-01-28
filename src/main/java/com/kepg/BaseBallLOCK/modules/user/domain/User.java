@@ -5,10 +5,15 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import com.kepg.BaseBallLOCK.modules.team.domain.Team;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,7 +37,14 @@ public class User {
     private String name;
     private String email;
     private String nickname;
-    private Integer favoriteTeamId;
+
+    /**
+     * 선호 팀 (다대일 관계)
+     * LAZY 로딩으로 N+1 문제 방지
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "favoriteTeamId")
+    private Team favoriteTeam;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -48,5 +60,21 @@ public class User {
      */
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    /**
+     * 기존 코드 호환성을 위한 favoriteTeamId getter
+     * @return 선호 팀의 ID, 팀이 없으면 null
+     */
+    public Integer getFavoriteTeamId() {
+        return favoriteTeam != null ? favoriteTeam.getId() : null;
+    }
+
+    /**
+     * 선호 팀 설정 메소드
+     * @param favoriteTeam 선호 팀 객체
+     */
+    public void setFavoriteTeam(Team favoriteTeam) {
+        this.favoriteTeam = favoriteTeam;
     }
 }

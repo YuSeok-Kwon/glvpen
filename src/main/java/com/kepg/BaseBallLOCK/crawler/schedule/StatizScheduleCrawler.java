@@ -20,7 +20,9 @@ import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class StatizScheduleCrawler {
@@ -69,7 +71,7 @@ public class StatizScheduleCrawler {
         try {
             String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             String url = "https://statiz.sporki.com/schedule/?m=daily&date=" + dateStr;
-            System.out.println("스케줄 크롤링 URL: " + url);
+            log.info("스케줄 크롤링 URL: {}", url);
 
             ChromeOptions options = new ChromeOptions();
             options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
@@ -80,12 +82,12 @@ public class StatizScheduleCrawler {
             Document doc = Jsoup.parse(driver.getPageSource());
             Elements games = doc.select(".box_type_boared .item_box");
             
-            System.out.println("스케줄 경기 박스 개수: " + games.size());
+            log.info("스케줄 경기 박스 개수: {}", games.size());
             
             if (games.isEmpty()) {
-                System.out.println("경기 박스가 없습니다. 다른 셀렉터를 시도합니다.");
+                log.warn("경기 박스가 없습니다. 다른 셀렉터를 시도합니다.");
                 Elements allBoxes = doc.select(".item_box");
-                System.out.println("전체 item_box 개수: " + allBoxes.size());
+                log.info("전체 item_box 개수: {}", allBoxes.size());
                 
                 if (!allBoxes.isEmpty()) {
                     games = allBoxes; // fallback
@@ -97,7 +99,7 @@ public class StatizScheduleCrawler {
                 	// 경기 일시
                 	Element boxHeadElement = game.selectFirst(".box_head");
                 	if (boxHeadElement == null) {
-                	    System.out.println("box_head 요소를 찾을 수 없습니다.");
+                	    log.warn("box_head 요소를 찾을 수 없습니다.");
                 	    continue;
                 	}
                 	String boxHead = boxHeadElement.text(); // 예: "정규 05-07 18:30 (고척) 경기전"
@@ -117,14 +119,14 @@ public class StatizScheduleCrawler {
                     // 팀 이름
                     Elements rows = game.select(".table_type03 tbody tr");
                     if (rows.size() < 2) {
-                        System.out.println("팀 정보 행이 부족합니다.");
+                        log.warn("팀 정보 행이 부족합니다.");
                         continue;
                     }
                     
                     Element awayTeamElement = rows.get(0).selectFirst("td");
                     Element homeTeamElement = rows.get(1).selectFirst("td");
                     if (awayTeamElement == null || homeTeamElement == null) {
-                        System.out.println("팀 이름 요소를 찾을 수 없습니다.");
+                        log.warn("팀 이름 요소를 찾을 수 없습니다.");
                         continue;
                     }
                     
@@ -152,7 +154,7 @@ public class StatizScheduleCrawler {
                             homeScore = scoreText.equals("-") ? null : Integer.parseInt(scoreText);
                         }
                     } catch (Exception e) {
-                        System.out.println("점수 파싱 실패 (무시됨): " + e.getMessage());
+                        log.debug("점수 파싱 실패 (무시됨): {}", e.getMessage());
                     }
 
                     int awayTeamId = teamNameToId.getOrDefault(awayTeam, 0);
@@ -191,15 +193,15 @@ public class StatizScheduleCrawler {
 
                     scheduleService.saveOrUpdate(schedule);
 
-                    System.out.printf("[Schedule 업데이트 완료] statizId=%d, matchDateTime=%s, %d vs %d (%s)\n",
+                    log.info("[Schedule 업데이트 완료] statizId={}, matchDateTime={}, {} vs {} ({})",
                             statizId, matchDateTime, homeTeamId, awayTeamId, status);
 
                 } catch (Exception e) {
-                    System.out.println("[개별 경기 처리 실패] " + e.getMessage());
+                    log.error("[개별 경기 처리 실패] {}", e.getMessage(), e);
                 }
             }
         } catch (Exception e) {
-            System.out.println("[일일 일정 처리 실패] " + e.getMessage());
+            log.error("[일일 일정 처리 실패] {}", e.getMessage(), e);
         } finally {
             if (driver != null) driver.quit();
         }

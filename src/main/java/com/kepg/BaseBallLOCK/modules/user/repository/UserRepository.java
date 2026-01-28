@@ -27,7 +27,11 @@ public interface UserRepository extends JpaRepository<User, Integer>{
 	
 	// 로그인 ID로 유저 조회 (회원 정보 가져오기 등에서 사용)
 	public Optional<User> findByLoginId(String loginId);
-	
-	@Query(value = "SELECT id FROM user", nativeQuery = true)
+
+	/**
+	 * 모든 유저의 ID 목록 조회
+	 * Native Query 대신 JPQL 사용으로 DB 독립성 확보
+	 */
+	@Query("SELECT u.id FROM User u")
 	List<Integer> findAllUserIds();
 }

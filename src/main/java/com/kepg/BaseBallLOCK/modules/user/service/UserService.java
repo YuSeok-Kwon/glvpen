@@ -7,6 +7,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kepg.BaseBallLOCK.modules.team.domain.Team;
+import com.kepg.BaseBallLOCK.modules.team.repository.TeamRepository;
 import com.kepg.BaseBallLOCK.modules.user.domain.User;
 import com.kepg.BaseBallLOCK.modules.user.repository.UserRepository;
 
@@ -18,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
 
 	private final UserRepository userRepository;
+	private final TeamRepository teamRepository;
 	private final PasswordEncoder passwordEncoder;
 	
 	// 로그인
@@ -47,13 +50,19 @@ public class UserService {
 		// BCrypt를 사용한 비밀번호 암호화
 		String encryptPassword = passwordEncoder.encode(password);
 
+		// 선호 팀 조회
+		Team favoriteTeam = null;
+		if (favoriteTeamId != null) {
+			favoriteTeam = teamRepository.findById(favoriteTeamId).orElse(null);
+		}
+
 		User user = User.builder()
 				.loginId(loginId)
 				.password(encryptPassword)
 				.name(name)
 				.email(email)
 				.nickname(nickname)
-				.favoriteTeamId(favoriteTeamId)
+				.favoriteTeam(favoriteTeam)
 				.build();
 
 		try {

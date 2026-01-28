@@ -25,12 +25,14 @@ import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequiredArgsConstructor
 @RequestMapping("/review")
 @RestController
 public class ReviewRestController {
-	
+
     private final ReviewService reviewService;
     private final ReviewSummaryService reviewSummaryService;
     private final ScheduleService scheduleService;
@@ -99,12 +101,12 @@ public class ReviewRestController {
                 // 기존 요약 조회
                 ReviewSummary existingSummary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
                 if (existingSummary != null) {
-                    System.out.println("리뷰 변경 -> 기존 요약 삭제: summaryId=" + existingSummary.getId() + ", weekStart=" + weekStart);
+                    log.info("리뷰 변경 -> 기존 요약 삭제: summaryId={}, weekStart={}", existingSummary.getId(), weekStart);
                     reviewSummaryService.deleteSummary(existingSummary.getId());
                 }
             }
         } catch (Exception e) {
-            System.err.println("요약 삭제 중 오류 발생: " + e.getMessage());
+            log.error("요약 삭제 중 오류 발생: {}", e.getMessage(), e);
             // 요약 삭제가 실패해도 리뷰 저장은 계속 진행
         }
     }

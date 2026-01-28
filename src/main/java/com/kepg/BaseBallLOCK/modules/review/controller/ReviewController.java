@@ -27,7 +27,9 @@ import com.kepg.BaseBallLOCK.modules.user.domain.User;
 
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/review")
@@ -75,21 +77,21 @@ public class ReviewController {
         for (List<CalendarDayDTO> week : calendar) {
             if (week.get(0) != null) {
                 LocalDate date = week.get(0).getDate();
-                
-                System.out.println("달력 주차 처리 - 월요일 날짜: " + date);
-                
+
+                log.debug("달력 주차 처리 - 월요일 날짜: {}", date);
+
                 // 먼저 요약이 존재하는지 확인
                 boolean exists = reviewSummaryService.summaryExistsForWeek(userId, date);
-                
+
                 // 요약이 없는 경우 자동 생성 시도
                 if (!exists) {
-                    System.out.println("요약이 없어서 생성 시도");
+                    log.debug("요약이 없어서 생성 시도");
                     ReviewSummary weeklySummary = reviewSummaryService.generateWeeklyReviewSummary(userId, date);
                     exists = (weeklySummary != null); // 생성에 성공했으면 true
-                    System.out.println("요약 생성 결과: " + (weeklySummary != null ? "성공" : "실패"));
+                    log.debug("요약 생성 결과: {}", (weeklySummary != null ? "성공" : "실패"));
                 }
-                
-                System.out.println("최종 summaryExistMap[" + date + "] = " + exists);
+
+                log.debug("최종 summaryExistMap[{}] = {}", date, exists);
                 summaryExistMap.put(date, exists);
             }
         }
@@ -165,19 +167,19 @@ public class ReviewController {
     public String reviewSummaryView(@RequestParam("startDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
                                     HttpSession session, Model model) {
 
-        System.out.println("=== 요약 페이지 접속 ===");
-        System.out.println("요청된 startDate: " + startDate);
-        
+        log.info("=== 요약 페이지 접속 ===");
+        log.info("요청된 startDate: {}", startDate);
+
         LocalDate weekStart = startDate.with(DayOfWeek.MONDAY);
-        System.out.println("계산된 weekStart: " + weekStart);
+        log.info("계산된 weekStart: {}", weekStart);
 
         User user = (User) session.getAttribute("loginUser");
         int userId = user != null ? user.getId() : 0;
         Integer teamId = user != null ? user.getFavoriteTeamId() : null;
         if (teamId == null) teamId = 999;
-        
-        System.out.println("userId: " + userId + ", teamId: " + teamId);
-        
+
+        log.info("userId: {}, teamId: {}", userId, teamId);
+
         LocalDate today = LocalDate.now();
         int year = today.getYear();
         int month = today.getMonthValue();
@@ -185,25 +187,25 @@ public class ReviewController {
         List<List<CalendarDayDTO>> calendar = reviewService.generateCalendar(year, month, userId, teamId);
 
         // 주간 요약 조회 시도
-        System.out.println("기존 요약 조회 시도");
+        log.debug("기존 요약 조회 시도");
         ReviewSummary summary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
 
         if (summary == null) {
-            System.out.println("기존 요약이 없어서 새로 생성 시도");
+            log.debug("기존 요약이 없어서 새로 생성 시도");
             reviewSummaryService.generateWeeklyReviewSummary(userId, weekStart);
             summary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
         } else if (summary.getFeelingSummary() != null && summary.getFeelingSummary().contains("Gemini 응답을 불러오지 못했습니다")) {
-            System.out.println("기존 요약이 실패한 상태이므로 삭제하고 새로 생성");
+            log.debug("기존 요약이 실패한 상태이므로 삭제하고 새로 생성");
             reviewSummaryService.deleteSummary(summary.getId());
             reviewSummaryService.generateWeeklyReviewSummary(userId, weekStart);
             summary = reviewSummaryService.getWeeklySummaryByStartDate(userId, weekStart);
         }
 
-        System.out.println("최종 요약 결과: " + (summary != null ? "존재함" : "null"));
+        log.debug("최종 요약 결과: {}", (summary != null ? "존재함" : "null"));
         if (summary != null) {
-            System.out.println("요약 ID: " + summary.getId());
-            System.out.println("감정 요약: " + summary.getFeelingSummary());
-            System.out.println("전체 요약: " + summary.getReviewText());
+            log.debug("요약 ID: {}", summary.getId());
+            log.debug("감정 요약: {}", summary.getFeelingSummary());
+            log.debug("전체 요약: {}", summary.getReviewText());
         }
 
         Map<LocalDate, Boolean> summaryExistMap = new HashMap<>();

@@ -57,10 +57,11 @@ public class GameEventService {
 
         boolean isWin = correctCount >= 4;
 
-        GameResult result = new GameResult();
-        result.setScheduleId(scheduleId);
-        result.setUserId(userId);
-        result.setWin(isWin);
+        GameResult result = GameResult.builder()
+                .scheduleId(scheduleId)
+                .userId(userId)
+                .isWin(isWin)
+                .build();
 
         gameResultRepository.save(result);
     }
