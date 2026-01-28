@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
-import com.kepg.BaseBallLOCK.modules.player.dto.TopPlayerCardView;
+import com.kepg.BaseBallLOCK.modules.player.dto.TopPitcherCardView;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
 import com.kepg.BaseBallLOCK.modules.player.stats.domain.PitcherStats;
 import com.kepg.BaseBallLOCK.modules.player.stats.repository.PitcherStatsRepository;
@@ -66,7 +66,7 @@ public class PitcherStatsService {
 	}
 	
 	// 팀별 WAR 1위 투수 조회 (ERA, WHIP, W/SV/HLD 중 최고값 포함)
-	public TopPlayerCardView getTopPitcher(int teamId, int season) {
+	public TopPitcherCardView getTopPitcher(int teamId, int season) {
 	    List<Object[]> result = playerService.getTopPitcherByTeamAndSeason(teamId, season);
 	    if (result.isEmpty()) {
 	        return null;
@@ -118,7 +118,7 @@ public class PitcherStatsService {
 	        }
 	    }
 
-	    return TopPlayerCardView.builder()
+	    return TopPitcherCardView.builder()
 	            .name(name)
 	            .position(position)
 	            .war(war)

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
-import com.kepg.BaseBallLOCK.modules.player.dto.TopPlayerCardView;
+import com.kepg.BaseBallLOCK.modules.player.dto.TopBatterCardView;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
 import com.kepg.BaseBallLOCK.modules.player.stats.domain.BatterStats;
 import com.kepg.BaseBallLOCK.modules.player.stats.repository.BatterStatsRepository;
@@ -64,7 +64,7 @@ public class BatterStatsService {
 	}
     
     // 팀별 WAR 1위 타자 조회 (AVG, OPS, HR 포함)
-    public TopPlayerCardView getTopHitter(int teamId, int season) {
+    public TopBatterCardView getTopHitter(int teamId, int season) {
         List<Object[]> result = playerService.getTopHitterByTeamAndSeason(teamId, season);
         if (result.isEmpty()) {
             return null;
@@ -111,7 +111,7 @@ public class BatterStatsService {
                 .map(Double::parseDouble)
                 .orElse(STAT_NOT_AVAILABLE);
 
-        return TopPlayerCardView.builder()
+        return TopBatterCardView.builder()
                 .name(name)
                 .position(position)
                 .war(war)

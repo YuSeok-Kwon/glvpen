@@ -9,7 +9,8 @@ import org.springframework.stereotype.Service;
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
 import com.kepg.BaseBallLOCK.modules.game.service.GameService;
-import com.kepg.BaseBallLOCK.modules.player.dto.TopPlayerCardView;
+import com.kepg.BaseBallLOCK.modules.player.dto.TopBatterCardView;
+import com.kepg.BaseBallLOCK.modules.player.dto.TopPitcherCardView;
 import com.kepg.BaseBallLOCK.modules.player.stats.service.BatterStatsService;
 import com.kepg.BaseBallLOCK.modules.player.stats.service.PitcherStatsService;
 import com.kepg.BaseBallLOCK.modules.team.domain.Team;
@@ -82,8 +83,8 @@ public class UserHomeService {
         }
 
         // 주요 선수
-        TopPlayerCardView hitter = batterStatsService.getTopHitter(myTeamId, season);
-        TopPlayerCardView pitcher = pitcherStatsService.getTopPitcher(myTeamId, season);
+        TopBatterCardView hitter = batterStatsService.getTopHitter(myTeamId, season);
+        TopPitcherCardView pitcher = pitcherStatsService.getTopPitcher(myTeamId, season);
 
         // 팀 순위
         List<TeamRankingCardView> rankingList = gameService.getTeamRankingCardViews(season);

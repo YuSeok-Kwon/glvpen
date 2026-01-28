@@ -3,7 +3,8 @@ package com.kepg.BaseBallLOCK.modules.user.dto;
 import java.util.List;
 
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
-import com.kepg.BaseBallLOCK.modules.player.dto.TopPlayerCardView;
+import com.kepg.BaseBallLOCK.modules.player.dto.TopBatterCardView;
+import com.kepg.BaseBallLOCK.modules.player.dto.TopPitcherCardView;
 import com.kepg.BaseBallLOCK.modules.team.domain.Team;
 import com.kepg.BaseBallLOCK.modules.team.teamRanking.dto.TeamRankingCardView;
 
@@ -39,10 +40,10 @@ public class UserHomeDTO {
     private String opponentRecord;
 
     // 주요 타자
-    private TopPlayerCardView topHitter;
+    private TopBatterCardView topHitter;
 
     // 주요 투수
-    private TopPlayerCardView topPitcher;
+    private TopPitcherCardView topPitcher;
 
     // 팀 순위
     private List<TeamRankingCardView> rankingList;
