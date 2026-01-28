@@ -37,14 +37,17 @@ public class BatterStatsService {
 	private static final double PA_MULTIPLIER = 3.1;
 	private static final int STANDARD_QUALIFIED_PA = 446;
 
+	// Logger 추가 (Lombok @Slf4j 없으므로)
+	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BatterStatsService.class);
+
 	// 타자 스탯 저장 또는 업데이트 (playerId + season + category 기준 중복 확인)
 	public void saveBatterStats(BatterStatsDTO dto) {
 	    Optional<BatterStats> optional = batterStatsRepository.findByPlayerIdAndSeasonAndCategory(dto.getPlayerId(), dto.getSeason(), dto.getCategory());
 
-	    if (optional.isPresent()) {
-	        batterStatsRepository.delete(optional.get());
-	        System.out.println("[DELETE-AND-INSERT] 기존 데이터 삭제: playerId=" + dto.getPlayerId() + ", category=" + dto.getCategory());
-	    }
+	    optional.ifPresent(existing -> {
+	        batterStatsRepository.delete(existing);
+	        log.info("[DELETE-AND-INSERT] 기존 데이터 삭제: playerId={}, category={}", dto.getPlayerId(), dto.getCategory());
+	    });
 
 	    BatterStats entity = BatterStats.builder()
 	            .playerId(dto.getPlayerId())
@@ -56,8 +59,7 @@ public class BatterStatsService {
 	            .build();
 
 	    batterStatsRepository.save(entity);
-	    System.out.println("[INSERT] playerId=" + dto.getPlayerId() + ", category=" + dto.getCategory()
-	            + ", value=" + dto.getValue());
+	    log.info("[INSERT] playerId={}, category={}, value={}", dto.getPlayerId(), dto.getCategory(), dto.getValue());
 	}
     
     // 팀별 WAR 1위 타자 조회 (AVG, OPS, HR 포함)
@@ -87,29 +89,26 @@ public class BatterStatsService {
             playerId = Integer.parseInt(row[4].toString());
         }
 
-        double avg = STAT_NOT_AVAILABLE;
-        int hr = DEFAULT_HR_VALUE;
-        double ops = STAT_NOT_AVAILABLE;
+        // Optional 체이닝 패턴으로 개선
+        double avg = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "AVG", season)
+                .map(Double::parseDouble)
+                .orElse(STAT_NOT_AVAILABLE);
 
-        Optional<String> avgOptional = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "AVG", season);
-        if (avgOptional.isPresent()) {
-            avg = Double.parseDouble(avgOptional.get());
-        }
+        int hr = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "HR", season)
+                .map(String::trim)
+                .map(rawHr -> {
+                    try {
+                        return (int) Double.parseDouble(rawHr);
+                    } catch (NumberFormatException e) {
+                        log.warn("HR 파싱 오류: {}", rawHr);
+                        return DEFAULT_HR_VALUE;
+                    }
+                })
+                .orElse(DEFAULT_HR_VALUE);
 
-        Optional<String> hrOptional = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "HR", season);
-        if (hrOptional.isPresent()) {
-            String rawHr = hrOptional.get().trim();
-            try {
-                hr = (int) Double.parseDouble(rawHr);
-            } catch (NumberFormatException e) {
-                System.out.println("오류: " + rawHr);
-            }
-        }
-
-        Optional<String> opsOptional = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "OPS", season);
-        if (opsOptional.isPresent()) {
-            ops = Double.parseDouble(opsOptional.get());
-        }
+        double ops = batterStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "OPS", season)
+                .map(Double::parseDouble)
+                .orElse(STAT_NOT_AVAILABLE);
 
         return TopPlayerCardView.builder()
                 .name(name)

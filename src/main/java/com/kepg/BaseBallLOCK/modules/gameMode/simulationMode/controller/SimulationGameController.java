@@ -25,11 +25,16 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/simulations")
 @Controller("simulationModeGameController")
 public class SimulationGameController {
-	
+
 	private final SimulationGameService simulationGameService;
 	private final SimulationService simulationService;
 	private final UserLineupService userLineupService;
 	private final GameResultService gameResultService;
+
+	// 헬퍼 메서드: User에서 userId 추출 (null 안전)
+	private int getUserIdOrDefault(User user) {
+		return user != null ? user.getId() : 0;
+	}
 		
 	@GetMapping("/home-view")
 	public String gameHomeView() {
@@ -45,7 +50,7 @@ public class SimulationGameController {
 	@GetMapping("/play-view")
 	public String showResult(@RequestParam(defaultValue = "normal") String difficulty, Model model, HttpSession session) {
 	    User user = (User) session.getAttribute("loginUser");
-	    int userId = user != null ? user.getId() : 0;
+	    int userId = getUserIdOrDefault(user);
 
 	    List<PlayerCardOverallDTO> userLineup = userLineupService.getSavedLineup(userId);
 

@@ -35,6 +35,9 @@ public class PitcherStatsService {
 	private static final int PITCHER_STATS_COLUMN_COUNT = 16;
 	private static final int CURRENT_SEASON = 2025;
 	private static final int STANDARD_QUALIFIED_IP = 144;
+
+	// Logger 추가
+	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PitcherStatsService.class);
 	
 	// 투수 스탯 저장 또는 업데이트 (playerId + season + category 기준 중복 확인)
 	@Transactional
@@ -42,10 +45,10 @@ public class PitcherStatsService {
 	    Optional<PitcherStats> optional = pitcherStatsRepository
 	            .findByPlayerIdAndSeasonAndCategory(dto.getPlayerId(), dto.getSeason(), dto.getCategory());
 
-	    if (optional.isPresent()) {
-	        pitcherStatsRepository.delete(optional.get());
-	        System.out.println("[DELETE-AND-INSERT] 기존 데이터 삭제: playerId=" + dto.getPlayerId() + ", category=" + dto.getCategory());
-	    }
+	    optional.ifPresent(existing -> {
+	        pitcherStatsRepository.delete(existing);
+	        log.info("[DELETE-AND-INSERT] 기존 데이터 삭제: playerId={}, category={}", dto.getPlayerId(), dto.getCategory());
+	    });
 
 	    PitcherStats entity = PitcherStats.builder()
 	            .playerId(dto.getPlayerId())
@@ -57,8 +60,7 @@ public class PitcherStatsService {
 	            .build();
 
 	    pitcherStatsRepository.save(entity);
-	    System.out.println("[INSERT] playerId=" + dto.getPlayerId() + ", category=" + dto.getCategory()
-	            + ", value=" + dto.getValue());
+	    log.info("[INSERT] playerId={}, category={}, value={}", dto.getPlayerId(), dto.getCategory(), dto.getValue());
 	}
 	
 	// 팀별 WAR 1위 투수 조회 (ERA, WHIP, W/SV/HLD 중 최고값 포함)
@@ -88,29 +90,24 @@ public class PitcherStatsService {
 	        playerId = Integer.parseInt(row[4].toString());
 	    }
 
-	    double era = STAT_NOT_AVAILABLE;
-	    double whip = STAT_NOT_AVAILABLE;
-	    String bestStatLabel = "-";
-	    int bestStatValue = STAT_NOT_AVAILABLE_INT;
+	    // Optional 체이닝 패턴으로 개선
+	    double era = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "ERA", season)
+	            .map(Double::parseDouble)
+	            .orElse(STAT_NOT_AVAILABLE);
 
-	    Optional<String> eraOpt = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "ERA", season);
-	    if (eraOpt.isPresent()) {
-	        era = Double.parseDouble(eraOpt.get());
-	    }
-
-	    Optional<String> whipOpt = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "WHIP", season);
-	    if (whipOpt.isPresent()) {
-	        whip = Double.parseDouble(whipOpt.get());
-	    }
+	    double whip = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "WHIP", season)
+	            .map(Double::parseDouble)
+	            .orElse(STAT_NOT_AVAILABLE);
 
 	    Map<String, Integer> statMap = new HashMap<>();
 	    for (String cat : List.of("W", "SV", "HLD")) {
-	        Optional<String> statOpt = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, cat, season);
-	        if (statOpt.isPresent()) {
-	            int statValue = (int) Double.parseDouble(statOpt.get());
-	            statMap.put(cat, statValue);
-	        }
+	        pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, cat, season)
+	                .map(value -> (int) Double.parseDouble(value))
+	                .ifPresent(statValue -> statMap.put(cat, statValue));
 	    }
+
+	    String bestStatLabel = "-";
+	    int bestStatValue = STAT_NOT_AVAILABLE_INT;
 
 	    for (Map.Entry<String, Integer> entry : statMap.entrySet()) {
 	        if (entry.getValue() > bestStatValue) {

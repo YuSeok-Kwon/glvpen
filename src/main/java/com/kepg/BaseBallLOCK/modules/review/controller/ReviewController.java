@@ -42,6 +42,19 @@ public class ReviewController {
     // Magic Number 상수화
     private static final int DEFAULT_TEAM_ID = 999;
 
+    // 헬퍼 메서드: User에서 팀 ID 추출 (null 안전)
+    private int getTeamIdOrDefault(User user) {
+        if (user == null || user.getFavoriteTeamId() == null) {
+            return DEFAULT_TEAM_ID;
+        }
+        return user.getFavoriteTeamId();
+    }
+
+    // 헬퍼 메서드: User에서 userId 추출 (null 안전)
+    private int getUserIdOrDefault(User user) {
+        return user != null ? user.getId() : 0;
+    }
+
     @GetMapping("/calendar-view")
     public String reviewCalendar(@RequestParam(value = "year", required = false) Integer year,
                                   @RequestParam(value = "month", required = false) Integer month,
@@ -49,11 +62,8 @@ public class ReviewController {
                                   Model model) {
 
         User user = (User) session.getAttribute("loginUser");
-        int userId = user != null ? user.getId() : 0;
-        Integer myTeamId = user != null ? user.getFavoriteTeamId() : null;
-        if (myTeamId == null) {
-            myTeamId = DEFAULT_TEAM_ID;
-        }
+        int userId = getUserIdOrDefault(user);
+        int myTeamId = getTeamIdOrDefault(user);
 
         // 오늘 날짜 → 이번 주 시작일 (월요일)
         LocalDate today = LocalDate.now();
