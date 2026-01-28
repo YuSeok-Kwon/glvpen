@@ -3,6 +3,8 @@ package com.kepg.BaseBallLOCK.modules.team.teamStats.service;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -95,15 +97,12 @@ public class TeamStatsService {
         DecimalFormat twoDecimal = new DecimalFormat("0.00");
         DecimalFormat integerFormat = new DecimalFormat("0");
 
-        if (category.equals("OPS") || category.equals("AVG")) {
-            return threeDecimal.format(value);
-        } else if (Arrays.asList("BetterWAR", "PitcherWAR", "ERA", "WHIP", "타격", "주루", "수비", "선발", "불펜").contains(category)) {
-            return twoDecimal.format(value);
-        } else if (Arrays.asList("HR", "SB", "SO", "BB", "H", "SV", "W").contains(category)) {
-            return integerFormat.format(value);
-        } else {
-            return twoDecimal.format(value);
-        }
+        return switch (category) {
+            case "OPS", "AVG" -> threeDecimal.format(value);
+            case "HR", "SB", "SO", "BB", "H", "SV", "W" -> integerFormat.format(value);
+            case "BetterWAR", "PitcherWAR", "ERA", "WHIP", "타격", "주루", "수비", "선발", "불펜" -> twoDecimal.format(value);
+            default -> twoDecimal.format(value);
+        };
     }
 
     // 타자 스탯 Top 팀 조회
@@ -175,55 +174,53 @@ public class TeamStatsService {
 
     // 오름차순 정렬
     private void sortAscending(List<TeamStatRankingDTO> list, String sort) {
-        for (int i = 0; i < list.size() - 1; i++) {
-            for (int j = i + 1; j < list.size(); j++) {
-                Double a = getValueByCategory(list.get(i), sort);
-                Double b = getValueByCategory(list.get(j), sort);
-                if (a != null && b != null && a > b) {
-                    TeamStatRankingDTO temp = list.get(i);
-                    list.set(i, list.get(j));
-                    list.set(j, temp);
-                }
-            }
-        }
+        Comparator<TeamStatRankingDTO> comparator = (a, b) -> {
+            Double valA = getValueByCategory(a, sort);
+            Double valB = getValueByCategory(b, sort);
+            if (valA == null && valB == null) return 0;
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+            return Double.compare(valA, valB);
+        };
+        Collections.sort(list, comparator);
     }
 
     // 내림차순 정렬
     private void sortDescending(List<TeamStatRankingDTO> list, String sort) {
-        for (int i = 0; i < list.size() - 1; i++) {
-            for (int j = i + 1; j < list.size(); j++) {
-                Double a = getValueByCategory(list.get(i), sort);
-                Double b = getValueByCategory(list.get(j), sort);
-                if (a != null && b != null && a < b) {
-                    TeamStatRankingDTO temp = list.get(i);
-                    list.set(i, list.get(j));
-                    list.set(j, temp);
-                }
-            }
-        }
+        Comparator<TeamStatRankingDTO> comparator = (a, b) -> {
+            Double valA = getValueByCategory(a, sort);
+            Double valB = getValueByCategory(b, sort);
+            if (valA == null && valB == null) return 0;
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+            return Double.compare(valB, valA); // 내림차순이므로 valB, valA 순서
+        };
+        Collections.sort(list, comparator);
     }
 
     // 카테고리에 따른 스탯 값 가져오기
     private Double getValueByCategory(TeamStatRankingDTO dto, String category) {
-    	if (category.equals("TotalWAR")) return dto.getTotalWar(); 
-        if (category.equals("OPS")) return dto.getOps();
-        if (category.equals("AVG")) return dto.getAvg();
-        if (category.equals("HR")) return dto.getHr();
-        if (category.equals("SB")) return dto.getSb();
-        if (category.equals("BetterWAR")) return dto.getBetterWar();
-        if (category.equals("PitcherWAR")) return dto.getPitcherWar();
-        if (category.equals("SO")) return dto.getSo();
-        if (category.equals("W")) return dto.getW();
-        if (category.equals("H")) return dto.getH();
-        if (category.equals("SV")) return dto.getSv();
-        if (category.equals("ERA")) return dto.getEra();
-        if (category.equals("WHIP")) return dto.getWhip();
-        if (category.equals("BB")) return dto.getBb();
-        if (category.equals("타격")) return dto.getBattingWaa();
-        if (category.equals("주루")) return dto.getBaserunningWaa();
-        if (category.equals("수비")) return dto.getDefenseWaa();
-        if (category.equals("선발")) return dto.getStartingWaa();
-        if (category.equals("불펜")) return dto.getBullpenWaa();
-        return null;
+        return switch (category) {
+            case "TotalWAR" -> dto.getTotalWar();
+            case "OPS" -> dto.getOps();
+            case "AVG" -> dto.getAvg();
+            case "HR" -> dto.getHr();
+            case "SB" -> dto.getSb();
+            case "BetterWAR" -> dto.getBetterWar();
+            case "PitcherWAR" -> dto.getPitcherWar();
+            case "SO" -> dto.getSo();
+            case "W" -> dto.getW();
+            case "H" -> dto.getH();
+            case "SV" -> dto.getSv();
+            case "ERA" -> dto.getEra();
+            case "WHIP" -> dto.getWhip();
+            case "BB" -> dto.getBb();
+            case "타격" -> dto.getBattingWaa();
+            case "주루" -> dto.getBaserunningWaa();
+            case "수비" -> dto.getDefenseWaa();
+            case "선발" -> dto.getStartingWaa();
+            case "불펜" -> dto.getBullpenWaa();
+            default -> null;
+        };
     }
 }
