@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +31,13 @@ import java.util.Map;
 public class RealMatchCrawlerService {
 
     private final ScheduleService scheduleService;
+
+    // 동시 크롤링 제한 (최대 2개까지)
+    private final Semaphore crawlSemaphore = new Semaphore(2);
+
+    // 크롤링 간 최소 간격 (밀리초)
+    private static final long MIN_CRAWL_INTERVAL_MS = 1000;
+    private volatile long lastCrawlTime = 0;
 
     private static final Map<String, Integer> teamNameToId = new HashMap<>();
     private static final Map<String, String> teamIdToName = new HashMap<>();
@@ -130,10 +139,30 @@ public class RealMatchCrawlerService {
 
     /**
      * Statiz에서 라인업 데이터를 크롤링합니다.
+     * 동시성 제어 및 Rate Limiting 적용
      */
     private void crawlLineupFromStatiz(int scheduleId) {
         WebDriver driver = null;
+        boolean acquired = false;
+
         try {
+            // 동시 크롤링 제한 (최대 2개, 타임아웃 10초)
+            acquired = crawlSemaphore.tryAcquire(10, TimeUnit.SECONDS);
+            if (!acquired) {
+                log.warn("크롤링 대기 시간 초과 - scheduleId: {}", scheduleId);
+                return;
+            }
+
+            // Rate Limiting: 최소 간격 확인
+            synchronized (this) {
+                long now = System.currentTimeMillis();
+                long timeSinceLastCrawl = now - lastCrawlTime;
+                if (timeSinceLastCrawl < MIN_CRAWL_INTERVAL_MS) {
+                    Thread.sleep(MIN_CRAWL_INTERVAL_MS - timeSinceLastCrawl);
+                }
+                lastCrawlTime = System.currentTimeMillis();
+            }
+
             ChromeOptions options = new ChromeOptions();
             options.addArguments("--headless");
             options.addArguments("--no-sandbox");
@@ -143,24 +172,30 @@ public class RealMatchCrawlerService {
             options.addArguments("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
 
             driver = new ChromeDriver(options);
-            
+
             // Statiz 경기 상세 페이지 접근
             String url = "https://www.statiz.co.kr/game.php?opt=5&game_id=" + scheduleId;
             driver.get(url);
-            
+
             Thread.sleep(2000); // 페이지 로딩 대기
-            
+
             String pageSource = driver.getPageSource();
             Document doc = Jsoup.parse(pageSource);
-            
+
             // 라인업 정보 파싱
             parseLineupData(doc, scheduleId);
-            
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("크롤링 작업 중단 - scheduleId: {}", scheduleId);
         } catch (Exception e) {
             log.error("라인업 크롤링 중 오류 발생 - scheduleId: {}", scheduleId, e);
         } finally {
             if (driver != null) {
                 driver.quit();
+            }
+            if (acquired) {
+                crawlSemaphore.release();
             }
         }
     }
