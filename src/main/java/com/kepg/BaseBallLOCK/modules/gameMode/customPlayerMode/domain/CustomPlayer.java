@@ -75,6 +75,9 @@ public class CustomPlayer {
     private Integer experience = 0; // RPG 모드 경험치
 
     @Builder.Default
+    private Integer trainingPoints = 0; // RPG 모드 훈련 포인트
+
+    @Builder.Default
     private Integer fielding = 50; // RPG 모드 수비력
 
     @Builder.Default

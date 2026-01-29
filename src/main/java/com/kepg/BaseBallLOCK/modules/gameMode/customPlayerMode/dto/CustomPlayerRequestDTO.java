@@ -77,4 +77,15 @@ public class CustomPlayerRequestDTO {
         private Integer fielding;
         private Integer arm;
     }
+
+    /**
+     * 훈련 요청 정보
+     */
+    @Data
+    @Builder
+    public static class TrainingRequest {
+        private Long playerId;
+        private String trainingType;  // "BATTING", "RUNNING", "FIELDING", "STAMINA"
+        private Integer intensity;    // 1~3 (강도 - 높을수록 성공률 낮지만 효과 큼)
+    }
 }
