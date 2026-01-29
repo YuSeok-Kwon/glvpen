@@ -23,7 +23,9 @@ import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.dto.UserLineupDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.simulationMode.repository.UserLineupRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SimulationGameService {
@@ -152,7 +154,7 @@ public class SimulationGameService {
                 .findByPlayerIdAndSeason(playerId, season);
 
             if (cardOpt.isEmpty()) {
-                System.out.println("PlayerCardOverall 없음");
+                log.warn("PlayerCardOverall 없음");
                 continue;
             }
 

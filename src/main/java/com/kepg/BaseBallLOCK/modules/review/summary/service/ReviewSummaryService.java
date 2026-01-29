@@ -21,7 +21,9 @@ import com.kepg.BaseBallLOCK.modules.review.summary.repository.ReviewSummaryRepo
 import com.kepg.BaseBallLOCK.modules.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ReviewSummaryService {
@@ -153,18 +155,19 @@ public class ReviewSummaryService {
 	    List<Review> weeklyReviews = reviewRepository.findByUserIdAndScheduleMatchDateBetween(
 	        userId, startDateTime, endDateTime
 	    );
-	    
-	    System.out.println("summaryExistsForWeek - userId: " + userId + ", weekStart: " + weekStartDate + ", 리뷰 개수: " + (weeklyReviews != null ? weeklyReviews.size() : 0));
-	    
+
+	    log.debug("summaryExistsForWeek - userId: {}, weekStart: {}, 리뷰 개수: {}",
+	        userId, weekStartDate, (weeklyReviews != null ? weeklyReviews.size() : 0));
+
 	    if (weeklyReviews == null || weeklyReviews.size() < 2) {
-	        System.out.println("리뷰가 2개 미만이므로 요약 불가");
+	        log.debug("리뷰가 2개 미만이므로 요약 불가");
 	        return false; // 리뷰가 2개 미만이면 요약 불가
 	    }
-	    
+
 	    // 2. 리뷰가 2개 이상이면 요약이 생성되었는지 확인
 	    Date sqlDate = Date.valueOf(weekStartDate);
 	    boolean exists = reviewSummaryRepository.existsByUserIdAndWeekStartDate(userId, sqlDate);
-	    System.out.println("요약 존재 여부: " + exists);
+	    log.debug("요약 존재 여부: {}", exists);
 	    return exists;
 	}
 	

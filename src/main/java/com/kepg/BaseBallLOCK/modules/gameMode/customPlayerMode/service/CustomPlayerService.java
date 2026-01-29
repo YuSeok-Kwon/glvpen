@@ -5,6 +5,7 @@ import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.repository.Custom
 import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerRequestDTO;
 import com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResultDTO;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.Random;
  * - 커스텀 선수 기반 게임 시뮬레이션
  * - 선수 성장 및 경험치 시스템
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -204,7 +206,7 @@ public class CustomPlayerService {
      */
     private void saveCustomPlayerGameResult(CustomPlayerResultDTO result) {
         // GameResultRepository를 통해 저장 (별도 구현 필요)
-        System.out.println("게임 결과 저장: " + result);
+        log.info("게임 결과 저장: {}", result);
     }
     
     /**
@@ -283,5 +285,131 @@ public class CustomPlayerService {
         }
         
         return teamStats.getRuns() > opponentRuns;
+    }
+
+    /**
+     * 모드별 커스텀 선수 목록 조회
+     */
+    public List<CustomPlayer> getCustomPlayersByMode(Integer userId, String mode) {
+        return customPlayerRepository.findByUserIdAndMode(userId, mode);
+    }
+
+    /**
+     * ID로 커스텀 선수 조회
+     */
+    public CustomPlayer getCustomPlayerById(Long playerId) {
+        return customPlayerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("선수를 찾을 수 없습니다. ID: " + playerId));
+    }
+
+    /**
+     * 커스텀 선수 정보 수정
+     */
+    public CustomPlayer updateCustomPlayer(Long playerId, CustomPlayerRequestDTO.CustomPlayerInfo playerInfo) {
+        CustomPlayer player = getCustomPlayerById(playerId);
+
+        // 능력치 검증
+        validatePlayerStats(playerInfo);
+
+        // 정보 업데이트
+        if (playerInfo.getPlayerName() != null) {
+            player.setPlayerName(playerInfo.getPlayerName());
+        }
+        if (playerInfo.getBattingPower() != null) {
+            player.setPower(playerInfo.getBattingPower());
+        }
+        if (playerInfo.getContactAbility() != null) {
+            player.setContact(playerInfo.getContactAbility());
+        }
+        if (playerInfo.getSpeed() != null) {
+            player.setSpeed(playerInfo.getSpeed());
+        }
+        if (playerInfo.getFielding() != null) {
+            player.setFielding(playerInfo.getFielding());
+        }
+        if (playerInfo.getThrowingPower() != null) {
+            player.setArm(playerInfo.getThrowingPower());
+        }
+
+        player.setUpdatedAt(LocalDateTime.now());
+
+        return customPlayerRepository.save(player);
+    }
+
+    /**
+     * 커스텀 선수 삭제
+     */
+    public void deleteCustomPlayer(Long playerId) {
+        CustomPlayer player = getCustomPlayerById(playerId);
+        customPlayerRepository.delete(player);
+    }
+
+    /**
+     * 능력치 할당 (레벨업 시)
+     */
+    public CustomPlayer allocateStats(Long playerId, CustomPlayerRequestDTO.StatAllocation statAllocation) {
+        CustomPlayer player = getCustomPlayerById(playerId);
+
+        // RPG 모드에서만 가능
+        if (!player.isRpgMode()) {
+            throw new IllegalArgumentException("HITTER 모드에서는 능력치 할당이 불가능합니다.");
+        }
+
+        // 할당 가능 포인트 확인 (레벨당 5포인트)
+        int totalAllocated = statAllocation.getPower() + statAllocation.getContact() +
+                           statAllocation.getSpeed() + statAllocation.getFielding() +
+                           statAllocation.getArm();
+
+        int availablePoints = player.getLevel() * 5; // 예: 레벨당 5 포인트
+        int currentTotal = player.getPower() + player.getContact() + player.getSpeed() +
+                          player.getFielding() + player.getArm();
+
+        if (currentTotal + totalAllocated > 250 + availablePoints) {
+            throw new IllegalArgumentException("할당 가능한 포인트를 초과했습니다.");
+        }
+
+        // 능력치 적용
+        player.setPower(player.getPower() + statAllocation.getPower());
+        player.setContact(player.getContact() + statAllocation.getContact());
+        player.setSpeed(player.getSpeed() + statAllocation.getSpeed());
+        player.setFielding(player.getFielding() + statAllocation.getFielding());
+        player.setArm(player.getArm() + statAllocation.getArm());
+
+        player.setUpdatedAt(LocalDateTime.now());
+
+        return customPlayerRepository.save(player);
+    }
+
+    /**
+     * 경기 결과 반영 (경험치/레벨업)
+     */
+    public CustomPlayer applyMatchResult(Long playerId, CustomPlayerResultDTO matchResult) {
+        CustomPlayer player = getCustomPlayerById(playerId);
+
+        // RPG 모드에서만 경험치 시스템 작동
+        if (!player.isRpgMode()) {
+            return player;
+        }
+
+        // 경험치 계산 (승리 시 보너스)
+        int baseExp = 50;
+        int winBonus = matchResult.isWin() ? 30 : 0;
+        int totalExp = baseExp + winBonus;
+
+        player.setExperience(player.getExperience() + totalExp);
+
+        // 레벨업 체크 (100 경험치당 1레벨)
+        int requiredExp = player.getLevel() * 100;
+        while (player.getExperience() >= requiredExp) {
+            player.setLevel(player.getLevel() + 1);
+            player.setExperience(player.getExperience() - requiredExp);
+            requiredExp = player.getLevel() * 100;
+
+            log.info("게임 결과 저장: {}", matchResult);
+        }
+
+        player.setUpdatedAt(LocalDateTime.now());
+
+        return customPlayerRepository.save(player);
     }
 }

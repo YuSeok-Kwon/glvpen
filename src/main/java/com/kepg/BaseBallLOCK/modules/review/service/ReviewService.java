@@ -211,6 +211,17 @@ public class ReviewService {
     public Optional<Review> findById(Integer id) {
         return reviewRepository.findById(id);
     }
+
+    // 특정 기간 내 유저의 리뷰 목록 조회
+    public List<Review> getReviewsByUserIdAndPeriod(int userId, LocalDateTime start, LocalDateTime end) {
+        return reviewRepository.findByUserIdAndScheduleMatchDateBetween(userId, start, end);
+    }
+
+    // 리뷰 삭제
+    @Transactional
+    public void deleteReview(Integer reviewId) {
+        reviewRepository.deleteById(reviewId);
+    }
     
     // 특정 경기에서 유저 팀(myTeamId)이 포함된 타자/투수 이름을 리스트로 조회 (중복 제거 및 가나다 정렬)
     public List<String> findPlayerNamesByScheduleId(int scheduleId, int myTeamId) {
