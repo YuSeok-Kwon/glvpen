@@ -199,6 +199,10 @@ public class CustomPlayerService {
         player.setSpeed(player.getSpeed() + random.nextInt(3) + 1);
         player.setFielding(player.getFielding() + random.nextInt(3) + 1);
         player.setArm(player.getArm() + random.nextInt(3) + 1);
+
+        // 레벨업 시 훈련 포인트 5개 부여
+        player.setTrainingPoints(player.getTrainingPoints() + 5);
+        log.info("레벨업! 선수: {}, 레벨: {}, 훈련 포인트 +5", player.getPlayerName(), player.getLevel());
     }
     
     /**
@@ -411,5 +415,188 @@ public class CustomPlayerService {
         player.setUpdatedAt(LocalDateTime.now());
 
         return customPlayerRepository.save(player);
+    }
+
+    /**
+     * 선수 훈련 실행
+     */
+    public com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResponseDTO.TrainingResult trainPlayer(
+            CustomPlayerRequestDTO.TrainingRequest request) {
+
+        CustomPlayer player = getCustomPlayerById(request.getPlayerId());
+
+        // RPG 모드 확인
+        if (!player.isRpgMode()) {
+            throw new IllegalArgumentException("HITTER 모드에서는 훈련이 불가능합니다.");
+        }
+
+        // 훈련 포인트 확인
+        int requiredPoints = request.getIntensity() != null ? request.getIntensity() : 1;
+        if (player.getTrainingPoints() < requiredPoints) {
+            throw new IllegalArgumentException("훈련 포인트가 부족합니다. (필요: " + requiredPoints + ", 보유: " + player.getTrainingPoints() + ")");
+        }
+
+        // 훈련 전 능력치 저장
+        com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResponseDTO.Stats statsBefore =
+            com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResponseDTO.Stats.builder()
+                .power(player.getPower())
+                .contact(player.getContact())
+                .speed(player.getSpeed())
+                .fielding(player.getFielding())
+                .arm(player.getArm())
+                .defense(player.getDefense())
+                .build();
+
+        // 훈련 실행
+        boolean success = executeTraining(player, request.getTrainingType(), requiredPoints);
+
+        // 훈련 포인트 차감
+        player.setTrainingPoints(player.getTrainingPoints() - requiredPoints);
+
+        // 훈련 후 능력치
+        com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResponseDTO.Stats statsAfter =
+            com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResponseDTO.Stats.builder()
+                .power(player.getPower())
+                .contact(player.getContact())
+                .speed(player.getSpeed())
+                .fielding(player.getFielding())
+                .arm(player.getArm())
+                .defense(player.getDefense())
+                .build();
+
+        player.setUpdatedAt(LocalDateTime.now());
+        customPlayerRepository.save(player);
+
+        // 결과 메시지 생성
+        String message = generateTrainingMessage(request.getTrainingType(), success);
+
+        // 다음 레벨까지 필요한 경험치
+        int expToNextLevel = player.getLevel() * 100 - player.getExperience();
+
+        return com.kepg.BaseBallLOCK.modules.gameMode.customPlayerMode.dto.CustomPlayerResponseDTO.TrainingResult.builder()
+                .playerId(player.getId())
+                .playerName(player.getPlayerName())
+                .trainingType(request.getTrainingType())
+                .success(success)
+                .message(message)
+                .statsBefore(statsBefore)
+                .statsAfter(statsAfter)
+                .leveledUp(false)
+                .currentLevel(player.getLevel())
+                .currentExperience(player.getExperience())
+                .experienceToNextLevel(expToNextLevel)
+                .remainingTrainingPoints(player.getTrainingPoints())
+                .build();
+    }
+
+    /**
+     * 훈련 실행 로직
+     */
+    private boolean executeTraining(CustomPlayer player, String trainingType, int intensity) {
+        // 성공률 계산 (강도가 높을수록 성공률 감소, 능력치가 높을수록 성공률 감소)
+        double baseSuccessRate = 0.8; // 80% 기본 성공률
+        double intensityPenalty = (intensity - 1) * 0.1; // 강도 1당 -10%
+
+        int currentStat = getCurrentStatByType(player, trainingType);
+        double statPenalty = Math.min(currentStat / 100.0 * 0.3, 0.3); // 능력치가 높을수록 최대 -30%
+
+        double successRate = Math.max(baseSuccessRate - intensityPenalty - statPenalty, 0.3); // 최소 30%
+
+        boolean success = random.nextDouble() < successRate;
+
+        if (success) {
+            // 성공 시 능력치 증가 (강도에 비례)
+            int statIncrease = intensity + random.nextInt(intensity);
+            applyStatIncrease(player, trainingType, statIncrease);
+            log.info("훈련 성공! 선수: {}, 타입: {}, 증가: +{}", player.getPlayerName(), trainingType, statIncrease);
+        } else {
+            log.info("훈련 실패. 선수: {}, 타입: {}", player.getPlayerName(), trainingType);
+        }
+
+        return success;
+    }
+
+    /**
+     * 훈련 타입에 따른 현재 능력치 조회
+     */
+    private int getCurrentStatByType(CustomPlayer player, String trainingType) {
+        switch (trainingType) {
+            case "BATTING":
+                return (player.getPower() + player.getContact()) / 2;
+            case "RUNNING":
+                return player.getSpeed();
+            case "FIELDING":
+                return player.getFielding();
+            case "STAMINA":
+                return (player.getPower() + player.getContact() + player.getSpeed() + player.getFielding() + player.getArm()) / 5;
+            default:
+                return 50;
+        }
+    }
+
+    /**
+     * 훈련 타입에 따른 능력치 증가 적용
+     */
+    private void applyStatIncrease(CustomPlayer player, String trainingType, int increase) {
+        switch (trainingType) {
+            case "BATTING":
+                // 타격 훈련: 파워 + 컨택트 증가
+                player.setPower(Math.min(player.getPower() + increase, 99));
+                player.setContact(Math.min(player.getContact() + increase, 99));
+                break;
+            case "RUNNING":
+                // 주루 훈련: 스피드 증가
+                player.setSpeed(Math.min(player.getSpeed() + increase * 2, 99));
+                break;
+            case "FIELDING":
+                // 수비 훈련: 수비력 + 어깨 증가
+                player.setFielding(Math.min(player.getFielding() + increase, 99));
+                player.setArm(Math.min(player.getArm() + increase, 99));
+                break;
+            case "STAMINA":
+                // 체력 훈련: 모든 능력치 소폭 증가
+                player.setPower(Math.min(player.getPower() + 1, 99));
+                player.setContact(Math.min(player.getContact() + 1, 99));
+                player.setSpeed(Math.min(player.getSpeed() + 1, 99));
+                player.setFielding(Math.min(player.getFielding() + 1, 99));
+                player.setArm(Math.min(player.getArm() + 1, 99));
+                break;
+        }
+    }
+
+    /**
+     * 훈련 결과 메시지 생성
+     */
+    private String generateTrainingMessage(String trainingType, boolean success) {
+        String typeName;
+        switch (trainingType) {
+            case "BATTING":
+                typeName = "타격";
+                break;
+            case "RUNNING":
+                typeName = "주루";
+                break;
+            case "FIELDING":
+                typeName = "수비";
+                break;
+            case "STAMINA":
+                typeName = "체력";
+                break;
+            default:
+                typeName = "훈련";
+        }
+
+        if (success) {
+            return typeName + " 훈련에 성공했습니다! 능력치가 상승했습니다.";
+        } else {
+            return typeName + " 훈련에 실패했습니다. 다음 기회에 도전하세요.";
+        }
+    }
+
+    /**
+     * 사용자의 모든 선수 조회 (훈련 가능 선수 목록)
+     */
+    public List<CustomPlayer> getTrainablePlayers(Integer userId) {
+        return customPlayerRepository.findByUserIdAndMode(userId, "RPG");
     }
 }
