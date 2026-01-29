@@ -384,4 +384,76 @@ public class CustomPlayerRestController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
     }
+
+    /**
+     * 선수 훈련 실행
+     * POST /api/custom-players/training
+     */
+    @PostMapping("/training")
+    public ResponseEntity<Map<String, Object>> trainPlayer(
+            @RequestBody CustomPlayerRequestDTO.TrainingRequest trainingRequest,
+            HttpSession session) {
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            log.info("선수 훈련 요청 - playerId: {}, trainingType: {}, intensity: {}",
+                    trainingRequest.getPlayerId(),
+                    trainingRequest.getTrainingType(),
+                    trainingRequest.getIntensity());
+
+            CustomPlayerResponseDTO.TrainingResult trainingResult =
+                    customPlayerService.trainPlayer(trainingRequest);
+
+            result.put("success", true);
+            result.put("data", trainingResult);
+
+            return ResponseEntity.ok(result);
+
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        } catch (Exception e) {
+            log.error("선수 훈련 실패 - playerId: {}, error: {}",
+                    trainingRequest.getPlayerId(), e.getMessage(), e);
+            result.put("success", false);
+            result.put("message", "훈련 중 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
+
+    /**
+     * 훈련 가능한 선수 목록 조회
+     * GET /api/custom-players/trainable?userId={userId}
+     */
+    @GetMapping("/trainable")
+    public ResponseEntity<Map<String, Object>> getTrainablePlayers(
+            @RequestParam Integer userId,
+            HttpSession session) {
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            log.info("훈련 가능 선수 조회 - userId: {}", userId);
+
+            List<CustomPlayer> players = customPlayerService.getTrainablePlayers(userId);
+            List<CustomPlayerResponseDTO> playerDTOs = players.stream()
+                    .map(CustomPlayerResponseDTO::fromEntity)
+                    .collect(java.util.stream.Collectors.toList());
+
+            result.put("success", true);
+            result.put("players", playerDTOs);
+            result.put("count", playerDTOs.size());
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            log.error("훈련 가능 선수 조회 실패 - userId: {}, error: {}",
+                    userId, e.getMessage(), e);
+            result.put("success", false);
+            result.put("message", "선수 목록 조회 중 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
 }
