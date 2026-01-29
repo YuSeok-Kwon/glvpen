@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/noheadefooter}"
+>
+  <head>
+    <title>게임 플레이 - BaseBall LOCK</title>
+    <style>
+      body {
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      .game-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .scoreboard {
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+      }
+
+      .score-display {
+        font-size: 4rem;
+        font-weight: bold;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+      }
+
+      .inning-display {
+        font-size: 2rem;
+        color: #ffd700;
+        margin-bottom: 20px;
+      }
+
+      .baseball-field {
+        background: radial-gradient(circle, #2c5f2d 0%, #1a3a1c 100%);
+        border-radius: 50%;
+        width: 400px;
+        height: 400px;
+        margin: 0 auto 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+        position: relative;
+      }
+
+      .base {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        background: white;
+        transform: rotate(45deg);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+      }
+
+      .base-1 { right: 100px; top: 50%; transform: translateY(-50%) rotate(45deg); }
+      .base-2 { top: 80px; left: 50%; transform: translateX(-50%) rotate(45deg); }
+      .base-3 { left: 100px; top: 50%; transform: translateY(-50%) rotate(45deg); }
+      .base-home { bottom: 80px; left: 50%; transform: translateX(-50%) rotate(45deg); background: orange; }
+
+      .base.occupied {
+        background: #00ff00;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.8); }
+        50% { box-shadow: 0 0 30px rgba(0, 255, 0, 1); }
+      }
+
+      .game-log {
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 10px;
+        padding: 20px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .log-entry {
+        padding: 10px;
+        border-left: 3px solid #4CAF50;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 5px;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .log-entry.hit {
+        border-left-color: #2196F3;
+      }
+
+      .log-entry.homerun {
+        border-left-color: #FFD700;
+        background: rgba(255, 215, 0, 0.1);
+      }
+
+      .log-entry.out {
+        border-left-color: #f44336;
+      }
+
+      .control-panel {
+        text-align: center;
+        margin-top: 30px;
+      }
+
+      .btn-game {
+        padding: 15px 40px;
+        font-size: 1.2rem;
+        border-radius: 50px;
+        transition: all 0.3s;
+      }
+
+      .btn-game:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 20px rgba(255, 255, 255, 0.3);
+      }
+
+      .player-stats {
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 20px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .result-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .result-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 40px;
+        border-radius: 20px;
+        max-width: 600px;
+        text-align: center;
+        animation: modalPop 0.5s ease-out;
+      }
+
+      @keyframes modalPop {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .loading {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 999;
+      }
+
+      .spinner {
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 5px solid white;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <th:block layout:fragment="contents">
+      <div class="game-container">
+        <!-- 스코어보드 -->
+        <div class="scoreboard">
+          <div class="row">
+            <div class="col-md-12 text-center">
+              <div class="inning-display" id="inningDisplay">1회초</div>
+            </div>
+          </div>
+          <div class="row align-items-center">
+            <div class="col-5 text-center">
+              <h2 id="myTeamName">나의 팀</h2>
+              <div class="score-display text-info" id="myScore">0</div>
+            </div>
+            <div class="col-2 text-center">
+              <h3>VS</h3>
+            </div>
+            <div class="col-5 text-center">
+              <h2 id="opponentName">상대 팀</h2>
+              <div class="score-display text-danger" id="opponentScore">0</div>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-12 text-center">
+              <span class="badge bg-secondary me-2">아웃: <span id="outCount">0</span></span>
+              <span class="badge bg-warning text-dark">타자: <span id="currentBatter">-</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- 야구장 -->
+          <div class="col-md-6">
+            <div class="baseball-field">
+              <div class="base base-1" id="base1"></div>
+              <div class="base base-2" id="base2"></div>
+              <div class="base base-3" id="base3"></div>
+              <div class="base base-home"></div>
+              <div class="text-center" style="z-index: 1;">
+                <i class="bi bi-circle-fill" style="font-size: 3rem; color: rgba(255,255,255,0.3);"></i>
+              </div>
+            </div>
+
+            <!-- 컨트롤 패널 -->
+            <div class="control-panel">
+              <button class="btn btn-success btn-game btn-lg" id="btnStart" onclick="startGame()">
+                <i class="bi bi-play-fill"></i> 게임 시작
+              </button>
+              <button class="btn btn-warning btn-game btn-lg d-none" id="btnPause" onclick="pauseGame()">
+                <i class="bi bi-pause-fill"></i> 일시정지
+              </button>
+              <a th:href="@{/customPlayer}" class="btn btn-outline-light btn-game btn-lg">
+                <i class="bi bi-arrow-left"></i> 나가기
+              </a>
+            </div>
+          </div>
+
+          <!-- 게임 로그 -->
+          <div class="col-md-6">
+            <div class="game-log" id="gameLog">
+              <h5 class="mb-3"><i class="bi bi-list-ul"></i> 경기 진행 상황</h5>
+              <div class="text-muted">게임을 시작하면 진행 상황이 표시됩니다.</div>
+            </div>
+
+            <!-- 선수 성적 -->
+            <div class="player-stats">
+              <h5><i class="bi bi-graph-up"></i> 선수 성적</h5>
+              <div id="playerStatsContainer">
+                <div class="text-muted">게임 종료 후 표시됩니다.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 결과 모달 -->
+      <div class="result-modal" id="resultModal">
+        <div class="result-content">
+          <h1 class="display-3 mb-4" id="resultTitle">승리!</h1>
+          <div class="mb-4">
+            <h3 id="finalScore"></h3>
+          </div>
+          <div class="mb-4">
+            <i class="bi bi-trophy-fill" style="font-size: 4rem; color: gold;"></i>
+            <h4 class="mt-3">MVP: <span id="mvpPlayer">-</span></h4>
+          </div>
+          <div class="mb-4">
+            <h5>획득 경험치: <span id="earnedExp" class="text-warning">+0</span></h5>
+          </div>
+          <button class="btn btn-light btn-lg" onclick="closeResult()">
+            <i class="bi bi-arrow-left"></i> 메인으로
+          </button>
+        </div>
+      </div>
+
+      <!-- 로딩 -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+      </div>
+    </th:block>
+
+    <th:block layout:fragment="script">
+      <script th:inline="javascript">
+        let gameInterval;
+        let gameData = {
+          inning: 1,
+          isTop: true,
+          outs: 0,
+          myScore: 0,
+          opponentScore: 0,
+          bases: [false, false, false], // 1루, 2루, 3루
+          currentBatter: 0,
+          players: [],
+          difficulty: 'NORMAL'
+        };
+
+        // 페이지 로드 시 초기화
+        $(document).ready(function() {
+          // URL 파라미터에서 난이도 가져오기
+          const urlParams = new URLSearchParams(window.location.search);
+          gameData.difficulty = urlParams.get('difficulty') || 'NORMAL';
+        });
+
+        // 게임 시작
+        function startGame() {
+          $('#btnStart').addClass('d-none');
+          $('#btnPause').removeClass('d-none');
+          $('#loading').show();
+
+          // 실제 API 호출하여 게임 시뮬레이션
+          $.ajax({
+            url: '/api/custom-players/play',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              userId: 1, // TODO: 세션에서 가져오기
+              gameMode: 'HITTER',
+              difficulty: gameData.difficulty
+            }),
+            success: function(response) {
+              $('#loading').hide();
+              if (response.success) {
+                playGameAnimation(response.data);
+              } else {
+                alert('게임 시작 실패: ' + response.message);
+                resetButtons();
+              }
+            },
+            error: function() {
+              $('#loading').hide();
+              alert('게임 시작 중 오류가 발생했습니다.');
+              resetButtons();
+            }
+          });
+        }
+
+        // 게임 애니메이션 재생
+        function playGameAnimation(result) {
+          addLog('⚾ 경기를 시작합니다!');
+          addLog(`난이도: ${gameData.difficulty}`);
+
+          // 9이닝 시뮬레이션
+          let currentInning = 1;
+          let eventIndex = 0;
+          const totalEvents = 54; // 9이닝 * 6이벤트
+
+          gameInterval = setInterval(() => {
+            if (currentInning > 9) {
+              clearInterval(gameInterval);
+              finishGame(result);
+              return;
+            }
+
+            // 랜덤 이벤트 생성
+            simulateAtBat();
+            eventIndex++;
+
+            // 3아웃되면 공격 교체
+            if (gameData.outs >= 3) {
+              gameData.outs = 0;
+              gameData.bases = [false, false, false];
+              updateBases();
+
+              if (gameData.isTop) {
+                addLog('--- 공격 종료 ---');
+                gameData.isTop = false;
+                updateInning();
+              } else {
+                gameData.isTop = true;
+                currentInning++;
+                if (currentInning <= 9) {
+                  updateInning();
+                  addLog(`=== ${currentInning}회 시작 ===`);
+                }
+              }
+            }
+          }, 1500);
+        }
+
+        // 타석 시뮬레이션
+        function simulateAtBat() {
+          const events = [
+            { name: '안타!', type: 'hit', weight: 25 },
+            { name: '2루타!', type: 'hit', weight: 10 },
+            { name: '3루타!', type: 'hit', weight: 5 },
+            { name: '홈런!', type: 'homerun', weight: 8 },
+            { name: '아웃!', type: 'out', weight: 30 },
+            { name: '삼진!', type: 'out', weight: 15 },
+            { name: '볼넷!', type: 'walk', weight: 7 }
+          ];
+
+          const event = weightedRandom(events);
+          const player = `선수${Math.floor(Math.random() * 9) + 1}`;
+
+          $('#currentBatter').text(player);
+
+          if (event.type === 'homerun') {
+            const runs = 1 + gameData.bases.filter(b => b).length;
+            if (gameData.isTop) {
+              gameData.opponentScore += runs;
+            } else {
+              gameData.myScore += runs;
+            }
+            gameData.bases = [false, false, false];
+            addLog(`💥 ${player}: ${event.name} (+${runs}점)`, 'homerun');
+          } else if (event.type === 'hit') {
+            if (gameData.isTop) {
+              gameData.opponentScore += gameData.bases[2] ? 1 : 0;
+            } else {
+              gameData.myScore += gameData.bases[2] ? 1 : 0;
+            }
+            advanceBases(event.name.includes('3루') ? 3 : event.name.includes('2루') ? 2 : 1);
+            addLog(`✓ ${player}: ${event.name}`, 'hit');
+          } else if (event.type === 'walk') {
+            gameData.bases[0] = true;
+            addLog(`→ ${player}: ${event.name}`, 'hit');
+          } else {
+            gameData.outs++;
+            addLog(`✗ ${player}: ${event.name}`, 'out');
+          }
+
+          updateScoreboard();
+          updateBases();
+        }
+
+        // 주자 진루
+        function advanceBases(bases) {
+          for (let i = 2; i >= 0; i--) {
+            if (gameData.bases[i]) {
+              const newBase = i + bases;
+              if (newBase >= 3) {
+                if (gameData.isTop) {
+                  gameData.opponentScore++;
+                } else {
+                  gameData.myScore++;
+                }
+              } else {
+                gameData.bases[newBase] = true;
+              }
+              gameData.bases[i] = false;
+            }
+          }
+          if (bases >= 1) gameData.bases[0] = true;
+        }
+
+        // 가중치 랜덤
+        function weightedRandom(items) {
+          const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+          let random = Math.random() * totalWeight;
+
+          for (const item of items) {
+            random -= item.weight;
+            if (random <= 0) return item;
+          }
+          return items[items.length - 1];
+        }
+
+        // 스코어보드 업데이트
+        function updateScoreboard() {
+          $('#myScore').text(gameData.myScore);
+          $('#opponentScore').text(gameData.opponentScore);
+          $('#outCount').text(gameData.outs);
+        }
+
+        // 이닝 업데이트
+        function updateInning() {
+          const inningText = `${gameData.inning}회${gameData.isTop ? '초' : '말'}`;
+          $('#inningDisplay').text(inningText);
+        }
+
+        // 루상 상황 업데이트
+        function updateBases() {
+          $('#base1').toggleClass('occupied', gameData.bases[0]);
+          $('#base2').toggleClass('occupied', gameData.bases[1]);
+          $('#base3').toggleClass('occupied', gameData.bases[2]);
+        }
+
+        // 로그 추가
+        function addLog(message, type = '') {
+          const timestamp = new Date().toLocaleTimeString('ko-KR');
+          const logEntry = `<div class="log-entry ${type}">
+            <span class="text-muted">[${timestamp}]</span> ${message}
+          </div>`;
+          $('#gameLog').prepend(logEntry);
+        }
+
+        // 게임 종료
+        function finishGame(result) {
+          addLog('⭐ 경기가 종료되었습니다!');
+
+          const isWin = gameData.myScore > gameData.opponentScore;
+          const finalScoreText = `${gameData.myScore} : ${gameData.opponentScore}`;
+
+          $('#resultTitle').text(isWin ? '🏆 승리!' : '패배...');
+          $('#finalScore').text(finalScoreText);
+          $('#mvpPlayer').text(result.mvpPlayer || '없음');
+          $('#earnedExp').text(`+${isWin ? 100 : 50}`);
+
+          // 선수 성적 표시
+          if (result.playerPerformances) {
+            let statsHtml = '';
+            result.playerPerformances.forEach(p => {
+              statsHtml += `<div class="stat-row">
+                <span>${p.playerName}</span>
+                <span>${p.hits}안타 ${p.homeRuns}홈런 ${p.stolenBases}도루</span>
+              </div>`;
+            });
+            $('#playerStatsContainer').html(statsHtml);
+          }
+
+          $('#btnPause').addClass('d-none');
+          $('#resultModal').css('display', 'flex');
+        }
+
+        // 일시정지
+        function pauseGame() {
+          if (gameInterval) {
+            clearInterval(gameInterval);
+            gameInterval = null;
+            $('#btnPause').html('<i class="bi bi-play-fill"></i> 재개');
+          } else {
+            // 재개 로직
+          }
+        }
+
+        // 결과 닫기
+        function closeResult() {
+          window.location.href = '/customPlayer';
+        }
+
+        // 버튼 리셋
+        function resetButtons() {
+          $('#btnStart').removeClass('d-none');
+          $('#btnPause').addClass('d-none');
+        }
+      </script>
+    </th:block>
+  </body>
+</html>

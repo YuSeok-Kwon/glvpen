@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/noheadefooter}"
+>
+  <head>
+    <title>경기 시뮬레이션 - BaseBall LOCK</title>
+    <style>
+      body {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+      }
+
+      .baseball-field {
+        background: radial-gradient(circle, #2c5f2d 0%, #1a3a1c 100%);
+        border-radius: 50%;
+        padding: 50px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        position: relative;
+      }
+
+      .prediction-panel {
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 20px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+      }
+
+      .team-card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+        cursor: pointer;
+        border: 3px solid transparent;
+      }
+
+      .team-card:hover {
+        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(-5px);
+      }
+
+      .team-card.selected {
+        border-color: #ffd700;
+        background: rgba(255, 215, 0, 0.2);
+      }
+
+      .score-input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+        font-size: 1.5rem;
+        width: 80px;
+      }
+
+      .score-input:focus {
+        border-color: #ffd700;
+        outline: none;
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .bet-amount-input {
+        background: rgba(255, 255, 255, 0.1);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 1.2rem;
+        width: 150px;
+        text-align: center;
+      }
+
+      .simulation-screen {
+        display: none;
+      }
+
+      .scoreboard {
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+      }
+
+      .score-display {
+        font-size: 4rem;
+        font-weight: bold;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+      }
+
+      .inning-display {
+        font-size: 2rem;
+        color: #ffd700;
+        margin-bottom: 20px;
+      }
+
+      .game-log {
+        background: rgba(0, 0, 0, 0.6);
+        border-radius: 10px;
+        padding: 20px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .log-entry {
+        padding: 10px;
+        border-left: 3px solid #4CAF50;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 5px;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateX(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+
+      .log-entry.hit {
+        border-left-color: #2196F3;
+      }
+
+      .log-entry.homerun {
+        border-left-color: #FFD700;
+        background: rgba(255, 215, 0, 0.1);
+      }
+
+      .log-entry.out {
+        border-left-color: #f44336;
+      }
+
+      .result-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .result-content {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 50px;
+        border-radius: 20px;
+        max-width: 700px;
+        text-align: center;
+        animation: modalPop 0.5s ease-out;
+      }
+
+      @keyframes modalPop {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .prediction-result {
+        font-size: 1.5rem;
+        margin: 20px 0;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+      }
+
+      .prediction-result.correct {
+        border: 3px solid #00ff00;
+        background: rgba(0, 255, 0, 0.1);
+      }
+
+      .prediction-result.incorrect {
+        border: 3px solid #ff0000;
+        background: rgba(255, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <th:block layout:fragment="contents">
+      <!-- 예측 화면 -->
+      <div class="container-fluid min-vh-100 d-flex align-items-center justify-content-center" id="predictionScreen">
+        <div class="row w-100">
+          <div class="col-12">
+            <div class="text-center mb-5">
+              <h1 class="display-3 mb-3">
+                <i class="bi bi-trophy"></i> 경기 예측
+              </h1>
+              <p class="lead">승자를 예측하고 포인트를 획득하세요!</p>
+            </div>
+
+            <div class="row mb-5">
+              <div class="col-md-8 offset-md-2">
+                <div class="prediction-panel">
+                  <h3 class="mb-4 text-center">
+                    <i class="bi bi-calendar-event"></i> 오늘의 경기
+                  </h3>
+
+                  <!-- 팀 선택 -->
+                  <div class="row mb-4">
+                    <div class="col-6">
+                      <div class="team-card" id="homeTeamCard" onclick="selectTeam('home')">
+                        <h2 class="mb-3" id="homeTeamName">KIA 타이거즈</h2>
+                        <p class="text-muted mb-2">홈 팀</p>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="winnerPrediction" id="homeWinner" value="home">
+                          <label class="form-check-label" for="homeWinner">
+                            승리 예측
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="team-card" id="awayTeamCard" onclick="selectTeam('away')">
+                        <h2 class="mb-3" id="awayTeamName">삼성 라이온즈</h2>
+                        <p class="text-muted mb-2">원정 팀</p>
+                        <div class="form-check">
+                          <input class="form-check-input" type="radio" name="winnerPrediction" id="awayWinner" value="away">
+                          <label class="form-check-label" for="awayWinner">
+                            승리 예측
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 점수 예측 -->
+                  <div class="row mb-4">
+                    <div class="col-12 text-center">
+                      <h5 class="mb-3">점수 예측 (선택사항)</h5>
+                      <div class="d-flex justify-content-center align-items-center gap-3">
+                        <div>
+                          <label class="form-label">홈 팀 점수</label>
+                          <input type="number" class="score-input" id="homeScorePrediction" value="0" min="0" max="30">
+                        </div>
+                        <h3 class="mx-3">:</h3>
+                        <div>
+                          <label class="form-label">원정 팀 점수</label>
+                          <input type="number" class="score-input" id="awayScorePrediction" value="0" min="0" max="30">
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 베팅 금액 -->
+                  <div class="row mb-4">
+                    <div class="col-12 text-center">
+                      <h5 class="mb-3">베팅 포인트</h5>
+                      <input type="number" class="bet-amount-input" id="betAmount" value="100" min="10" max="1000" step="10">
+                      <p class="text-muted mt-2">
+                        <small>맞추면 <span class="text-warning">1.5배</span> 획득!</small>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- 버튼 -->
+                  <div class="text-center">
+                    <button class="btn btn-success btn-lg px-5" onclick="submitPrediction()" id="btnSubmitPrediction">
+                      <i class="bi bi-check-circle"></i> 예측 제출 및 시뮬레이션 시작
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-center">
+              <a th:href="@{/realmatch/home}" class="btn btn-outline-light btn-lg">
+                <i class="bi bi-arrow-left"></i> 경기 목록으로
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 시뮬레이션 화면 -->
+      <div class="container-fluid simulation-screen" id="simulationScreen">
+        <!-- 스코어보드 -->
+        <div class="scoreboard">
+          <div class="row">
+            <div class="col-md-12 text-center">
+              <div class="inning-display" id="inningDisplay">1회초</div>
+            </div>
+          </div>
+          <div class="row align-items-center">
+            <div class="col-5 text-center">
+              <h2 id="simHomeTeamName">홈 팀</h2>
+              <div class="score-display text-info" id="simHomeScore">0</div>
+            </div>
+            <div class="col-2 text-center">
+              <h3>VS</h3>
+            </div>
+            <div class="col-5 text-center">
+              <h2 id="simAwayTeamName">원정 팀</h2>
+              <div class="score-display text-danger" id="simAwayScore">0</div>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-12 text-center">
+              <span class="badge bg-secondary me-2">아웃: <span id="outCount">0</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 게임 로그 -->
+        <div class="row">
+          <div class="col-md-8 offset-md-2">
+            <div class="game-log" id="gameLog">
+              <h5 class="mb-3"><i class="bi bi-list-ul"></i> 경기 진행 상황</h5>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 결과 모달 -->
+      <div class="result-modal" id="resultModal">
+        <div class="result-content">
+          <h1 class="display-3 mb-4">경기 종료!</h1>
+          <div class="mb-4">
+            <h3 id="finalScore"></h3>
+          </div>
+
+          <div class="prediction-result" id="predictionResult">
+            <h2 id="predictionResultTitle">예측 결과</h2>
+            <p id="predictionResultText"></p>
+          </div>
+
+          <div class="mb-4">
+            <h4>
+              획득 포인트: <span id="earnedPoints" class="text-warning">+0</span>
+            </h4>
+          </div>
+
+          <div class="mb-4">
+            <p>나의 예측: <span id="myPrediction" class="text-info"></span></p>
+            <p>실제 결과: <span id="actualResult" class="text-success"></span></p>
+          </div>
+
+          <button class="btn btn-light btn-lg" onclick="closeResult()">
+            <i class="bi bi-arrow-left"></i> 경기 목록으로
+          </button>
+        </div>
+      </div>
+    </th:block>
+
+    <th:block layout:fragment="script">
+      <script th:inline="javascript">
+        let gameInterval;
+        let matchData = {
+          scheduleId: null,
+          homeTeamName: 'KIA 타이거즈',
+          awayTeamName: '삼성 라이온즈',
+          inning: 1,
+          isTop: true,
+          outs: 0,
+          homeScore: 0,
+          awayScore: 0,
+          prediction: {
+            winner: null,
+            homeScore: 0,
+            awayScore: 0,
+            betAmount: 100
+          }
+        };
+
+        // 페이지 로드 시 초기화
+        $(document).ready(function() {
+          const urlParams = new URLSearchParams(window.location.search);
+          matchData.scheduleId = urlParams.get('matchId');
+
+          // TODO: 실제 경기 정보 로드
+          loadMatchInfo();
+        });
+
+        // 경기 정보 로드
+        function loadMatchInfo() {
+          // TODO: API에서 실제 경기 정보 가져오기
+          $('#homeTeamName').text(matchData.homeTeamName);
+          $('#awayTeamName').text(matchData.awayTeamName);
+          $('#simHomeTeamName').text(matchData.homeTeamName);
+          $('#simAwayTeamName').text(matchData.awayTeamName);
+        }
+
+        // 팀 선택
+        function selectTeam(team) {
+          $('.team-card').removeClass('selected');
+          if (team === 'home') {
+            $('#homeTeamCard').addClass('selected');
+            $('#homeWinner').prop('checked', true);
+          } else {
+            $('#awayTeamCard').addClass('selected');
+            $('#awayWinner').prop('checked', true);
+          }
+          matchData.prediction.winner = team;
+        }
+
+        // 예측 제출
+        function submitPrediction() {
+          // 유효성 검사
+          if (!matchData.prediction.winner) {
+            alert('승자를 선택해주세요!');
+            return;
+          }
+
+          const betAmount = parseInt($('#betAmount').val());
+          if (betAmount < 10 || betAmount > 1000) {
+            alert('베팅 금액은 10~1000 포인트 사이여야 합니다.');
+            return;
+          }
+
+          matchData.prediction.homeScore = parseInt($('#homeScorePrediction').val());
+          matchData.prediction.awayScore = parseInt($('#awayScorePrediction').val());
+          matchData.prediction.betAmount = betAmount;
+
+          // 예측 제출 (백엔드에 저장)
+          $('#btnSubmitPrediction').prop('disabled', true).text('처리 중...');
+
+          // 시뮬레이션 시작
+          startSimulation();
+        }
+
+        // 시뮬레이션 시작
+        function startSimulation() {
+          $('#predictionScreen').hide();
+          $('#simulationScreen').show();
+
+          addLog('⚾ 경기를 시작합니다!');
+          addLog(`${matchData.homeTeamName} vs ${matchData.awayTeamName}`);
+
+          // 9이닝 시뮬레이션
+          let currentInning = 1;
+
+          gameInterval = setInterval(() => {
+            if (currentInning > 9) {
+              clearInterval(gameInterval);
+              finishGame();
+              return;
+            }
+
+            // 타석 시뮬레이션
+            simulateAtBat();
+
+            // 3아웃되면 공격 교체
+            if (matchData.outs >= 3) {
+              matchData.outs = 0;
+
+              if (matchData.isTop) {
+                addLog('--- 공격 종료 ---');
+                matchData.isTop = false;
+                updateInning();
+              } else {
+                matchData.isTop = true;
+                currentInning++;
+                if (currentInning <= 9) {
+                  updateInning();
+                  addLog(`=== ${currentInning}회 시작 ===`);
+                }
+              }
+            }
+          }, 1000);
+        }
+
+        // 타석 시뮬레이션
+        function simulateAtBat() {
+          const events = [
+            { name: '안타!', type: 'hit', weight: 25, runs: 0 },
+            { name: '2루타!', type: 'hit', weight: 10, runs: 0 },
+            { name: '홈런!', type: 'homerun', weight: 8, runs: 1 },
+            { name: '아웃!', type: 'out', weight: 30, runs: 0 },
+            { name: '삼진!', type: 'out', weight: 15, runs: 0 },
+            { name: '볼넷!', type: 'walk', weight: 7, runs: 0 }
+          ];
+
+          const event = weightedRandom(events);
+          const player = `타자 #${Math.floor(Math.random() * 9) + 1}`;
+
+          if (event.type === 'homerun') {
+            if (matchData.isTop) {
+              matchData.awayScore += event.runs;
+            } else {
+              matchData.homeScore += event.runs;
+            }
+            addLog(`💥 ${player}: ${event.name} (+${event.runs}점)`, 'homerun');
+          } else if (event.type === 'hit') {
+            // 확률적으로 득점
+            if (Math.random() < 0.3) {
+              if (matchData.isTop) {
+                matchData.awayScore++;
+              } else {
+                matchData.homeScore++;
+              }
+              addLog(`✓ ${player}: ${event.name} (득점!)`, 'hit');
+            } else {
+              addLog(`✓ ${player}: ${event.name}`, 'hit');
+            }
+          } else if (event.type === 'out') {
+            matchData.outs++;
+            addLog(`✗ ${player}: ${event.name}`, 'out');
+          }
+
+          updateScoreboard();
+        }
+
+        // 가중치 랜덤
+        function weightedRandom(items) {
+          const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+          let random = Math.random() * totalWeight;
+
+          for (const item of items) {
+            random -= item.weight;
+            if (random <= 0) return item;
+          }
+          return items[items.length - 1];
+        }
+
+        // 스코어보드 업데이트
+        function updateScoreboard() {
+          $('#simHomeScore').text(matchData.homeScore);
+          $('#simAwayScore').text(matchData.awayScore);
+          $('#outCount').text(matchData.outs);
+        }
+
+        // 이닝 업데이트
+        function updateInning() {
+          const inningText = `${matchData.inning}회${matchData.isTop ? '초' : '말'}`;
+          $('#inningDisplay').text(inningText);
+        }
+
+        // 로그 추가
+        function addLog(message, type = '') {
+          const timestamp = new Date().toLocaleTimeString('ko-KR');
+          const logEntry = `<div class="log-entry ${type}">
+            <span class="text-muted">[${timestamp}]</span> ${message}
+          </div>`;
+          $('#gameLog').prepend(logEntry);
+        }
+
+        // 게임 종료
+        function finishGame() {
+          addLog('⭐ 경기가 종료되었습니다!');
+
+          const finalScoreText = `${matchData.homeTeamName} ${matchData.homeScore} : ${matchData.awayScore} ${matchData.awayTeamName}`;
+          const actualWinner = matchData.homeScore > matchData.awayScore ? 'home' :
+                               matchData.awayScore > matchData.homeScore ? 'away' : 'draw';
+
+          const isCorrect = actualWinner === matchData.prediction.winner;
+          const earnedPoints = isCorrect ? Math.floor(matchData.prediction.betAmount * 1.5) : 0;
+
+          $('#finalScore').text(finalScoreText);
+          $('#earnedPoints').text(isCorrect ? `+${earnedPoints}` : '0');
+
+          $('#myPrediction').text(
+            matchData.prediction.winner === 'home' ? matchData.homeTeamName : matchData.awayTeamName
+          );
+          $('#actualResult').text(
+            actualWinner === 'home' ? matchData.homeTeamName :
+            actualWinner === 'away' ? matchData.awayTeamName : '무승부'
+          );
+
+          if (isCorrect) {
+            $('#predictionResult').addClass('correct');
+            $('#predictionResultTitle').text('🎉 예측 성공!');
+            $('#predictionResultText').text(`축하합니다! ${earnedPoints} 포인트를 획득했습니다.`);
+          } else {
+            $('#predictionResult').addClass('incorrect');
+            $('#predictionResultTitle').text('😢 예측 실패');
+            $('#predictionResultText').text('다음 기회에 다시 도전하세요!');
+          }
+
+          // 백엔드에 결과 저장
+          savePredictionResult(actualWinner, isCorrect, earnedPoints);
+
+          $('#resultModal').css('display', 'flex');
+        }
+
+        // 예측 결과 저장
+        function savePredictionResult(actualWinner, isCorrect, earnedPoints) {
+          $.ajax({
+            url: '/realmatch/predict',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+              userId: 1, // TODO: 세션에서 가져오기
+              scheduleId: matchData.scheduleId || 1,
+              homeTeamPrediction: matchData.prediction.winner,
+              homeScorePrediction: matchData.prediction.homeScore,
+              awayScorePrediction: matchData.prediction.awayScore,
+              betAmount: matchData.prediction.betAmount
+            }),
+            success: function(response) {
+              console.log('예측 결과 저장 성공', response);
+            },
+            error: function() {
+              console.log('예측 결과 저장 실패');
+            }
+          });
+        }
+
+        // 결과 닫기
+        function closeResult() {
+          window.location.href = '/realmatch/home';
+        }
+      </script>
+    </th:block>
+  </body>
+</html>

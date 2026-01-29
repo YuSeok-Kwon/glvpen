@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/default}"
+>
+  <head>
+    <title>커스텀 선수 관리 - BaseBall LOCK</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contents">
+      <div class="container py-5">
+        <div class="row mb-4">
+          <div class="col-12">
+            <h1 class="display-4 mb-3">
+              <i class="bi bi-person-badge"></i> 나의 커스텀 선수
+            </h1>
+            <p class="lead text-muted">
+              직접 만든 선수로 게임을 즐겨보세요
+            </p>
+          </div>
+        </div>
+
+        <!-- 모드 선택 -->
+        <div class="row mb-4">
+          <div class="col-12">
+            <div class="btn-group" role="group">
+              <button
+                type="button"
+                class="btn btn-outline-primary active"
+                id="btnHitterMode"
+                onclick="loadPlayersByMode('HITTER')"
+              >
+                <i class="bi bi-lightning"></i> 간편 모드
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-primary"
+                id="btnRpgMode"
+                onclick="loadPlayersByMode('RPG')"
+              >
+                <i class="bi bi-star"></i> RPG 모드
+              </button>
+              <button
+                type="button"
+                class="btn btn-outline-secondary"
+                id="btnAllMode"
+                onclick="loadPlayersByMode('')"
+              >
+                <i class="bi bi-list"></i> 전체 보기
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 선수 목록 -->
+        <div class="row" id="playerGrid">
+          <div class="col-12 text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">로딩 중...</span>
+            </div>
+            <p class="mt-3 text-muted">선수 목록을 불러오는 중...</p>
+          </div>
+        </div>
+
+        <!-- 선수가 없을 때 -->
+        <div class="row d-none" id="emptyState">
+          <div class="col-12 text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted"></i>
+            <p class="mt-3 text-muted">아직 생성된 선수가 없습니다</p>
+            <a th:href="@{/customPlayer/create}" class="btn btn-primary mt-3">
+              <i class="bi bi-plus-circle"></i> 첫 선수 만들기
+            </a>
+          </div>
+        </div>
+
+        <!-- 새 선수 생성 버튼 -->
+        <div class="row mt-4">
+          <div class="col-12 text-center">
+            <a
+              th:href="@{/customPlayer/create}"
+              class="btn btn-primary btn-lg"
+              id="btnCreatePlayer"
+            >
+              <i class="bi bi-plus-circle"></i> 새 선수 만들기
+            </a>
+          </div>
+        </div>
+      </div>
+    </th:block>
+
+    <th:block layout:fragment="script">
+      <script th:inline="javascript">
+        let currentMode = 'HITTER';
+
+        // 페이지 로드 시 초기 데이터 로드
+        $(document).ready(function () {
+          loadPlayersByMode('HITTER');
+        });
+
+        // 모드별 선수 목록 로드
+        function loadPlayersByMode(mode) {
+          currentMode = mode;
+
+          // 버튼 활성화 상태 변경
+          $('.btn-group button').removeClass('active');
+          if (mode === 'HITTER') {
+            $('#btnHitterMode').addClass('active');
+          } else if (mode === 'RPG') {
+            $('#btnRpgMode').addClass('active');
+          } else {
+            $('#btnAllMode').addClass('active');
+          }
+
+          // 로딩 상태 표시
+          $('#playerGrid').html(`
+            <div class="col-12 text-center py-5">
+              <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">로딩 중...</span>
+              </div>
+              <p class="mt-3 text-muted">선수 목록을 불러오는 중...</p>
+            </div>
+          `);
+          $('#emptyState').addClass('d-none');
+
+          // API 호출
+          const url = mode
+            ? `/api/custom-players?mode=${mode}`
+            : '/api/custom-players';
+
+          $.ajax({
+            url: url,
+            method: 'GET',
+            success: function (response) {
+              if (response.success && response.players.length > 0) {
+                renderPlayers(response.players);
+                $('#btnCreatePlayer').removeClass('d-none');
+              } else {
+                showEmptyState();
+              }
+            },
+            error: function (xhr) {
+              if (xhr.status === 401) {
+                alert('로그인이 필요합니다.');
+                window.location.href = '/user/login-view';
+              } else {
+                alert('선수 목록을 불러오는데 실패했습니다.');
+                showEmptyState();
+              }
+            },
+          });
+        }
+
+        // 선수 목록 렌더링
+        function renderPlayers(players) {
+          let html = '';
+
+          players.forEach((player) => {
+            const modeClass = player.mode === 'RPG' ? 'border-warning' : 'border-primary';
+            const modeBadge = player.mode === 'RPG'
+              ? '<span class="badge bg-warning text-dark">RPG</span>'
+              : '<span class="badge bg-primary">간편</span>';
+
+            html += `
+              <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card ${modeClass} h-100 shadow-sm">
+                  <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                    ${modeBadge}
+                    <small class="text-muted">Lv. ${player.level || 1}</small>
+                  </div>
+                  <div class="card-body">
+                    <h5 class="card-title mb-3">${player.name || player.playerName || '이름 없음'}</h5>
+
+                    <div class="mb-3">
+                      <small class="text-muted">포지션</small>
+                      <div class="fw-bold">${player.position || '-'}</div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                      <div class="col-6">
+                        <small class="text-muted">파워</small>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar bg-danger" style="width: ${player.power}%">${player.power}</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted">정확도</small>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar bg-primary" style="width: ${player.contact}%">${player.contact}</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted">스피드</small>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar bg-success" style="width: ${player.speed}%">${player.speed}</div>
+                        </div>
+                      </div>
+                      <div class="col-6">
+                        <small class="text-muted">수비</small>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar bg-warning" style="width: ${player.defense || player.fielding}%">${player.defense || player.fielding}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    ${player.mode === 'RPG' ? `
+                      <div class="mb-3">
+                        <small class="text-muted">경험치</small>
+                        <div class="progress" style="height: 20px;">
+                          <div class="progress-bar bg-info" style="width: ${(player.experience / (player.level * 100)) * 100}%">
+                            ${player.experience} / ${player.level * 100}
+                          </div>
+                        </div>
+                      </div>
+                    ` : ''}
+
+                    <div class="d-grid gap-2">
+                      <a href="/customPlayer/edit/${player.id}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-pencil"></i> 수정
+                      </a>
+                      <button onclick="deletePlayer(${player.id}, '${player.name || player.playerName}')" class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i> 삭제
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-footer bg-transparent text-muted">
+                    <small>생성일: ${formatDate(player.createdAt)}</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+
+          $('#playerGrid').html(html);
+          $('#emptyState').addClass('d-none');
+        }
+
+        // 빈 상태 표시
+        function showEmptyState() {
+          $('#playerGrid').html('');
+          $('#emptyState').removeClass('d-none');
+          $('#btnCreatePlayer').addClass('d-none');
+        }
+
+        // 선수 삭제
+        function deletePlayer(playerId, playerName) {
+          if (!confirm(`정말로 "${playerName}" 선수를 삭제하시겠습니까?`)) {
+            return;
+          }
+
+          $.ajax({
+            url: `/api/custom-players/${playerId}`,
+            method: 'DELETE',
+            success: function (response) {
+              if (response.success) {
+                alert('선수가 삭제되었습니다.');
+                loadPlayersByMode(currentMode);
+              }
+            },
+            error: function (xhr) {
+              if (xhr.status === 401) {
+                alert('로그인이 필요합니다.');
+              } else if (xhr.status === 403) {
+                alert('권한이 없습니다.');
+              } else {
+                alert('선수 삭제에 실패했습니다.');
+              }
+            },
+          });
+        }
+
+        // 날짜 포맷팅
+        function formatDate(dateString) {
+          if (!dateString) return '-';
+          const date = new Date(dateString);
+          return date.toLocaleDateString('ko-KR');
+        }
+      </script>
+    </th:block>
+  </body>
+</html>

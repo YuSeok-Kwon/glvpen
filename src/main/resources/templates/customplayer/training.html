@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/default}"
+>
+  <head>
+    <title>선수 훈련 - BaseBall LOCK</title>
+  </head>
+  <body>
+    <th:block layout:fragment="contents">
+      <div class="container py-5">
+        <h1 class="display-4 mb-4">
+          <i class="bi bi-trophy"></i> 선수 훈련
+        </h1>
+
+        <div class="alert alert-warning">
+          <i class="bi bi-hammer"></i> 선수 훈련 및 성장 시스템입니다. (준비 중)
+        </div>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header bg-info text-white">
+                <h5 class="mb-0">타격 훈련</h5>
+              </div>
+              <div class="card-body">
+                <p>파워와 정확도를 향상시킵니다.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header bg-success text-white">
+                <h5 class="mb-0">주루 훈련</h5>
+              </div>
+              <div class="card-body">
+                <p>스피드를 향상시킵니다.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">수비 훈련</h5>
+              </div>
+              <div class="card-body">
+                <p>수비력을 향상시킵니다.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="card mb-4">
+              <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">체력 훈련</h5>
+              </div>
+              <div class="card-body">
+                <p>전체 능력치를 향상시킵니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <a th:href="@{/customPlayer}" class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> 돌아가기
+        </a>
+      </div>
+    </th:block>
+  </body>
+</html>
