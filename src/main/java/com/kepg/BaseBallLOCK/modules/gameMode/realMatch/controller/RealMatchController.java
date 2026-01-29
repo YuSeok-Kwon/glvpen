@@ -39,7 +39,27 @@ public class RealMatchController {
         model.addAttribute("gameMode", "realmatch");
         return "realmatch/home";
     }
-    
+
+    /**
+     * RealMatch Mode 메인 페이지 (/home 경로)
+     */
+    @GetMapping("/home")
+    public String realMatchHomePage(Model model) {
+        model.addAttribute("pageTitle", "Real Match Mode");
+        model.addAttribute("gameMode", "realmatch");
+        return "realmatch/home";
+    }
+
+    /**
+     * 경기 예측 페이지 (scheduleId 없는 버전)
+     */
+    @GetMapping("/predict")
+    public String predictGameWithoutScheduleId(Model model) {
+        // TODO: 오늘의 경기 목록 표시 또는 경기 선택 페이지
+        model.addAttribute("pageTitle", "경기 예측");
+        return "realmatch/predict";
+    }
+
     /**
      * 특정 경기 예측 페이지
      */

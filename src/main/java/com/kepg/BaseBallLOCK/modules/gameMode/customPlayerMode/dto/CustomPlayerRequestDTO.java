@@ -64,4 +64,17 @@ public class CustomPlayerRequestDTO {
         private String customUniform;
         private Integer creationCost;
     }
+
+    /**
+     * 능력치 할당 정보 (레벨업 시)
+     */
+    @Data
+    @Builder
+    public static class StatAllocation {
+        private Integer power;
+        private Integer contact;
+        private Integer speed;
+        private Integer fielding;
+        private Integer arm;
+    }
 }

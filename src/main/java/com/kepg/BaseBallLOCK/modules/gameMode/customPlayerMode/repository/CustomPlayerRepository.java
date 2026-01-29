@@ -40,4 +40,10 @@ public interface CustomPlayerRepository extends JpaRepository<CustomPlayer, Long
      */
     @Query("SELECT p FROM CustomPlayer p WHERE p.mode = 'RPG' AND p.userId = :userId ORDER BY p.level DESC, p.createdAt DESC")
     List<CustomPlayer> findByUserIdOrderByLevelDescCreatedAtDesc(@Param("userId") Integer userId);
+
+    /**
+     * 사용자 ID와 모드로 커스텀 선수 조회
+     */
+    @Query("SELECT p FROM CustomPlayer p WHERE p.userId = :userId AND p.mode = :mode ORDER BY p.createdAt DESC")
+    List<CustomPlayer> findByUserIdAndMode(@Param("userId") Integer userId, @Param("mode") String mode);
 }

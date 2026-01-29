@@ -73,6 +73,16 @@ public class CustomPlayerController {
     }
     
     /**
+     * 커스텀 선수 목록 페이지 (userId 없는 버전)
+     */
+    @GetMapping("/players")
+    public String playerListWithoutUserId(Model model) {
+        // TODO: 세션에서 userId 가져오기
+        model.addAttribute("pageTitle", "선수 목록");
+        return "customplayer/players";
+    }
+
+    /**
      * 커스텀 선수 목록 페이지
      */
     @GetMapping("/players/{userId}")
@@ -106,13 +116,19 @@ public class CustomPlayerController {
      */
     @GetMapping("/game")
     public String gamePage(
-        @RequestParam Integer userId,
+        @RequestParam(required = false) Integer userId,
         @RequestParam(required = false) String difficulty,
         Model model
     ) {
-        List<CustomPlayer> players = customPlayerService.getActiveCustomPlayers(userId);
-        model.addAttribute("players", players);
-        model.addAttribute("userId", userId);
+        // userId가 있는 경우 선수 목록 로드
+        if (userId != null) {
+            List<CustomPlayer> players = customPlayerService.getActiveCustomPlayers(userId);
+            model.addAttribute("players", players);
+            model.addAttribute("userId", userId);
+        } else {
+            // TODO: 세션에서 userId 가져오기
+            model.addAttribute("userId", null);
+        }
         model.addAttribute("difficulty", difficulty != null ? difficulty : "NORMAL");
         return "customplayer/game";
     }
@@ -133,6 +149,16 @@ public class CustomPlayerController {
     }
     
     /**
+     * 커스텀 선수 편집 페이지 (playerId 없는 버전)
+     */
+    @GetMapping("/edit")
+    public String editPlayerPageWithoutPlayerId(Model model) {
+        // TODO: 선수 선택 페이지 또는 세션에서 playerId 가져오기
+        model.addAttribute("pageTitle", "선수 편집");
+        return "customplayer/edit";
+    }
+
+    /**
      * 커스텀 선수 편집 페이지
      */
     @GetMapping("/edit/{playerId}")
@@ -142,6 +168,16 @@ public class CustomPlayerController {
         return "customplayer/edit";
     }
     
+    /**
+     * 커스텀 선수 통계 페이지 (userId 없는 버전)
+     */
+    @GetMapping("/stats")
+    public String playerStatisticsWithoutUserId(Model model) {
+        // TODO: 세션에서 userId 가져오기
+        model.addAttribute("pageTitle", "선수 통계");
+        return "customplayer/stats";
+    }
+
     /**
      * 커스텀 선수 통계 페이지
      * TODO: CustomPlayerStatistics 클래스 구현 후 활성화
@@ -172,6 +208,16 @@ public class CustomPlayerController {
     */
     
     /**
+     * 선수 성장/훈련 페이지 (playerId 없는 버전)
+     */
+    @GetMapping("/training")
+    public String playerTrainingWithoutPlayerId(Model model) {
+        // TODO: 세션에서 playerId 가져오기 또는 선수 선택 페이지 표시
+        model.addAttribute("pageTitle", "선수 훈련");
+        return "customplayer/training";
+    }
+
+    /**
      * 선수 성장/훈련 페이지
      */
     @GetMapping("/training/{playerId}")
@@ -181,6 +227,16 @@ public class CustomPlayerController {
         return "customplayer/training";
     }
     
+    /**
+     * 선수 컬렉션 페이지 (userId 없는 버전)
+     */
+    @GetMapping("/collection")
+    public String playerCollectionWithoutUserId(Model model) {
+        // TODO: 세션에서 userId 가져오기
+        model.addAttribute("pageTitle", "선수 컬렉션");
+        return "customplayer/collection";
+    }
+
     /**
      * 선수 컬렉션 페이지
      */
@@ -192,6 +248,16 @@ public class CustomPlayerController {
         return "customplayer/collection";
     }
     
+    /**
+     * 팀 빌더 페이지 (userId 없는 버전)
+     */
+    @GetMapping("/teambuilder")
+    public String teamBuilderWithoutUserId(Model model) {
+        // TODO: 세션에서 userId 가져오기
+        model.addAttribute("pageTitle", "팀 구성하기");
+        return "customplayer/teambuilder";
+    }
+
     /**
      * 팀 빌더 페이지
      */
