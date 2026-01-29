@@ -15,7 +15,9 @@ import com.kepg.BaseBallLOCK.crawler.team.StatizTeamUnifiedCrawler;
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
 
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class CrawlersManualRunner {
 
 public static void main(String[] args) {
@@ -38,11 +40,11 @@ try {
     boolean crawlPlayer = false;  // 선수 데이터 크롤링 여부
     boolean onlyMissingData = false; // 없는 데이터만 크롤링할지 여부
     
-    System.out.println("=== 경기 데이터 수집 시작 ===");
-    System.out.println("수집 범위: " + startDate + " ~ " + endDate);
-    System.out.println("팀 데이터 크롤링: " + (crawlTeam ? "예" : "아니오"));
-    System.out.println("선수 데이터 크롤링: " + (crawlPlayer ? "예" : "아니오"));
-    System.out.println("누락 데이터만 크롤링: " + (onlyMissingData ? "예" : "아니오"));
+    log.info("=== 경기 데이터 수집 시작 ===");
+    log.info("수집 범위: " + startDate + " ~ " + endDate);
+    log.info("팀 데이터 크롤링: " + (crawlTeam ? "예" : "아니오"));
+    log.info("선수 데이터 크롤링: " + (crawlPlayer ? "예" : "아니오"));
+    log.info("누락 데이터만 크롤링: " + (onlyMissingData ? "예" : "아니오"));
     
     // 크롤러 인스턴스 생성
     StatizScheduleCrawler scheduleCrawler = context.getBean(StatizScheduleCrawler.class);
@@ -54,42 +56,42 @@ try {
     ScheduleService scheduleService = context.getBean(ScheduleService.class);
     
     // 1. 지정된 날짜 범위의 스케줄 크롤링
-    System.out.println("\n[1단계] 스케줄 데이터 확인 및 크롤링");
+    log.info("\n[1단계] 스케줄 데이터 확인 및 크롤링");
     if (onlyMissingData) {
         crawlMissingScheduleData(scheduleCrawler, scheduleService, startDate, endDate);
     } else {
-        System.out.println("전체 스케줄 크롤링: " + startDate + " ~ " + endDate);
+        log.info("전체 스케줄 크롤링: " + startDate + " ~ " + endDate);
         scheduleCrawler.crawlGameRange(startDate, endDate);
     }
     
     // 2. 지정된 날짜 범위의 경기 상세 정보 크롤링
-    System.out.println("\n[2단계] 경기 상세 데이터 확인 및 크롤링");
+    log.info("\n[2단계] 경기 상세 데이터 확인 및 크롤링");
     if (onlyMissingData) {
         crawlMissingGameData(gameCrawler, scheduleService, startDate, endDate);
     } else {
-        System.out.println("전체 경기 데이터 크롤링: " + startDate + " ~ " + endDate);
+        log.info("전체 경기 데이터 크롤링: " + startDate + " ~ " + endDate);
         gameCrawler.crawlGameRange(startDate, endDate);
     }
     
     // 3. 팀 통계 데이터 수집 (선택사항)
-    System.out.println("\n[3단계] 팀 데이터 크롤링");
+    log.info("\n[3단계] 팀 데이터 크롤링");
     if (crawlTeam) {
-        System.out.println("팀 데이터 크롤링 시작");
+        log.info("팀 데이터 크롤링 시작");
         teamCrawler.crawlAllTeamData();
     } else {
-        System.out.println("팀 데이터 크롤링 생략");
+        log.info("팀 데이터 크롤링 생략");
     }
     
     // 4. 플레이어 통계 데이터 수집 (선택사항)
-    System.out.println("\n[4단계] 선수 데이터 크롤링");
+    log.info("\n[4단계] 선수 데이터 크롤링");
     if (crawlPlayer) {
-        System.out.println("선수 데이터 크롤링 시작");
+        log.info("선수 데이터 크롤링 시작");
         playerCrawler.crawlAllPlayerData();
     } else {
-        System.out.println("선수 데이터 크롤링 생략");
+        log.info("선수 데이터 크롤링 생략");
     }
     
-    System.out.println("\n=== 데이터 수집 완료 ===");
+    log.info("\n=== 데이터 수집 완료 ===");
     
 } catch (Exception e) {
     e.printStackTrace();	
@@ -103,7 +105,7 @@ try {
  * 스케줄 데이터가 없는 날짜만 크롤링
  */
 private static void crawlMissingScheduleData(StatizScheduleCrawler scheduleCrawler, ScheduleService scheduleService, LocalDate startDate, LocalDate endDate) {
-    System.out.println("스케줄 크롤링 (누락 데이터 확인): " + startDate + " ~ " + endDate);
+    log.info("스케줄 크롤링 (누락 데이터 확인): " + startDate + " ~ " + endDate);
     
     LocalDate currentDate = startDate;
     int totalDays = 0;
@@ -119,23 +121,23 @@ private static void crawlMissingScheduleData(StatizScheduleCrawler scheduleCrawl
         
         if (schedules.isEmpty()) {
             missingDays++;
-            System.out.println("  ▶ " + currentDate + ": 스케줄 데이터 없음 - 크롤링 실행");
+            log.info("  ▶ " + currentDate + ": 스케줄 데이터 없음 - 크롤링 실행");
             scheduleCrawler.crawlGameRange(currentDate, currentDate);
         } else {
-            System.out.println("  ✓ " + currentDate + ": 스케줄 데이터 존재 (" + schedules.size() + "경기) - 생략");
+            log.info("  ✓ " + currentDate + ": 스케줄 데이터 존재 (" + schedules.size() + "경기) - 생략");
         }
         
         currentDate = currentDate.plusDays(1);
     }
     
-    System.out.println("스케줄 크롤링 완료: 전체 " + totalDays + "일 중 " + missingDays + "일 크롤링");
+    log.info("스케줄 크롤링 완료: 전체 " + totalDays + "일 중 " + missingDays + "일 크롤링");
 }
 
 /**
  * 경기 상세 데이터가 없는 경기만 크롤링
  */
 private static void crawlMissingGameData(StatizGameCrawler gameCrawler, ScheduleService scheduleService, LocalDate startDate, LocalDate endDate) {
-    System.out.println("경기 상세 데이터 크롤링 (누락 데이터 확인): " + startDate + " ~ " + endDate);
+    log.info("경기 상세 데이터 크롤링 (누락 데이터 확인): " + startDate + " ~ " + endDate);
     
     LocalDate currentDate = startDate;
     int totalDays = 0;
@@ -187,16 +189,16 @@ private static void crawlMissingGameData(StatizGameCrawler gameCrawler, Schedule
         
         if (needsCrawling && !schedules.isEmpty()) {
             crawledDays++;
-            System.out.println("  ▶ " + currentDate + ": 상세 데이터 부족 (" + gamesWithoutDetails + "/" + schedules.size() + "경기) - 크롤링 실행");
+            log.info("  ▶ " + currentDate + ": 상세 데이터 부족 (" + gamesWithoutDetails + "/" + schedules.size() + "경기) - 크롤링 실행");
             gameCrawler.crawlGameRange(currentDate, currentDate);
         } else if (schedules.isEmpty()) {
-            System.out.println("  ! " + currentDate + ": 스케줄 데이터 없음 - 먼저 스케줄 크롤링 필요");
+            log.info("  ! " + currentDate + ": 스케줄 데이터 없음 - 먼저 스케줄 크롤링 필요");
         } else {
-            System.out.println("  ✓ " + currentDate + ": 상세 데이터 완료 (" + schedules.size() + "경기) - 생략");
+            log.info("  ✓ " + currentDate + ": 상세 데이터 완료 (" + schedules.size() + "경기) - 생략");
         }
         
     }
     
-    System.out.println("경기 상세 크롤링 완료: 전체 " + totalDays + "일 중 " + crawledDays + "일 크롤링");
+    log.info("경기 상세 크롤링 완료: 전체 " + totalDays + "일 중 " + crawledDays + "일 크롤링");
 }
 }

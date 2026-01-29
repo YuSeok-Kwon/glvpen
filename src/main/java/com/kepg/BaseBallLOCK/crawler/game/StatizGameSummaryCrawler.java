@@ -26,7 +26,9 @@ import com.kepg.BaseBallLOCK.modules.game.scoreBoard.domain.ScoreBoard;
 import com.kepg.BaseBallLOCK.modules.game.scoreBoard.service.ScoreBoardService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class StatizGameSummaryCrawler {
@@ -54,7 +56,7 @@ public class StatizGameSummaryCrawler {
         String baseUrl = "https://statiz.sporki.com/schedule/?m=summary&s_no=%d";
 
         for (int statizId = 20250191; statizId <= 20250200; statizId++) {
-            System.out.println("크롤링 시작: " + statizId);
+            log.info("크롤링 시작: " + statizId);
             WebDriver driver = null;
             try {
                 ChromeOptions options = new ChromeOptions();
@@ -71,13 +73,13 @@ public class StatizGameSummaryCrawler {
                 Element scoreTable = doc.selectFirst("div.box_type_boared > div.item_box.w100 .table_type03 table");
 
                 if (scoreTable == null) {
-                    System.out.println("스코어 테이블 없음: " + statizId);
+                    log.info("스코어 테이블 없음: " + statizId);
                     continue;
                 }
 
                 Elements rows = scoreTable.select("tbody > tr");
                 if (rows.size() < 2) {
-                    System.out.println("팀 정보 행 부족: " + statizId);
+                    log.info("팀 정보 행 부족: " + statizId);
                     continue;
                 }
 
@@ -93,19 +95,19 @@ public class StatizGameSummaryCrawler {
                 int homeTeamId = teamNameToId.getOrDefault(homeTeam, 0);
                 int awayTeamId = teamNameToId.getOrDefault(awayTeam, 0);
                 if (homeTeamId == 0 || awayTeamId == 0) {
-                    System.out.println("TeamId 추출 실패");
+                    log.info("TeamId 추출 실패");
                     continue;
                 }
 
                 Element dateElement = doc.selectFirst(".callout_box .txt");
                 if (dateElement == null) {
-                    System.out.println("날짜 정보 없음: " + statizId);
+                    log.info("날짜 정보 없음: " + statizId);
                     continue;
                 }
                 
                 String[] dateParts = dateElement.text().split(",");
                 if (dateParts.length < 2) {
-                    System.out.println("날짜 파싱 실패: " + statizId);
+                    log.info("날짜 파싱 실패: " + statizId);
                     continue;
                 }
                 
@@ -116,7 +118,7 @@ public class StatizGameSummaryCrawler {
 
                 Integer scheduleId = scheduleService.findIdByDateAndTeams(matchDateTime, homeTeamId, awayTeamId);
                 if (scheduleId == null) {
-                    System.out.println("ScheduleId 매칭 실패");
+                    log.info("ScheduleId 매칭 실패");
                     continue;
                 }
 
@@ -139,13 +141,13 @@ public class StatizGameSummaryCrawler {
                  String losePitcher = extractPitcher(doc, ".game_result .lose a");
 
                  saveScoreBoard(scheduleId, homeScores, awayScores, homeR, homeH, homeE, homeB, awayR, awayH, awayE, awayB, winPitcher, losePitcher);
-                 System.out.println("scoreBoard 저장 완료: " + statizId + " ScheduleId: " + scheduleId);
+                 log.info("scoreBoard 저장 완료: " + statizId + " ScheduleId: " + scheduleId);
 
                 saveGameHighlights(doc, scheduleId);
                 Thread.sleep(3000);
 
             } catch (Exception e) {
-                System.out.println("오류 발생: " + statizId);
+                log.info("오류 발생: " + statizId);
                 e.printStackTrace();
             } finally {
                 if (driver != null) driver.quit();
@@ -194,7 +196,7 @@ public class StatizGameSummaryCrawler {
     private void saveGameHighlights(Document doc, Integer scheduleId) {
         Element highlightBox = doc.selectFirst("div.sh_box:has(.box_head:contains(결정적 장면 Best 5)) table");
         if (highlightBox == null) {
-            System.out.println("결정적 장면 테이블 없음");
+            log.info("결정적 장면 테이블 없음");
             return;
         }
 
@@ -227,7 +229,7 @@ public class StatizGameSummaryCrawler {
             gameHighlightService.saveOrUpdate(dto);
         }
 
-        System.out.println("gameHighlight 저장 완료: " + scheduleId);
+        log.info("gameHighlight 저장 완료: " + scheduleId);
     }
 
     private String toInningString(List<Integer> scores) {

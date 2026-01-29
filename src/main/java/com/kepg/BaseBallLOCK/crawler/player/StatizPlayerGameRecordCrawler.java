@@ -21,10 +21,11 @@ import com.kepg.BaseBallLOCK.modules.player.domain.Player;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
-
 public class StatizPlayerGameRecordCrawler {
 
     private final ScheduleService scheduleService;
@@ -56,7 +57,7 @@ public class StatizPlayerGameRecordCrawler {
         	WebDriver driver = null;
         	try {
         	    String url = String.format(baseUrl, statizId);
-        	    System.out.println("크롤링 시작: " + statizId);
+        	    log.info("크롤링 시작: " + statizId);
 
         	    ChromeOptions options = new ChromeOptions();
         	    options.addArguments("--headless");
@@ -88,11 +89,11 @@ public class StatizPlayerGameRecordCrawler {
                 saveBatterRecords(doc, scheduleId, homeTeamId, sbMap);
                 savePitcherRecords(doc, scheduleId);
 
-                System.out.println("저장 완료 batterLineUp, BatterRecord, PitcherRecord " + statizId + " (" + scheduleId + ") " + matchDate);
+                log.info("저장 완료 batterLineUp, BatterRecord, PitcherRecord " + statizId + " (" + scheduleId + ") " + matchDate);
                 Thread.sleep(3000);
 
             } catch (Exception e) {
-                System.out.printf("오류 발생: %d, %s\n", statizId, e.getMessage());
+                log.info(String.format("오류 발생: %d, %s\n", statizId, e.getMessage()));
             } finally {
                 if (driver != null) driver.quit();
             }
@@ -108,7 +109,7 @@ public class StatizPlayerGameRecordCrawler {
             LocalDate date = LocalDate.parse("2025-" + dateText, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             return Timestamp.valueOf(date.atStartOfDay());
         } catch (Exception e) {
-            System.out.println("경기 날짜 추출 실패");
+            log.info("경기 날짜 추출 실패");
             return null;
         }
     }
@@ -150,27 +151,27 @@ public class StatizPlayerGameRecordCrawler {
         for (Element section : sections) {
             Element head = section.selectFirst(".box_head");
             if (head == null || !head.text().contains("타격기록")) {
-                System.out.println("타격기록 섹션 없음");
+                log.info("타격기록 섹션 없음");
                 continue;
             }
 
             String teamName = head.text().replaceAll(".*\\((.*?)\\).*", "$1").trim();
             Integer extractedTeamId = teamNameToId.get(teamName);
             if (extractedTeamId == null || !extractedTeamId.equals(teamId)) {
-                System.out.println("TeamId 추출 실패");
+                log.info("TeamId 추출 실패");
                 continue;
             }
 
             Element table = section.selectFirst("table");
             if (table == null) {
-                System.out.println("테이블 없음");
+                log.info("테이블 없음");
             	continue;
             }
 
             for (Element row : table.select("tbody > tr:not(.total)")) {
                 Elements cols = row.select("td");
                 if (cols.size() < 22) {
-                    System.out.println("행 부족");
+                    log.info("행 부족");
                 	continue;
                 }
 
@@ -196,10 +197,10 @@ public class StatizPlayerGameRecordCrawler {
 
                         lineupService.saveBatterLineup(scheduleId, teamId, order, pos, name);
                         recordService.saveBatterRecord(scheduleId, teamId, pa, ab, hits, hr, rbi, bb, so, sb, name);
-                        System.out.println("타자 저장 : " + name);
+                        log.info("타자 저장 : " + name);
                         break;
                     } catch (Exception e) {
-                        System.out.println("타자 저장 중 에러: " + name);
+                        log.info("타자 저장 중 에러: " + name);
                         break;
                     }
                 }
@@ -212,27 +213,27 @@ public class StatizPlayerGameRecordCrawler {
         for (Element section : doc.select("div.box_type_boared")) {
             Element head = section.selectFirst(".box_head");
             if (head == null || !head.text().contains("투구기록")) {
-            	System.out.println("투구기록 head 없음");
+            	log.info("투구기록 head 없음");
             	continue;
             }
 
             String teamName = head.text().replaceAll(".*\\((.*?)\\).*", "$1").trim();
             Integer teamId = teamNameToId.get(teamName);
             if (teamId == null) {
-            	System.out.println("TeamId 추출 실패");
+            	log.info("TeamId 추출 실패");
             	continue;
             }
 
             Element table = section.selectFirst(".table_type03 table");
             if (table == null) {
-            	System.out.println("테이블 없음");
+            	log.info("테이블 없음");
             	continue;
             }
 
             for (Element row : table.select("tbody > tr:not(.total)")) {
                 Elements cols = row.select("td");
                 if (cols.size() < 18) {
-                	System.out.println("행 부족");
+                	log.info("행 부족");
                 	continue;
                 }
 
@@ -259,10 +260,10 @@ public class StatizPlayerGameRecordCrawler {
                         int hr = Integer.parseInt(cols.get(9).text().trim());
 
                         recordService.savePitcherRecord(scheduleId, teamId, name, innings, strikeouts, bb, hbp, runs, er, hits, hr, decision);
-                        System.out.println("투수 저장 : " + name);
+                        log.info("투수 저장 : " + name);
                         break;
                     } catch (Exception e) {
-                        System.out.println("투수 저장 중 에러: " + name);
+                        log.info("투수 저장 중 에러: " + name);
                         break;
                     }
                 }
