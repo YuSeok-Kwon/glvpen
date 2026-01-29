@@ -456,4 +456,39 @@ public class CustomPlayerRestController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
         }
     }
+
+    /**
+     * 커스텀 선수 게임 실행
+     * POST /api/custom-players/play
+     */
+    @PostMapping("/play")
+    public ResponseEntity<Map<String, Object>> playGame(
+            @RequestBody CustomPlayerRequestDTO request,
+            HttpSession session) {
+
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            log.info("게임 실행 요청 - userId: {}, gameMode: {}, difficulty: {}",
+                    request.getUserId(), request.getGameMode(), request.getDifficulty());
+
+            CustomPlayerResultDTO gameResult = customPlayerService.playCustomPlayerGame(request);
+
+            result.put("success", true);
+            result.put("data", gameResult);
+
+            return ResponseEntity.ok(result);
+
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(result);
+        } catch (Exception e) {
+            log.error("게임 실행 실패 - request: {}, error: {}",
+                    request, e.getMessage(), e);
+            result.put("success", false);
+            result.put("message", "게임 실행 중 오류가 발생했습니다.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(result);
+        }
+    }
 }

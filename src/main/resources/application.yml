@@ -17,8 +17,8 @@ spring:
   mvc:
     static-path-pattern: /static/**
   jpa:
-    hibernate: 
-      ddl-auto: none
+    hibernate:
+      ddl-auto: update
       naming: 
         implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
