@@ -36,6 +36,10 @@ out/
 ### VS Code ###
 .vscode/
 
+### Mac OS ###
+.DS_Store
+*.DS_Store
+
 security-variable.yml
 
 ### 로그 파일 ###
