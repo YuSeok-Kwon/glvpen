@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
-@RequestMapping("/api/simulations")
+@RequestMapping("/simulations")
 @Controller("simulationModeGameController")
 public class SimulationGameController {
 

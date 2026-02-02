@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
-@RequestMapping("/api/game")
+@RequestMapping("/game")
 public class GameResultController {
 
 	@GetMapping("/result-view")

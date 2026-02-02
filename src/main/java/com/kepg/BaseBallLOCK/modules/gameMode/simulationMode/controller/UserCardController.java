@@ -18,7 +18,7 @@ import com.kepg.BaseBallLOCK.modules.user.domain.User;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
-@RequestMapping("/api/game")
+@RequestMapping("/game")
 @Controller
 @RequiredArgsConstructor
 public class UserCardController {

@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/players")
+@RequestMapping("/players")
 public class PlayerStatsController {
 
     private final BatterStatsService batterStatsService;

@@ -15,7 +15,7 @@ import com.kepg.BaseBallLOCK.modules.team.teamStats.service.TeamStatsService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/ranking")
+@RequestMapping("/api/team-rankings")
 @RequiredArgsConstructor
 public class TeamRankingRestController {
 

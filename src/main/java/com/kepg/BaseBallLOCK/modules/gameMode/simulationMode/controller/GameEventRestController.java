@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/game/game-event")
+@RequestMapping("/api/game-events")
 public class GameEventRestController {
 
     private final GameEventService gameEventService;
