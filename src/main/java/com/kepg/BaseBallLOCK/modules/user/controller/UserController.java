@@ -85,6 +85,60 @@ public class UserController {
         return "user/join";
     }
 
+    // 회원가입 API
+    @PostMapping("/join")
+    @ResponseBody
+    public Map<String, String> join(
+            @RequestParam("loginId") String loginId,
+            @RequestParam("password") String password,
+            @RequestParam("name") String name,
+            @RequestParam("email") String email,
+            @RequestParam("nickname") String nickname,
+            @RequestParam("favoriteTeamId") Integer favoriteTeamId) {
+
+        Map<String, String> resultMap = new HashMap<>();
+
+        // 입력값 검증
+        if (loginId == null || loginId.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "아이디를 입력해주세요.");
+            return resultMap;
+        }
+        if (password == null || password.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "비밀번호를 입력해주세요.");
+            return resultMap;
+        }
+        if (name == null || name.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "이름을 입력해주세요.");
+            return resultMap;
+        }
+        if (email == null || email.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "이메일을 입력해주세요.");
+            return resultMap;
+        }
+        if (nickname == null || nickname.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "닉네임을 입력해주세요.");
+            return resultMap;
+        }
+
+        // 회원가입 처리
+        boolean isSuccess = userService.addUser(loginId, password, name, email, nickname, favoriteTeamId);
+
+        if (isSuccess) {
+            resultMap.put("result", "success");
+            resultMap.put("message", "회원가입이 완료되었습니다.");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "회원가입에 실패했습니다. 다시 시도해주세요.");
+        }
+
+        return resultMap;
+    }
+
     // 아이디 중복 확인 API
     @GetMapping("/duplicate-id")
     @ResponseBody
