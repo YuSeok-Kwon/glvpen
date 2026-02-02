@@ -74,11 +74,20 @@
 <th:block layout:fragment="script">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
 <script>
 flatpickr.localize(flatpickr.l10ns.ko);
 const flatpickrInstance = flatpickr("#hiddenDatePicker", {
     dateFormat: "Y-m-d",
     locale : "ko",
+    plugins: [
+        new monthSelectPlugin({
+            shorthand: false,
+            dateFormat: "Y-m-d",
+            altFormat: "Y년 m월"
+        })
+    ],
     onChange: function(selectedDates, dateStr) {
         if (dateStr) {
             window.location.href = `/schedule/detail-redirect-view?date=${dateStr}`;

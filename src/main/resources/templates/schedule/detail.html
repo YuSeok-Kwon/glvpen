@@ -13,7 +13,7 @@
 	     class="btn btn-outline-secondary order-1 order-md-0">
 	    &laquo; 이전
 	  </a>
-      <div class="fs-4 fs-md-3 fw-bold order-0 order-md-1" th:text="${#temporals.format(game.matchDate.toLocalDateTime(), 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
+      <div class="fs-4 fs-md-3 fw-bold order-0 order-md-1" th:text="${#dates.format(game.matchDate, 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
 	  <a th:if="${nextStatizId != null}"
 	     th:href="@{/schedule/detail-view(statizId=${nextStatizId})}"
 	     class="btn btn-outline-secondary order-2">
