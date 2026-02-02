@@ -167,6 +167,14 @@ public class ScheduleService {
                          schedule.getId(), schedule.getAwayTeamId(), date);
             }
 
+            // statizId 누락 경고
+            if (schedule.getStatizId() == null) {
+                log.warn("StatizId가 null입니다. scheduleId: {}, 날짜: {}, 홈팀: {}, 원정팀: {}",
+                         schedule.getId(), date,
+                         homeTeam != null ? homeTeam.getName() : "알 수 없음",
+                         awayTeam != null ? awayTeam.getName() : "알 수 없음");
+            }
+
             ScheduleCardView view = ScheduleCardView.builder()
                     .id(schedule.getId())
                     .statizId(schedule.getStatizId())
