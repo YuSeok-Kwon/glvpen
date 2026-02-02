@@ -47,19 +47,40 @@ public class ScheduleService {
     // 주어진 경기 일정이 존재하면 업데이트, 없으면 새로 저장
     @Transactional
     public void saveOrUpdate(Schedule newSchedule) {
+        // statizId null 체크
+        if (newSchedule.getStatizId() == null) {
+            log.error("StatizId가 null인 경기를 저장할 수 없습니다. 날짜: {}, 홈팀ID: {}, 원정팀ID: {}",
+                     newSchedule.getMatchDate(), newSchedule.getHomeTeamId(), newSchedule.getAwayTeamId());
+            return;
+        }
+
         Integer existingId = scheduleRepository.findIdByStatizId(newSchedule.getStatizId());
 
         Schedule schedule;
         if (existingId != null) {
             schedule = scheduleRepository.findById(existingId).orElse(newSchedule);
+            log.debug("기존 경기 업데이트. statizId: {}, scheduleId: {}", newSchedule.getStatizId(), existingId);
         } else {
             schedule = newSchedule;
+            log.debug("새 경기 저장. statizId: {}", newSchedule.getStatizId());
+
+            // 더블헤더 체크 (같은 날짜에 같은 팀의 다른 경기가 있는지)
+            if (newSchedule.getMatchDate() != null) {
+                java.time.LocalDate date = newSchedule.getMatchDate().toLocalDateTime().toLocalDate();
+                java.util.List<Schedule> sameDateGames = findByMatchDateAndTeam(date, newSchedule.getHomeTeamId());
+                if (!sameDateGames.isEmpty()) {
+                    log.info("더블헤더 감지! 날짜: {}, 팀ID: {}, 기존 경기 수: {}",
+                            date, newSchedule.getHomeTeamId(), sameDateGames.size());
+                }
+            }
         }
 
         schedule.setMatchDate(newSchedule.getMatchDate());
         schedule.setStadium(newSchedule.getStadium());
         schedule.setStatus(newSchedule.getStatus());
         schedule.setStatizId(newSchedule.getStatizId());
+        schedule.setHomeTeamId(newSchedule.getHomeTeamId());
+        schedule.setAwayTeamId(newSchedule.getAwayTeamId());
 
         if ("종료".equals(newSchedule.getStatus())) {
             schedule.setHomeTeamScore(newSchedule.getHomeTeamScore());
@@ -562,6 +583,72 @@ public class ScheduleService {
     // 특정 기간 및 팀 기준으로 경기 목록 조회 (N+1 쿼리 방지용)
     public List<Schedule> findByMatchDateBetweenAndTeam(Timestamp start, Timestamp end, int teamId) {
         return scheduleRepository.findByMatchDateBetweenAndTeam(start, end, teamId);
+    }
+
+    // ======== 더블헤더 관련 유틸리티 메서드 ========
+
+    /**
+     * 더블헤더 여부 확인
+     * 같은 날짜에 같은 팀이 출전하는 경기가 2개 이상인지 확인
+     */
+    public boolean isDoubleHeader(LocalDate date, int teamId) {
+        List<Schedule> games = findByMatchDateAndTeam(date, teamId);
+        return games.size() >= 2;
+    }
+
+    /**
+     * 더블헤더 경기 목록 조회 (시간 순 정렬)
+     */
+    public List<Schedule> getDoubleHeaderGames(LocalDate date, int teamId) {
+        List<Schedule> games = findByMatchDateAndTeam(date, teamId);
+        games.sort((a, b) -> a.getMatchDate().compareTo(b.getMatchDate()));
+        return games;
+    }
+
+    /**
+     * 더블헤더에서 몇 번째 경기인지 반환 (1-based index)
+     * 해당 날짜에 경기가 1개면 0 반환, 2개 이상이면 순서 반환
+     */
+    public int getDoubleHeaderSequence(int scheduleId) {
+        Optional<Schedule> optSchedule = scheduleRepository.findById(scheduleId);
+        if (optSchedule.isEmpty()) return 0;
+
+        Schedule schedule = optSchedule.get();
+        LocalDate date = schedule.getMatchDate().toLocalDateTime().toLocalDate();
+        int homeTeamId = schedule.getHomeTeamId();
+
+        List<Schedule> games = getDoubleHeaderGames(date, homeTeamId);
+        if (games.size() <= 1) return 0; // 더블헤더 아님
+
+        for (int i = 0; i < games.size(); i++) {
+            if (games.get(i).getId().equals(scheduleId)) {
+                return i + 1; // 1-based index
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 더블헤더 검증: 같은 날짜/같은 팀의 경기가 중복 statizId를 가지고 있는지 확인
+     */
+    public void validateDoubleHeaderIntegrity(LocalDate date, int teamId) {
+        List<Schedule> games = findByMatchDateAndTeam(date, teamId);
+        if (games.size() < 2) return;
+
+        Map<Integer, Integer> statizIdCount = new HashMap<>();
+        for (Schedule game : games) {
+            Integer statizId = game.getStatizId();
+            if (statizId != null) {
+                statizIdCount.put(statizId, statizIdCount.getOrDefault(statizId, 0) + 1);
+            }
+        }
+
+        for (Map.Entry<Integer, Integer> entry : statizIdCount.entrySet()) {
+            if (entry.getValue() > 1) {
+                log.error("중복된 StatizId 발견! statizId: {}, 중복 개수: {}, 날짜: {}, 팀ID: {}",
+                         entry.getKey(), entry.getValue(), date, teamId);
+            }
+        }
     }
 
 }

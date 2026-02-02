@@ -174,12 +174,36 @@ public class StatizScheduleCrawler {
                     // 상태
                     String status = boxHead.contains("경기전") ? "예정" : (boxHead.contains("경기종료") ? "종료" : "경기취소");
 
-                    // statizId
+                    // statizId 추출 (개선된 로직)
                     Element previewLink = game.selectFirst("a[href*='preview']");
                     Element summaryLink = game.selectFirst("a[href*='summary']");
-                    String statizUrl = previewLink != null ? previewLink.attr("href") : (summaryLink != null ? summaryLink.attr("href") : null);
-                    if (statizUrl == null || !statizUrl.contains("s_no=")) continue;
-                    int statizId = Integer.parseInt(statizUrl.split("s_no=")[1]);
+                    String statizUrl = previewLink != null ? previewLink.attr("href") :
+                                      (summaryLink != null ? summaryLink.attr("href") : null);
+
+                    if (statizUrl == null || !statizUrl.contains("s_no=")) {
+                        log.warn("StatizId를 추출할 수 없습니다. {} vs {}, 날짜: {}",
+                                 homeTeam, awayTeam, matchDateTime);
+                        continue;
+                    }
+
+                    // 정규표현식으로 s_no 파라미터 추출
+                    Integer statizId = null;
+                    try {
+                        String[] params = statizUrl.split("s_no=");
+                        if (params.length > 1) {
+                            String sNoValue = params[1].split("&")[0]; // & 이후 제거
+                            statizId = Integer.parseInt(sNoValue);
+                        }
+                    } catch (Exception e) {
+                        log.error("StatizId 파싱 실패. URL: {}, 에러: {}", statizUrl, e.getMessage());
+                        continue;
+                    }
+
+                    if (statizId == null) {
+                        log.warn("StatizId가 null입니다. {} vs {}, 날짜: {}",
+                                 homeTeam, awayTeam, matchDateTime);
+                        continue;
+                    }
 
                     Schedule schedule = new Schedule();
                     schedule.setMatchDate(matchDateTime);
