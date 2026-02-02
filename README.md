@@ -4,15 +4,15 @@ KBO 야구 데이터 기반 시뮬레이션 게임
 
 ## 프로젝트 개요
 
-BaseBall LOCK은 실제 KBO 경기 데이터를 활용한 야구 시뮬레이션 게임입니다. 사용자는 실제 경기 일정과 라인업으로 게임을 즐기거나, 커스텀 타자를 육성하거나, 클래식 모드로 빠른 대전을 즐길 수 있습니다.
+BaseBall LOCK은 실제 KBO 경기 데이터를 활용한 야구 시뮬레이션 게임입니다. 사용자는 실제 경기 일정과 라인업으로 게임을 즐기거나, 커스텀 타자를 육성하거나, 시뮬레이션 모드로 빠른 대전을 즐길 수 있습니다.
 
 ### 핵심 기능
 
 - **실제 데이터 기반**: KBO 실제 경기 데이터를 크롤링하여 사용
-- **다양한 게임 모드**: Real Match, Custom Hitter, Classic 3가지 모드 제공
+- **다양한 게임 모드**: Real Match, Custom Player, Simulation 3가지 모드 제공
 - **성장 시스템**: 커스텀 타자 육성 및 스탯 관리
 - **실시간 시뮬레이션**: WebSocket 기반 턴제 게임 진행
-- **통계 및 랭킹**: 상세한 경기 통계와 사용자 랭킹 시스템
+- **통계 및 랭킹**: 상세한 경기 통계와 팀 순위 시스템
 
 ## 기술 스택
 
@@ -28,7 +28,6 @@ BaseBall LOCK은 실제 KBO 경기 데이터를 활용한 야구 시뮬레이션
 - **Framework**: React
 - **Language**: TypeScript
 - **Animation**: GSAP, SVG
-- **Build Tool**: Gradle
 
 ### Crawler
 - **Library**: Selenium, Jsoup
@@ -43,24 +42,68 @@ BaseBallLOCK/
 │   │   ├── java/com/kepg/BaseBallLOCK/
 │   │   │   ├── modules/              # Feature-based 모듈 구조
 │   │   │   │   ├── user/            # 사용자 관리
-│   │   │   │   ├── realmatch/       # Real Match 모드
-│   │   │   │   ├── customplayer/    # Custom Hitter 모드
-│   │   │   │   ├── classic/         # Classic 모드
-│   │   │   │   ├── game/            # 경기 관련 (일정, 기록, 하이라이트)
-│   │   │   │   ├── player/          # 선수 정보 및 통계
-│   │   │   │   ├── team/            # 팀 정보 및 순위
-│   │   │   │   ├── review/          # 리뷰 시스템
-│   │   │   │   └── ranking/         # 랭킹 시스템
+│   │   │   │   │   ├── controller/
+│   │   │   │   │   ├── service/
+│   │   │   │   │   ├── repository/
+│   │   │   │   │   ├── domain/
+│   │   │   │   │   └── dto/
+│   │   │   │   ├── gameMode/        # 게임 모드
+│   │   │   │   │   ├── realMatch/   # Real Match 모드
+│   │   │   │   │   ├── customPlayerMode/ # Custom Player 모드
+│   │   │   │   │   └── simulationMode/   # Simulation 모드
+│   │   │   │   ├── game/            # 경기 관련
+│   │   │   │   │   ├── schedule/    # 경기 일정
+│   │   │   │   │   ├── lineUp/      # 라인업
+│   │   │   │   │   ├── record/      # 경기 기록
+│   │   │   │   │   ├── scoreBoard/  # 스코어보드
+│   │   │   │   │   └── highlight/   # 하이라이트
+│   │   │   │   ├── player/          # 선수 정보
+│   │   │   │   │   ├── domain/
+│   │   │   │   │   ├── service/
+│   │   │   │   │   ├── repository/
+│   │   │   │   │   └── stats/       # 선수 통계
+│   │   │   │   ├── team/            # 팀 정보
+│   │   │   │   │   ├── domain/
+│   │   │   │   │   ├── service/
+│   │   │   │   │   ├── teamRanking/ # 팀 순위
+│   │   │   │   │   └── teamStats/   # 팀 통계
+│   │   │   │   └── review/          # 리뷰 시스템
+│   │   │   │       ├── controller/
+│   │   │   │       ├── service/
+│   │   │   │       ├── repository/
+│   │   │   │       └── summary/     # 리뷰 요약
 │   │   │   ├── crawler/             # 데이터 크롤링
 │   │   │   │   ├── game/            # 경기 크롤러
 │   │   │   │   ├── player/          # 선수 크롤러
 │   │   │   │   ├── schedule/        # 일정 크롤러
 │   │   │   │   ├── team/            # 팀 크롤러
 │   │   │   │   └── util/            # 크롤링 유틸리티
-│   │   │   └── common/              # 공통 모듈
+│   │   │   ├── common/              # 공통 모듈
+│   │   │   │   ├── ai/              # AI 관련
+│   │   │   │   ├── game/            # 게임 공통 로직
+│   │   │   │   ├── enums/           # Enum 정의
+│   │   │   │   ├── exception/       # 예외 처리
+│   │   │   │   └── validator/       # 검증 로직
+│   │   │   └── config/              # 설정
 │   │   └── resources/
 │   │       ├── static/              # 정적 리소스
-│   │       └── templates/           # Thymeleaf 템플릿
+│   │       │   ├── css/
+│   │       │   ├── game/
+│   │       │   ├── emblems/         # 팀 엠블럼
+│   │       │   ├── soundEffect/
+│   │       │   └── textures/
+│   │       ├── templates/           # Thymeleaf 템플릿
+│   │       │   ├── user/
+│   │       │   ├── game/
+│   │       │   ├── schedule/
+│   │       │   ├── review/
+│   │       │   ├── ranking/
+│   │       │   ├── realmatch/
+│   │       │   ├── customplayer/
+│   │       │   ├── fragments/
+│   │       │   └── layouts/
+│   │       └── db/
+│   │           └── migration/       # Flyway 마이그레이션
 │   └── test/
 ├── docs/                            # 프로젝트 문서
 │   ├── planning/                    # 기획서 및 게임 기획
@@ -70,7 +113,7 @@ BaseBallLOCK/
 │   ├── migration/                   # 마이그레이션 가이드
 │   └── references/                  # 참고 자료
 ├── build.gradle                     # Gradle 빌드 설정
-├── CLAUDE.md                        # Claude Code 가이드
+├── settings.gradle                  # Gradle 설정
 └── README.md                        # 프로젝트 소개
 ```
 
@@ -95,7 +138,7 @@ BaseBallLOCK/
 - **주요 테이블**: `schedule`, `lineup`, `record`, `score_board`
 - **특징**: 실제 선수들의 최신 폼을 반영한 시뮬레이션
 
-### 2. Custom Hitter Mode
+### 2. Custom Player Mode
 
 유저가 만든 타자를 키우는 RPG형 성장 시스템
 
@@ -108,7 +151,7 @@ BaseBallLOCK/
   - **수비**: MVP 선정 평가 반영
 - **특별 보상**: MVP 달성 시 경험치 2배
 
-### 3. Classic Sim Mode
+### 3. Simulation Mode
 
 빠른 대전을 위한 자동 시뮬레이션 모드
 
@@ -229,6 +272,8 @@ GET    /api/reviews/calendar         # 캘린더 형식 조회
 
 #### 파일 구조
 
+각 모듈은 다음과 같은 구조를 따릅니다:
+
 ```
 domain/
 ├── controller/
@@ -246,8 +291,9 @@ domain/
 
 ### Git Commit Convention
 
+형식:
 ```
-[권유석][type](<scope>): <description>
+[이름][type](<scope>): <description>
 ```
 
 #### Type 종류
@@ -343,7 +389,7 @@ domain/
 - **경기 기록**: 수동 실행 (경기 종료 후)
 
 ### 크롤러 유틸리티
-- `CrawlerUtils`: 공통 크롤링 메서드
+- `CrawlerUtils`: 공통 크롤링 메서드 (페이지 로딩, 숫자 파싱, 패턴 추출)
 - `TeamMappingConstants`: 팀/경기장 매핑 상수
 - `WebDriverFactory`: WebDriver 생성 팩토리
 
@@ -357,17 +403,10 @@ domain/
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m '[권유석][feat]: Add some AmazingFeature'`)
+3. Commit your Changes (`git commit -m '[이름][feat]: Add some AmazingFeature'`)
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
 ## 문의
 
 프로젝트 관련 문의: kyus0919@gmail.com
-
-## 참고 문서
-
-- [CLAUDE.md](./CLAUDE.md): Claude Code 개발 가이드
-- [아키텍처 문서](./docs/architecture/)
-- [데이터베이스 설계](./docs/database/)
-- [API 가이드](./docs/architecture/RESTFUL_API_GUIDE.md)
