@@ -85,6 +85,58 @@ public class UserController {
         return "user/join";
     }
 
+    // 아이디 중복 확인 API
+    @GetMapping("/duplicate-id")
+    @ResponseBody
+    public Map<String, Object> checkDuplicateId(@RequestParam("loginId") String loginId) {
+        Map<String, Object> resultMap = new HashMap<>();
+
+        // 입력값 검증
+        if (loginId == null || loginId.trim().isEmpty()) {
+            resultMap.put("result", false);
+            resultMap.put("message", "아이디를 입력해주세요.");
+            return resultMap;
+        }
+
+        // 중복 확인
+        boolean isDuplicate = userService.duplicateId(loginId);
+        resultMap.put("result", isDuplicate);
+
+        if (isDuplicate) {
+            resultMap.put("message", "이미 사용 중인 아이디입니다.");
+        } else {
+            resultMap.put("message", "사용 가능한 아이디입니다.");
+        }
+
+        return resultMap;
+    }
+
+    // 닉네임 중복 확인 API
+    @GetMapping("/duplicate-nickname")
+    @ResponseBody
+    public Map<String, Object> checkDuplicateNickname(@RequestParam("nickname") String nickname) {
+        Map<String, Object> resultMap = new HashMap<>();
+
+        // 입력값 검증
+        if (nickname == null || nickname.trim().isEmpty()) {
+            resultMap.put("result", false);
+            resultMap.put("message", "닉네임을 입력해주세요.");
+            return resultMap;
+        }
+
+        // 중복 확인
+        boolean isDuplicate = userService.duplicateNickname(nickname);
+        resultMap.put("result", isDuplicate);
+
+        if (isDuplicate) {
+            resultMap.put("message", "이미 사용 중인 닉네임입니다.");
+        } else {
+            resultMap.put("message", "사용 가능한 닉네임입니다.");
+        }
+
+        return resultMap;
+    }
+
     @GetMapping("/find-id-view")
     public String findIdView() {
         return "user/findId";
