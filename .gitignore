@@ -38,3 +38,19 @@ out/
 
 security-variable.yml
 
+### 로그 파일 ###
+*.log
+app_runtime.log
+runtime_test.log
+
+### 리포트 및 문서 파일 ###
+*_REPORT.md
+*_SUMMARY.md
+DATABASE_STRUCTURE.md
+DEVELOPMENT_ROADMAP.md
+MISSING_TEMPLATES.md
+
+### 테스트 스크립트 및 결과 ###
+test_endpoints.sh
+runtime_errors.txt
+
