@@ -1,6 +1,6 @@
 <header
   class="position-relative d-flex align-items-end px-3 px-md-5"
-  th:classappend="${session.favoriteTeamId != null ? ' team-bg-' + session.favoriteTeamId : ' team-bg-1'}"
+  th:classappend="${session.loginUser != null and session.loginUser.favoriteTeamId != null ? ' team-bg-' + session.loginUser.favoriteTeamId : ' team-bg-1'}"
   style="width: 100%"
 >
   <!-- 로고 영역 -->
@@ -31,7 +31,7 @@
   >
     <span
       class="small fw-bold d-none d-sm-inline"
-      th:text="${session.userNickname != null ? session.userNickname + ' 님' : '게스트 님'}"
+      th:text="${session.loginUser != null ? session.loginUser.nickname + ' 님' : '게스트 님'}"
       >권유석 님</span
     >
     <a href="/user/logout" class="small text-white">로그아웃</a>

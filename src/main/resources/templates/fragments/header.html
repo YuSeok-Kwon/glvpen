@@ -27,7 +27,7 @@
   >
     <span
       class="text-dark small fw-bold d-none d-sm-inline"
-      th:text="${session.userNickname + ' 님'}"
+      th:text="${session.loginUser != null ? session.loginUser.nickname + ' 님' : '게스트 님'}"
       >권유석 님</span
     >
     <a href="/user/logout" class="small text-warning">로그아웃</a>

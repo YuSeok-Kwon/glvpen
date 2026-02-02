@@ -191,7 +191,7 @@
 	    var currentDirection = $('#current-direction').val();
 	
 	    $.ajax({
-	        url: '/ranking/playerranking-view-json',
+	        url: '/api/player-rankings/playerranking-view-json',
 	        method: 'GET',
 	        data: { 
 	        	season: season, 
@@ -262,7 +262,7 @@
 	    var newDirection = (currentSort === sortKey && currentDirection === 'ASC') ? 'DESC' : 'ASC';
 	
 	    $.ajax({
-	        url: '/ranking/playerranking-view-json',
+	        url: '/api/player-rankings/playerranking-view-json',
 	        method: 'GET',
 	        data: { 
 	            season: season, 
@@ -361,7 +361,7 @@
 	    var newDirection = (currentSort === sortKey && currentDirection === 'ASC') ? 'DESC' : 'ASC';
 	
 	    $.ajax({
-	        url: '/ranking/playerranking-view-json',
+	        url: '/api/player-rankings/playerranking-view-json',
 	        method: 'GET',
 	        data: { 
 	            season: season, 

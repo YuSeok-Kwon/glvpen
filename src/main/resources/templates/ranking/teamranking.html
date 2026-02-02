@@ -75,7 +75,7 @@
 	  var currentDirection = $('input[name="direction"]').val();
 	
 	  $.ajax({
-	    url: '/ranking/teamranking-view-json',
+	    url: '/api/team-rankings/teamranking-view-json',
 	    method: 'GET',
 	    data: {
 	      season: season,
@@ -110,7 +110,7 @@
 	  }
 	
 	  $.ajax({
-	    url: '/ranking/teamranking-view-json',
+	    url: '/api/team-rankings/teamranking-view-json',
 	    method: 'GET',
 	    data: {
 	      season: season,
