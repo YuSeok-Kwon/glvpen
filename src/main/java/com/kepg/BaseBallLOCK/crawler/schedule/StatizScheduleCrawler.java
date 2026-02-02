@@ -1,23 +1,21 @@
 package com.kepg.BaseBallLOCK.crawler.schedule;
 
+import static com.kepg.BaseBallLOCK.crawler.util.CrawlerUtils.*;
+import static com.kepg.BaseBallLOCK.crawler.util.TeamMappingConstants.*;
+
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.stereotype.Component;
 
+import com.kepg.BaseBallLOCK.crawler.util.WebDriverFactory;
 import com.kepg.BaseBallLOCK.modules.game.schedule.domain.Schedule;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
 
@@ -39,45 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 public class StatizScheduleCrawler {
 
     private final ScheduleService scheduleService;
-
-    // 팀명 -> 팀 ID 매핑
-    private static final Map<String, Integer> TEAM_NAME_TO_ID = new HashMap<>();
-
-    // 경기장 약칭 -> 정식 명칭 매핑
-    private static final Map<String, String> STADIUM_NAME_MAP = new HashMap<>();
-
-    // 정규표현식 패턴
-    private static final Pattern DATE_TIME_PATTERN = Pattern.compile("(\\d{2}-\\d{2})\\s+(\\d{2}:\\d{2})");
-    private static final Pattern STATIZ_ID_PATTERN = Pattern.compile("s_no=(\\d+)");
-    private static final Pattern STADIUM_PATTERN = Pattern.compile("\\(([^)]+)\\)");
-
-    static {
-        // 팀 매핑 초기화
-        TEAM_NAME_TO_ID.put("KIA", 1);
-        TEAM_NAME_TO_ID.put("두산", 2);
-        TEAM_NAME_TO_ID.put("삼성", 3);
-        TEAM_NAME_TO_ID.put("SSG", 4);
-        TEAM_NAME_TO_ID.put("LG", 5);
-        TEAM_NAME_TO_ID.put("한화", 6);
-        TEAM_NAME_TO_ID.put("NC", 7);
-        TEAM_NAME_TO_ID.put("KT", 8);
-        TEAM_NAME_TO_ID.put("롯데", 9);
-        TEAM_NAME_TO_ID.put("키움", 10);
-
-        // 경기장 매핑 초기화
-        STADIUM_NAME_MAP.put("고척", "서울 고척스카이돔");
-        STADIUM_NAME_MAP.put("잠실", "서울 잠실종합운동장");
-        STADIUM_NAME_MAP.put("대구", "대구 삼성라이온즈파크");
-        STADIUM_NAME_MAP.put("문학", "인천 SSG랜더스필드");
-        STADIUM_NAME_MAP.put("수원", "수원 KT위즈파크");
-        STADIUM_NAME_MAP.put("창원", "창원 NC파크");
-        STADIUM_NAME_MAP.put("광주", "광주 기아챔피언스필드");
-        STADIUM_NAME_MAP.put("대전", "대전 한화생명이글스파크");
-        STADIUM_NAME_MAP.put("사직", "부산 사직야구장");
-        STADIUM_NAME_MAP.put("포항", "포항야구장");
-        STADIUM_NAME_MAP.put("울산", "울산 문수야구장");
-        STADIUM_NAME_MAP.put("청주", "청주야구장");
-    }
 
     /**
      * 날짜 범위의 경기 일정 크롤링
@@ -198,15 +157,7 @@ public class StatizScheduleCrawler {
      * WebDriver 생성
      */
     private WebDriver createWebDriver() {
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments(
-            "--headless",
-            "--no-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--window-size=1920,1080"
-        );
-        return new ChromeDriver(options);
+        return WebDriverFactory.createChromeDriverWithExtendedOptions();
     }
 
     /**
@@ -352,7 +303,7 @@ public class StatizScheduleCrawler {
             info.name = teamName;
 
             // 팀 ID
-            Integer teamId = TEAM_NAME_TO_ID.get(teamName);
+            Integer teamId = getTeamId(teamName);
             if (teamId == null) {
                 log.warn("알 수 없는 팀명: {}", teamName);
                 return null;
@@ -385,7 +336,7 @@ public class StatizScheduleCrawler {
             Matcher matcher = STADIUM_PATTERN.matcher(boxHead);
             if (matcher.find()) {
                 String stadiumShort = matcher.group(1).trim();
-                return STADIUM_NAME_MAP.getOrDefault(stadiumShort, stadiumShort);
+                return getStadiumFullNameOrDefault(stadiumShort, stadiumShort);
             }
             return "미정";
         } catch (Exception e) {

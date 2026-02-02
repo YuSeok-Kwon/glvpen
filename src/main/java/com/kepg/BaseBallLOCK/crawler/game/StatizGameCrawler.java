@@ -1,4 +1,7 @@
 package com.kepg.BaseBallLOCK.crawler.game;
+import static com.kepg.BaseBallLOCK.crawler.util.CrawlerUtils.*;
+import static com.kepg.BaseBallLOCK.crawler.util.TeamMappingConstants.*;
+
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -8,17 +11,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.kepg.BaseBallLOCK.crawler.util.WebDriverFactory;
 import com.kepg.BaseBallLOCK.modules.game.highlight.dto.GameHighlightDTO;
 import com.kepg.BaseBallLOCK.modules.game.highlight.service.GameHighlightService;
 import com.kepg.BaseBallLOCK.modules.game.lineUp.service.LineupService;
@@ -30,6 +32,8 @@ import com.kepg.BaseBallLOCK.modules.game.scoreBoard.service.ScoreBoardService;
 import com.kepg.BaseBallLOCK.modules.player.domain.Player;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
 
+import lombok.Builder;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,34 +49,19 @@ public class StatizGameCrawler {
     private final LineupService lineupService;
     private final RecordService recordService;
 
-    private static final Map<String, Integer> teamNameToId = new HashMap<>();
-    private static final Map<String, String> stadiumNameMap = new HashMap<>();
+    // ==================== 상수 정의 ====================
 
-    static {
-        teamNameToId.put("KIA", 1);
-        teamNameToId.put("두산", 2);
-        teamNameToId.put("삼성", 3);
-        teamNameToId.put("SSG", 4);
-        teamNameToId.put("LG", 5);
-        teamNameToId.put("한화", 6);
-        teamNameToId.put("NC", 7);
-        teamNameToId.put("KT", 8);
-        teamNameToId.put("롯데", 9);
-        teamNameToId.put("키움", 10);
+    // 셀렉터 상수
+    private static final String SELECTOR_GAME_BOXES = ".box_type_boared .item_box";
+    private static final String SELECTOR_SCORE_TABLE = "div.box_type_boared > div.item_box.w100 .table_type03 table";
+    private static final String SELECTOR_HIGHLIGHT_TABLE = "div.sh_box:has(.box_head:contains(결정적 장면 Best 5)) table";
 
-        stadiumNameMap.put("고척", "서울 고척스카이돔");
-        stadiumNameMap.put("잠실", "서울 잠실종합운동장");
-        stadiumNameMap.put("대구", "대구 삼성라이온즈파크");
-        stadiumNameMap.put("문학", "인천 SSG랜더스필드");
-        stadiumNameMap.put("수원", "수원 KT위즈파크");
-        stadiumNameMap.put("창원", "창원 NC파크");
-        stadiumNameMap.put("광주", "광주 기아챔피언스필드");
-        stadiumNameMap.put("대전", "대전 한화생명이글스파크");
-        stadiumNameMap.put("사직", "부산 사직야구장");
-        stadiumNameMap.put("포항", "포항야구장");
-        stadiumNameMap.put("울산", "울산 문수야구장");
-        stadiumNameMap.put("청주", "청주야구장");
-    }
+    // 크롤링 설정
+    private static final int PAGE_LOAD_WAIT_MS = 3000;
+    private static final int DEFAULT_GAME_HOUR = 18;
+    private static final int DEFAULT_GAME_MINUTE = 30;
+
+    // ==================== 공개 메서드 ====================
 
     /**
      * 매일 새벽 4시에 자동으로 오늘 경기를 크롤링합니다.
@@ -80,869 +69,1024 @@ public class StatizGameCrawler {
     @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
     public void crawlToday() {
         LocalDate today = LocalDate.now();
+        log.info("=== 자동 크롤링 시작: {} ===", today);
         crawlGameRange(today, today);
-        log.info("[자동 크롤링 완료] 오늘 날짜: " + today);
+        log.info("=== 자동 크롤링 완료: {} ===", today);
     }
 
     /**
      * 지정된 날짜 범위의 경기를 크롤링합니다 (수동 실행용).
      */
-    // statizId 추출할 날짜 범위 지정
     public void crawlGameRange(LocalDate startDate, LocalDate endDate) {
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-        WebDriver driver = new ChromeDriver(options);
+        log.info("=== 경기 크롤링 시작 ===");
+        log.info("크롤링 기간: {} ~ {}", startDate, endDate);
 
-        LocalDate currentDate = startDate;
+        WebDriver driver = null;
+        int totalDays = 0;
+        int successDays = 0;
+        int totalGames = 0;
+        int successGames = 0;
 
-        while (!currentDate.isAfter(endDate)) {
-            List<Integer> statizIds = getStatizIdsFromDailyPage(driver, currentDate);
+        try {
+            driver = createWebDriver();
+            LocalDate currentDate = startDate;
 
-            log.info("[일자] " + currentDate + " → 추출된 경기 수: " + statizIds.size());
+            while (!currentDate.isAfter(endDate)) {
+                totalDays++;
+                log.info("\n=== 날짜: {} ===", currentDate);
+
+                try {
+                    CrawlResult result = crawlDailyGames(driver, currentDate);
+                    if (result.isSuccess()) {
+                        successDays++;
+                        totalGames += result.getGameCount();
+                        successGames += result.getGameCount();
+                    }
+                } catch (Exception e) {
+                    log.error("날짜 {} 크롤링 실패: {}", currentDate, e.getMessage(), e);
+                }
+
+                currentDate = currentDate.plusDays(1);
+            }
+        } finally {
+            if (driver != null) {
+                driver.quit();
+            }
+        }
+
+        // 크롤링 통계 출력
+        log.info("\n=== 크롤링 완료 ===");
+        log.info("총 {}일 중 {}일 성공 (성공률: {:.1f}%)", totalDays, successDays,
+                 totalDays > 0 ? (successDays * 100.0 / totalDays) : 0);
+        log.info("총 {}경기 중 {}경기 성공", totalGames, successGames);
+    }
+
+    /**
+     * 특정 날짜의 모든 경기를 크롤링합니다.
+     */
+    private CrawlResult crawlDailyGames(WebDriver driver, LocalDate date) {
+        try {
+            List<Integer> statizIds = extractStatizIds(driver, date);
+            log.info("추출된 경기 수: {}", statizIds.size());
+
+            int successCount = 0;
             for (int i = 0; i < statizIds.size(); i++) {
                 int statizId = statizIds.get(i);
-                log.info("▶ [" + (i + 1) + "/" + statizIds.size() + "] statizId = " + statizId);
+                log.info("▶ [{}/{}] statizId = {}", i + 1, statizIds.size(), statizId);
+
                 try {
-                    processGame(driver, statizId, currentDate);
+                    processGame(driver, statizId, date);
+                    successCount++;
                 } catch (Exception e) {
-                    log.info("[오류 발생] statizId: " + statizId);
-                    e.printStackTrace();
+                    log.error("경기 처리 실패 (statizId: {}): {}", statizId, e.getMessage(), e);
                 }
             }
 
-            currentDate = currentDate.plusDays(1);
-        }
-
-        driver.quit();
-    }
-    
-    // 날짜별 statizId 추출
-    public List<Integer> getStatizIdsFromDailyPage(WebDriver driver, LocalDate date) {
-        List<Integer> statizIds = new ArrayList<>();
-
-        try {
-            String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-            String url = "https://statiz.sporki.com/schedule/?m=daily&date=" + dateStr;
-            log.info("크롤링 URL: " + url);
-            driver.get(url);
-
-            // 페이지 로딩 대기 (기본 3초)
-            Thread.sleep(3000);
-
-            String html = driver.getPageSource();
-            Document doc = Jsoup.parse(html);
-            
-            // 페이지 전체 구조 확인
-            Elements gameBoxes = doc.select(".box_type_boared .item_box");
-            log.info("경기 박스 개수: " + gameBoxes.size());
-            
-            if (gameBoxes.isEmpty()) {
-                log.info("경기 박스가 없습니다. 다른 셀렉터를 시도합니다.");
-                Elements allBoxes = doc.select(".item_box");
-                log.info("전체 item_box 개수: " + allBoxes.size());
-                
-                Elements boaredBoxes = doc.select(".box_type_boared");
-                log.info("box_type_boared 개수: " + boaredBoxes.size());
-            }
-
-            // 개선된 statizId 추출 방식 - btn_box 링크를 우선으로 사용
-            Elements links = null;
-            
-            // 첫 번째 시도: btn_box 안의 링크에서 s_no 추출 (가장 정확한 방법)
-            links = doc.select("div.btn_box a[href*='s_no=']");
-            log.info("첫 번째 시도 (btn_box s_no) 결과: " + links.size() + "개");
-            
-            // 두 번째 시도: game_result 근처의 링크
-            if (links.isEmpty()) {
-                links = doc.select("div.game_result ~ div.btn_box a[href*='s_no=']");
-                log.info("두 번째 시도 (game_result + btn_box) 결과: " + links.size() + "개");
-            }
-            
-            // 세 번째 시도: summary 링크 (기존 방식 개선)
-            if (links.isEmpty()) {
-                links = doc.select("a[href*='summary'][href*='s_no=']");
-                log.info("세 번째 시도 (summary s_no) 결과: " + links.size() + "개");
-            }
-            
-            // 네 번째 시도: boxscore 링크
-            if (links.isEmpty()) {
-                links = doc.select("a[href*='boxscore'][href*='s_no=']");
-                log.info("네 번째 시도 (boxscore s_no) 결과: " + links.size() + "개");
-            }
-            
-            // 다섯 번째 시도: 모든 s_no 링크
-            if (links.isEmpty()) {
-                links = doc.select("a[href*='s_no=']");
-                log.info("다섯 번째 시도 (모든 s_no) 결과: " + links.size() + "개");
-            }
-            
-            // 여섯 번째 시도: 전체 링크 검사
-            if (links.isEmpty()) {
-                links = doc.select("a[href]");
-                log.info("여섯 번째 시도: 전체 링크 " + links.size() + "개 검사");
-                
-                // 첫 10개 링크의 href 출력해서 디버깅
-                for (int i = 0; i < Math.min(10, links.size()); i++) {
-                    Element link = links.get(i);
-                    log.info("  링크 " + (i+1) + ": " + link.attr("href") + " - " + link.text().trim());
-                }
-            }
-            
-           
-
-            for (Element link : links) {
-                String href = link.attr("href");
-                if (href.contains("s_no=")) {
-                    try {
-                        String[] parts = href.split("s_no=");
-                        if (parts.length >= 2) {
-                            // URL 파라미터 분리 
-                            String statizIdStr = parts[1].split("&")[0].trim();
-                            int statizId = Integer.parseInt(statizIdStr);
-                            if (!statizIds.contains(statizId)) {
-                                statizIds.add(statizId);
-                                log.info("statizId 추출 성공: " + statizId + " from " + href);
-                            }
-                        }
-                    } catch (NumberFormatException e) {
-                        log.info("statizId 파싱 실패: " + href);
-                    }
-                }
-            }
-
-            log.info("최종 statizId 추출 완료: " + statizIds);
+            return CrawlResult.builder()
+                    .success(true)
+                    .gameCount(successCount)
+                    .build();
 
         } catch (Exception e) {
-            log.info("statizId 추출 중 오류 발생");
-            e.printStackTrace();
+            log.error("일일 크롤링 실패: {}", e.getMessage(), e);
+            return CrawlResult.builder()
+                    .success(false)
+                    .gameCount(0)
+                    .errorMessage(e.getMessage())
+                    .build();
+        }
+    }
+
+    // ==================== StatizId 추출 ====================
+
+    /**
+     * 특정 날짜의 모든 경기 statizId를 추출합니다.
+     */
+    private List<Integer> extractStatizIds(WebDriver driver, LocalDate date) {
+        try {
+            String url = buildDailyUrl(date);
+            log.info("페이지 접속: {}", url);
+
+            Document doc = loadPage(driver, url);
+            Elements links = findStatizIdLinks(doc);
+
+            return parseStatizIds(links);
+
+        } catch (Exception e) {
+            log.error("StatizId 추출 실패: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 일일 일정 페이지 URL을 생성합니다.
+     */
+    private String buildDailyUrl(LocalDate date) {
+        String dateStr = date.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        return "https://statiz.sporki.com/schedule/?m=daily&date=" + dateStr;
+    }
+
+    /**
+     * 페이지를 로드하고 파싱합니다.
+     */
+    private Document loadPage(WebDriver driver, String url) throws InterruptedException {
+        driver.get(url);
+        Thread.sleep(PAGE_LOAD_WAIT_MS);
+
+        String html = driver.getPageSource();
+        return Jsoup.parse(html);
+    }
+
+    /**
+     * 여러 전략으로 statizId를 포함한 링크를 찾습니다.
+     */
+    private Elements findStatizIdLinks(Document doc) {
+        // 전략 1: btn_box 안의 s_no 링크 (가장 정확)
+        Elements links = doc.select("div.btn_box a[href*='s_no=']");
+        if (!links.isEmpty()) {
+            log.debug("전략 1 성공 (btn_box): {} 개", links.size());
+            return links;
         }
 
+        // 전략 2: game_result 근처의 btn_box 링크
+        links = doc.select("div.game_result ~ div.btn_box a[href*='s_no=']");
+        if (!links.isEmpty()) {
+            log.debug("전략 2 성공 (game_result + btn_box): {} 개", links.size());
+            return links;
+        }
+
+        // 전략 3: summary 링크
+        links = doc.select("a[href*='summary'][href*='s_no=']");
+        if (!links.isEmpty()) {
+            log.debug("전략 3 성공 (summary): {} 개", links.size());
+            return links;
+        }
+
+        // 전략 4: boxscore 링크
+        links = doc.select("a[href*='boxscore'][href*='s_no=']");
+        if (!links.isEmpty()) {
+            log.debug("전략 4 성공 (boxscore): {} 개", links.size());
+            return links;
+        }
+
+        // 전략 5: 모든 s_no 링크
+        links = doc.select("a[href*='s_no=']");
+        if (!links.isEmpty()) {
+            log.debug("전략 5 성공 (모든 s_no): {} 개", links.size());
+            return links;
+        }
+
+        log.warn("statizId 링크를 찾을 수 없습니다.");
+        return new Elements();
+    }
+
+    /**
+     * 링크에서 statizId를 파싱합니다.
+     */
+    private List<Integer> parseStatizIds(Elements links) {
+        List<Integer> statizIds = new ArrayList<>();
+
+        for (Element link : links) {
+            String href = link.attr("href");
+            Integer statizId = extractStatizIdFromUrl(href);
+
+            if (statizId != null && !statizIds.contains(statizId)) {
+                statizIds.add(statizId);
+                log.debug("StatizId 추출: {} from {}", statizId, href);
+            }
+        }
+
+        log.info("총 {} 개의 StatizId 추출 완료", statizIds.size());
         return statizIds;
     }
-    
-    public void processGame(WebDriver driver, int statizId, LocalDate expectedDate) {
 
+    /**
+     * URL에서 statizId를 추출합니다.
+     */
+    private Integer extractStatizIdFromUrl(String url) {
+        if (url == null || !url.contains("s_no=")) {
+            return null;
+        }
+
+        Matcher matcher = STATIZ_ID_PATTERN.matcher(url);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException e) {
+                log.warn("StatizId 파싱 실패: {}", url);
+            }
+        }
+
+        return null;
+    }
+
+    // ==================== 경기 처리 ====================
+
+    /**
+     * 단일 경기의 모든 정보를 크롤링하고 저장합니다.
+     */
+    private void processGame(WebDriver driver, int statizId, LocalDate expectedDate) {
+        log.info("\n=== 경기 처리 시작: statizId = {} ===", statizId);
+
+        WebDriver gameDriver = null;
         try {
-            log.info("\n[시작] statizId = " + statizId);
+            gameDriver = createWebDriver();
 
-            ChromeOptions options = new ChromeOptions();
-            options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-            driver = new ChromeDriver(options);
+            // 1. Summary 페이지 크롤링
+            Document summaryDoc = loadSummaryPage(gameDriver, statizId);
 
-            // ----------------------- summary 크롤링 ----------------------
-            String summaryUrl = "https://statiz.sporki.com/schedule/?m=summary&s_no=" + statizId;
-            driver.get(summaryUrl);
-            Thread.sleep(3000);
+            // 2. 기본 경기 정보 추출
+            GameInfo gameInfo = extractGameInfo(summaryDoc, statizId, expectedDate);
+            if (gameInfo == null) {
+                log.warn("경기 정보 추출 실패 - statizId: {}", statizId);
+                return;
+            }
 
-            String html = driver.getPageSource();
-            Document doc = Jsoup.parse(html);
+            // 3. 경기 상세 정보 존재 여부 확인 (중복 방지)
+            if (shouldSkipGame(statizId, gameInfo)) {
+                log.info("이미 완전한 데이터가 있는 경기 - statizId: {}", statizId);
+                return;
+            }
 
-            Element scoreTable = doc.selectFirst("div.box_type_boared > div.item_box.w100 .table_type03 table");
+            // 4. Schedule 저장
+            Integer scheduleId = saveSchedule(gameInfo);
+            if (scheduleId == null) {
+                log.warn("Schedule 저장 실패 - statizId: {}", statizId);
+                return;
+            }
+
+            // 5. ScoreBoard 정보 추출 및 저장
+            ScoreBoardInfo scoreBoardInfo = extractScoreBoardInfo(summaryDoc);
+            saveScoreBoard(scheduleId, scoreBoardInfo);
+
+            // 6. GameHighlight 추출 및 저장
+            saveGameHighlights(summaryDoc, scheduleId);
+
+            // 7. Boxscore 크롤링 (타자/투수 기록)
+            crawlBoxscore(gameDriver, statizId, scheduleId, gameInfo.getHomeTeamId(), gameInfo.getAwayTeamId());
+
+            log.info("=== 경기 처리 완료: statizId = {} ===", statizId);
+
+        } catch (Exception e) {
+            log.error("경기 처리 실패 (statizId: {}): {}", statizId, e.getMessage(), e);
+        } finally {
+            if (gameDriver != null) {
+                gameDriver.quit();
+            }
+        }
+    }
+
+    /**
+     * WebDriver 인스턴스를 생성합니다.
+     */
+    private WebDriver createWebDriver() {
+        return WebDriverFactory.createChromeDriver();
+    }
+
+    /**
+     * Summary 페이지를 로드합니다.
+     */
+    private Document loadSummaryPage(WebDriver driver, int statizId) throws InterruptedException {
+        String url = "https://statiz.sporki.com/schedule/?m=summary&s_no=" + statizId;
+        log.debug("Summary 페이지 접속: {}", url);
+
+        driver.get(url);
+        Thread.sleep(PAGE_LOAD_WAIT_MS);
+
+        String html = driver.getPageSource();
+        return Jsoup.parse(html);
+    }
+
+    /**
+     * Summary 페이지에서 기본 경기 정보를 추출합니다.
+     */
+    private GameInfo extractGameInfo(Document doc, int statizId, LocalDate expectedDate) {
+        try {
+            // 스코어 테이블 찾기
+            Element scoreTable = findScoreTable(doc);
             if (scoreTable == null) {
-                // 다른 선택자로 시도
-                scoreTable = doc.selectFirst("div.box_type_boared .table_type03 table");
-                if (scoreTable == null) {
-                    scoreTable = doc.selectFirst(".table_type03 table");
-                    if (scoreTable == null) {
-                        // 더 포괄적인 선택자 시도
-                        scoreTable = doc.selectFirst("table.table_type03");
-                        if (scoreTable == null) {
-                            scoreTable = doc.selectFirst("div.score_table table");
-                            if (scoreTable == null) {
-                                // 모든 테이블을 확인하여 점수가 있는 테이블 찾기
-                                Elements allTables = doc.select("table");
-                                for (Element table : allTables) {
-                                    if (table.text().contains("이닝") || table.text().contains("팀")) {
-                                        scoreTable = table;
-                                        log.info("대체 테이블 사용: " + table.select("tr").size() + "행");
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                log.warn("스코어 테이블을 찾을 수 없음 - statizId: {}", statizId);
+                return null;
+            }
+
+            // 팀 정보 추출
+            Elements rows = scoreTable.select("tbody > tr");
+            if (rows.size() < 2) {
+                log.warn("경기 정보 행 부족 - statizId: {}, 행 수: {}", statizId, rows.size());
+                return null;
+            }
+
+            TeamInfo awayTeam = extractTeamInfo(rows.get(0));
+            TeamInfo homeTeam = extractTeamInfo(rows.get(1));
+
+            if (!validateTeamInfo(awayTeam, homeTeam)) {
+                return null;
+            }
+
+            // 경기 시간 및 경기장 정보
+            LocalDateTime matchDateTime = extractMatchDateTime(doc, expectedDate);
+            String stadium = extractStadium(doc, expectedDate);
+
+            return GameInfo.builder()
+                    .statizId(statizId)
+                    .awayTeam(awayTeam.getName())
+                    .homeTeam(homeTeam.getName())
+                    .awayTeamId(awayTeam.getId())
+                    .homeTeamId(homeTeam.getId())
+                    .awayScore(awayTeam.getScore())
+                    .homeScore(homeTeam.getScore())
+                    .matchDateTime(matchDateTime)
+                    .stadium(stadium)
+                    .status("종료")
+                    .build();
+
+        } catch (Exception e) {
+            log.error("경기 정보 추출 실패: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 스코어 테이블을 찾습니다 (여러 선택자 시도).
+     */
+    private Element findScoreTable(Document doc) {
+        // 전략 1: 기본 선택자
+        Element table = doc.selectFirst(SELECTOR_SCORE_TABLE);
+        if (table != null) return table;
+
+        // 전략 2: 대체 선택자들
+        String[] selectors = {
+            "div.box_type_boared .table_type03 table",
+            ".table_type03 table",
+            "table.table_type03",
+            "div.score_table table"
+        };
+
+        for (String selector : selectors) {
+            table = doc.selectFirst(selector);
+            if (table != null) {
+                log.debug("대체 선택자로 테이블 발견: {}", selector);
+                return table;
+            }
+        }
+
+        // 전략 3: 모든 테이블 검사
+        Elements allTables = doc.select("table");
+        for (Element tbl : allTables) {
+            if (tbl.text().contains("이닝") || tbl.text().contains("팀")) {
+                log.debug("패턴 매칭으로 테이블 발견");
+                return tbl;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * 행에서 팀 정보를 추출합니다.
+     */
+    private TeamInfo extractTeamInfo(Element row) {
+        Elements cols = row.select("td");
+        if (cols.isEmpty()) {
+            return null;
+        }
+
+        // 팀 이름
+        String teamName = "";
+        Element teamLink = cols.get(0).selectFirst("a");
+        if (teamLink != null) {
+            teamName = teamLink.text().trim();
+        } else {
+            teamName = cols.get(0).text().trim();
+        }
+
+        Integer teamId = getTeamId(teamName);
+
+        // 점수 (R 컬럼)
+        Integer score = extractScoreFromRow(cols, row.parent().parent());
+
+        return TeamInfo.builder()
+                .name(teamName)
+                .id(teamId)
+                .score(score)
+                .build();
+    }
+
+    /**
+     * 행에서 점수(R 컬럼)를 추출합니다.
+     */
+    private Integer extractScoreFromRow(Elements cols, Element table) {
+        try {
+            // 헤더에서 R 컬럼 인덱스 찾기
+            Elements headerCols = table.select("thead > tr > th");
+            int rIndex = -1;
+            for (int i = 0; i < headerCols.size(); i++) {
+                if (headerCols.get(i).text().trim().equals("R")) {
+                    rIndex = i;
+                    break;
+                }
+            }
+
+            if (rIndex != -1 && rIndex < cols.size()) {
+                Element scoreElement = cols.get(rIndex).selectFirst("div.score");
+                if (scoreElement != null) {
+                    String scoreText = scoreElement.ownText().trim();
+                    if (!scoreText.equals("-") && !scoreText.isEmpty()) {
+                        return Integer.parseInt(scoreText);
                     }
                 }
-                if (scoreTable == null) {
-                    log.info("[중단] 점수 테이블(scoreTable) 없음 - statizId: " + statizId);
-                    log.info("페이지 HTML 구조 확인:");
-                    Elements allTables = doc.select("table");
-                    log.info("전체 테이블 수: " + allTables.size());
-                    for (int i = 0; i < Math.min(3, allTables.size()); i++) {
-                        log.info("테이블 " + i + ": " + allTables.get(i).select("tr").size() + "행");
-                        log.info("  내용: " + allTables.get(i).text().substring(0, Math.min(100, allTables.get(i).text().length())));
-                    }
-                    return;
+            }
+        } catch (Exception e) {
+            log.debug("점수 추출 실패: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 팀 정보의 유효성을 검증합니다.
+     */
+    private boolean validateTeamInfo(TeamInfo awayTeam, TeamInfo homeTeam) {
+        if (awayTeam == null || homeTeam == null) {
+            log.warn("팀 정보가 null입니다.");
+            return false;
+        }
+
+        if (awayTeam.getId() == null || awayTeam.getId() == 0 ||
+            homeTeam.getId() == null || homeTeam.getId() == 0) {
+            log.warn("팀 ID 매핑 실패 - away: '{}' → {}, home: '{}' → {}",
+                    awayTeam.getName(), awayTeam.getId(),
+                    homeTeam.getName(), homeTeam.getId());
+            log.info("매핑 가능한 팀: {}", teamNameToId.keySet());
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Summary 페이지에서 경기 시간을 추출합니다.
+     */
+    private LocalDateTime extractMatchDateTime(Document doc, LocalDate expectedDate) {
+        try {
+            // 전략 1: 스코어박스에서 "잠실, 07-03" 형태 추출
+            Element scoreBox = doc.selectFirst("div.callout_box .game_schedule .txt");
+            if (scoreBox != null) {
+                String scoreBoxText = scoreBox.text().trim();
+                Matcher matcher = DATE_PATTERN.matcher(scoreBoxText);
+                if (matcher.find()) {
+                    int month = Integer.parseInt(matcher.group(1));
+                    int day = Integer.parseInt(matcher.group(2));
+                    int year = expectedDate.getYear();
+
+                    LocalDateTime dateTime = LocalDate.of(year, month, day)
+                            .atTime(DEFAULT_GAME_HOUR, DEFAULT_GAME_MINUTE);
+                    log.debug("경기 시간 추출 (전략 1): {}", dateTime);
+                    return dateTime;
                 }
+            }
+
+            // 전략 2: box_head에서 "07-17 18:30 (잠실)" 형태 추출
+            Elements boxHeads = doc.select("div.box_head");
+            for (Element boxHead : boxHeads) {
+                String headText = boxHead.text();
+                Matcher matcher = DATE_TIME_PATTERN.matcher(headText);
+                if (matcher.find()) {
+                    int month = Integer.parseInt(matcher.group(1));
+                    int day = Integer.parseInt(matcher.group(2));
+                    int hour = Integer.parseInt(matcher.group(3));
+                    int minute = Integer.parseInt(matcher.group(4));
+                    int year = expectedDate.getYear();
+
+                    LocalDateTime dateTime = LocalDate.of(year, month, day).atTime(hour, minute);
+                    log.debug("경기 시간 추출 (전략 2): {}", dateTime);
+                    return dateTime;
+                }
+            }
+
+        } catch (Exception e) {
+            log.debug("경기 시간 추출 실패: {}", e.getMessage());
+        }
+
+        // 기본값: expectedDate 18:30
+        return expectedDate.atTime(DEFAULT_GAME_HOUR, DEFAULT_GAME_MINUTE);
+    }
+
+    /**
+     * Summary 페이지에서 경기장을 추출합니다.
+     */
+    private String extractStadium(Document doc, LocalDate expectedDate) {
+        try {
+            // 전략 1: 스코어박스에서 "잠실, 07-03" 형태 추출
+            Element scoreBox = doc.selectFirst("div.callout_box .game_schedule .txt");
+            if (scoreBox != null) {
+                String scoreBoxText = scoreBox.text().trim();
+                if (scoreBoxText.contains(",")) {
+                    String stadiumKey = scoreBoxText.split(",")[0].trim();
+                    String stadium = getStadiumFullName(stadiumKey);
+                    if (stadium != null) {
+                        log.debug("경기장 추출 (전략 1): {} -> {}", stadiumKey, stadium);
+                        return stadium;
+                    }
+                }
+            }
+
+            // 전략 2: box_head에서 "(잠실)" 형태 추출
+            Elements boxHeads = doc.select("div.box_head");
+            for (Element boxHead : boxHeads) {
+                String headText = boxHead.text();
+                Matcher matcher = STADIUM_PATTERN.matcher(headText);
+                if (matcher.find()) {
+                    String stadiumKey = matcher.group(1);
+                    String stadium = getStadiumFullName(stadiumKey);
+                    if (stadium != null) {
+                        log.debug("경기장 추출 (전략 2): {} -> {}", stadiumKey, stadium);
+                        return stadium;
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.debug("경기장 추출 실패: {}", e.getMessage());
+        }
+
+        return "미정";
+    }
+
+    /**
+     * 경기를 건너뛸지 여부를 판단합니다 (중복 방지).
+     */
+    private boolean shouldSkipGame(int statizId, GameInfo gameInfo) {
+        try {
+            Optional<Schedule> existingSchedule = scheduleService.findByStatizId(statizId);
+            if (existingSchedule.isEmpty()) {
+                return false;
+            }
+
+            Schedule existing = existingSchedule.get();
+
+            // 기본 점수 정보 확인
+            boolean hasBasicScore = existing.getHomeTeamScore() != null &&
+                                   existing.getAwayTeamScore() != null &&
+                                   existing.getStatizId() != null &&
+                                   existing.getStatizId().equals(statizId);
+
+            if (!hasBasicScore) {
+                return false;
+            }
+
+            // 상세 데이터 확인
+            Integer scheduleId = scheduleService.findIdByStatizId(statizId);
+            if (scheduleId == null) {
+                return false;
+            }
+
+            boolean hasScoreBoard = scoreBoardService.findByScheduleId(scheduleId) != null;
+            boolean hasGameHighlight = !gameHighlightService.findByScheduleId(scheduleId).isEmpty();
+            boolean hasBatterRecord = !recordService.getBatterRecords(scheduleId, existing.getHomeTeamId()).isEmpty() ||
+                                     !recordService.getBatterRecords(scheduleId, existing.getAwayTeamId()).isEmpty();
+            boolean hasPitcherRecord = !recordService.getPitcherRecords(scheduleId, existing.getHomeTeamId()).isEmpty() ||
+                                      !recordService.getPitcherRecords(scheduleId, existing.getAwayTeamId()).isEmpty();
+
+            boolean hasDetailedData = hasScoreBoard && hasGameHighlight && hasBatterRecord && hasPitcherRecord;
+
+            log.debug("상세 정보 확인 - ScoreBoard: {}, GameHighlight: {}, BatterRecord: {}, PitcherRecord: {}",
+                     hasScoreBoard ? "✓" : "✗", hasGameHighlight ? "✓" : "✗",
+                     hasBatterRecord ? "✓" : "✗", hasPitcherRecord ? "✓" : "✗");
+
+            return hasDetailedData;
+
+        } catch (Exception e) {
+            log.debug("중복 체크 실패: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Schedule을 저장하고 scheduleId를 반환합니다.
+     */
+    private Integer saveSchedule(GameInfo gameInfo) {
+        try {
+            // 기존 데이터에서 추가 정보 가져오기
+            Optional<Schedule> existingSchedule = scheduleService.findByStatizId(gameInfo.getStatizId());
+            if (existingSchedule.isPresent()) {
+                Schedule existing = existingSchedule.get();
+                if (gameInfo.getStadium().equals("미정") && existing.getStadium() != null) {
+                    gameInfo.setStadium(existing.getStadium());
+                }
+                if (gameInfo.getMatchDateTime() == null && existing.getMatchDate() != null) {
+                    gameInfo.setMatchDateTime(existing.getMatchDate().toLocalDateTime());
+                }
+                if (gameInfo.getStatus() == null && existing.getStatus() != null) {
+                    gameInfo.setStatus(existing.getStatus());
+                }
+            }
+
+            Schedule schedule = new Schedule();
+            schedule.setMatchDate(gameInfo.getMatchDateTime() != null ?
+                    Timestamp.valueOf(gameInfo.getMatchDateTime()) : null);
+            schedule.setHomeTeamId(gameInfo.getHomeTeamId());
+            schedule.setAwayTeamId(gameInfo.getAwayTeamId());
+            schedule.setHomeTeamScore(gameInfo.getHomeScore());
+            schedule.setAwayTeamScore(gameInfo.getAwayScore());
+            schedule.setStadium(gameInfo.getStadium());
+            schedule.setStatus(gameInfo.getStatus());
+            schedule.setStatizId(gameInfo.getStatizId());
+
+            scheduleService.saveOrUpdate(schedule);
+            log.info("Schedule 저장 완료 - statizId: {}, {} vs {} ({})",
+                    gameInfo.getStatizId(), gameInfo.getHomeTeamId(),
+                    gameInfo.getAwayTeamId(), gameInfo.getStatus());
+
+            return scheduleService.findIdByStatizId(gameInfo.getStatizId());
+
+        } catch (Exception e) {
+            log.error("Schedule 저장 실패: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+    // ==================== ScoreBoard 처리 ====================
+
+    /**
+     * Summary 페이지에서 ScoreBoard 정보를 추출합니다.
+     */
+    private ScoreBoardInfo extractScoreBoardInfo(Document doc) {
+        try {
+            Element scoreTable = findScoreTable(doc);
+            if (scoreTable == null) {
+                log.warn("ScoreBoard 추출 실패: 스코어 테이블 없음");
+                return createEmptyScoreBoardInfo();
             }
 
             Elements rows = scoreTable.select("tbody > tr");
             if (rows.size() < 2) {
-                log.info("[중단] 경기 정보 행(row) 부족 - statizId: " + statizId + ", 행 수: " + rows.size());
-                // 경기가 아직 시작하지 않았거나 취소된 경우일 수 있음
-                Elements allRows = scoreTable.select("tr");
-                log.info("전체 행 수: " + allRows.size());
-                if (allRows.size() > 0) {
-                    log.info("첫 번째 행: " + allRows.get(0).text());
-                }
-            	return;
+                log.warn("ScoreBoard 추출 실패: 행 부족");
+                return createEmptyScoreBoardInfo();
             }
 
             Elements awayTds = rows.get(0).select("td");
             Elements homeTds = rows.get(1).select("td");
+            Elements headerCols = scoreTable.select("thead > tr > th");
 
-            // 팀 이름 추출 - 링크에서 팀 이름 가져오기
-            String awayTeam = "";
-            String homeTeam = "";
-            
-            try {
-                // away 팀 이름 추출
-                Element awayTeamLink = awayTds.get(0).selectFirst("a");
-                if (awayTeamLink != null) {
-                    awayTeam = awayTeamLink.text().trim();
-                } else {
-                    awayTeam = awayTds.get(0).text().trim();
-                }
-                
-                // home 팀 이름 추출
-                Element homeTeamLink = homeTds.get(0).selectFirst("a");
-                if (homeTeamLink != null) {
-                    homeTeam = homeTeamLink.text().trim();
-                } else {
-                    homeTeam = homeTds.get(0).text().trim();
-                }
-                
-                log.info("[팀 이름 추출] Away: '" + awayTeam + "', Home: '" + homeTeam + "'");
-                
-                // 디버깅을 위해 첫 번째 컬럼의 HTML 구조 출력
-                log.info("[디버깅] Away TD HTML: " + awayTds.get(0).html());
-                log.info("[디버깅] Home TD HTML: " + homeTds.get(0).html());
-                
-            } catch (Exception e) {
-                log.info("팀 이름 추출 실패: " + e.getMessage());
-                e.printStackTrace();
-                return;
-            }
+            // 컬럼 인덱스 찾기
+            Map<String, Integer> columnIndex = findColumnIndices(headerCols);
 
-            int awayTeamId = teamNameToId.getOrDefault(awayTeam, 0);
-            int homeTeamId = teamNameToId.getOrDefault(homeTeam, 0);
-            if (awayTeamId == 0 || homeTeamId == 0) {
-            	log.info(String.format("[중단] 팀 ID 매핑 실패: away='%s' → %d, home='%s' → %d\n",
-                        awayTeam, awayTeamId, homeTeam, homeTeamId));
-            	
-            	// 사용 가능한 팀 이름 목록 출력
-            	log.info("매핑 가능한 팀 이름 목록:");
-            	for (String teamName : teamNameToId.keySet()) {
-            	    log.info("  - '" + teamName + "' → " + teamNameToId.get(teamName));
-            	}
-            	
-            	// 전체 행의 구조 확인
-            	log.info("\n전체 테이블 구조 확인:");
-            	for (int i = 0; i < Math.min(rows.size(), 3); i++) {
-            	    Elements rowTds = rows.get(i).select("td");
-            	    log.info("행 " + i + " (" + rowTds.size() + "개 컬럼):");
-            	    for (int j = 0; j < Math.min(rowTds.size(), 5); j++) {
-            	        log.info("  컬럼 " + j + ": " + rowTds.get(j).text().trim());
-            	    }
-            	}
-            	return;
-            }
-            
-            // ----------------------- schedule 크롤링 ----------------------
-            // 기존 Schedule 데이터에서 정보 가져오기
-            Optional<Schedule> existingSchedule = scheduleService.findByStatizId(statizId);
-            
-            String status = "종료";
-            String stadium = "미정";
-            LocalDateTime matchDateTime1 = null;
-            
-            // 중복 방지: 상세 정보가 완전한 경기는 건너뛰기 (더 정확한 검사)
-            if (existingSchedule.isPresent()) {
-                Schedule existing = existingSchedule.get();
-                
-                // 1. 기본 점수 정보가 있는지 확인
-                boolean hasBasicScore = existing.getHomeTeamScore() != null && existing.getAwayTeamScore() != null && 
-                                      existing.getStatizId() != null && existing.getStatizId().equals(statizId);
-                
-                // 2. 상세 데이터가 있는지 확인 (scheduleId 기준으로)
-                boolean hasDetailedData = false;
-                if (hasBasicScore) {
-                    Integer scheduleIdForCheck = scheduleService.findIdByStatizId(statizId);
-                    if (scheduleIdForCheck != null) {
-                        // ScoreBoard 데이터 확인
-                        boolean hasScoreBoard = scoreBoardService.findByScheduleId(scheduleIdForCheck) != null;
-                        // GameHighlight 데이터 확인  
-                        boolean hasGameHighlight = !gameHighlightService.findByScheduleId(scheduleIdForCheck).isEmpty();
-                        // BatterRecord와 PitcherRecord는 recordService를 통해 확인
-                        boolean hasBatterRecord = !recordService.getBatterRecords(scheduleIdForCheck, existing.getHomeTeamId()).isEmpty() ||
-                                                !recordService.getBatterRecords(scheduleIdForCheck, existing.getAwayTeamId()).isEmpty();
-                        boolean hasPitcherRecord = !recordService.getPitcherRecords(scheduleIdForCheck, existing.getHomeTeamId()).isEmpty() ||
-                                                 !recordService.getPitcherRecords(scheduleIdForCheck, existing.getAwayTeamId()).isEmpty();
-                        
-                        hasDetailedData = hasScoreBoard && hasGameHighlight && hasBatterRecord && hasPitcherRecord;
-                        
-                        log.info(String.format("[상세 정보 확인] statizId: %s (scheduleId: %s) - ScoreBoard: %s, GameHighlight: %s, BatterRecord: %s, PitcherRecord: %s\n",
-                            statizId, scheduleIdForCheck, hasScoreBoard ? "✓" : "✗", hasGameHighlight ? "✓" : "✗",
-                            hasBatterRecord ? "✓" : "✗", hasPitcherRecord ? "✓" : "✗"));
-                    }
-                }
-                
-                if (hasBasicScore && hasDetailedData) {
-                    log.info("[건너뛰기] 이미 완전한 상세 정보가 있는 경기 - statizId: " + statizId);
-                    return;
-                } else if (hasBasicScore) {
-                    log.info("[부분 크롤링] 기본 점수는 있지만 상세 데이터가 부족한 경기 - statizId: " + statizId);
-                }
-                
-                status = existing.getStatus() != null ? existing.getStatus() : "종료";
-                stadium = existing.getStadium() != null ? existing.getStadium() : "미정";
-                matchDateTime1 = existing.getMatchDate() != null ? existing.getMatchDate().toLocalDateTime() : null;
-            }
-            
-            // 실제 경기 시간 정보 크롤링 시도
-            try {
-                log.info("[시간 크롤링] statizId: " + statizId + " 시작");
-                
-                // 방법 1: 스코어 박스의 "잠실, 07-03" 형태 날짜 정보 찾기
-                Element scoreBox = doc.selectFirst("div.callout_box .game_schedule .txt");
-                if (scoreBox != null) {
-                    String scoreBoxText = scoreBox.text().trim();
-                    log.info("[시간 크롤링] 스코어박스 텍스트: " + scoreBoxText);
-                    
-                    // "잠실, 07-03" 패턴에서 날짜 추출
-                    if (scoreBoxText.matches(".*\\d{2}-\\d{2}.*")) {
-                        try {
-                            String datePattern = scoreBoxText.replaceAll(".*?(\\d{2})-(\\d{2}).*", "$1-$2");
-                            log.info("[시간 크롤링] 추출된 날짜 패턴: " + datePattern);
-                            
-                            String[] dateParts = datePattern.split("-");
-                            int month = Integer.parseInt(dateParts[0]);
-                            int day = Integer.parseInt(dateParts[1]);
-                            
-                            // 년도는 expectedDate에서 가져오기
-                            int year = expectedDate.getYear();
-                            
-                            // 기본 시간은 18:30으로 설정 (대부분의 경기 시간)
-                            matchDateTime1 = LocalDate.of(year, month, day).atTime(18, 30);
-                            log.info("스코어박스에서 경기 날짜 크롤링 성공: " + matchDateTime1);
-                            
-                            // 경기장 정보도 추출
-                            if (scoreBoxText.contains(",")) {
-                                String stadiumKey = scoreBoxText.split(",")[0].trim();
-                                if (stadiumNameMap.containsKey(stadiumKey)) {
-                                    stadium = stadiumNameMap.get(stadiumKey);
-                                    log.info("경기장 정보 추출: " + stadiumKey + " -> " + stadium);
-                                }
-                            }
-                        } catch (Exception parseEx) {
-                            log.info("[시간 크롤링] 스코어박스 파싱 실패: " + parseEx.getMessage());
-                        }
-                    }
-                }
-                
-                // 방법 2: box_head에서 직접 날짜/시간 텍스트 찾기 (fallback)
-                if (matchDateTime1 == null) {
-                    Elements boxHeads = doc.select("div.box_head");
-                    for (Element boxHead : boxHeads) {
-                        String headText = boxHead.text();
-                        log.info("[시간 크롤링] box_head 텍스트: " + headText);
-                        
-                        // "07-17 18:30 (잠실)" 패턴 찾기
-                        if (headText.matches(".*\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}.*")) {
-                            try {
-                                // 월-일 시:분 패턴 추출
-                                String dateTimePattern = headText.replaceAll(".*?(\\d{2})-(\\d{2})\\s+(\\d{2}):(\\d{2}).*", "$1-$2 $3:$4");
-                                log.info("[시간 크롤링] 추출된 패턴: " + dateTimePattern);
-                                
-                                String[] parts = dateTimePattern.split(" ");
-                                String[] dateParts = parts[0].split("-");
-                                String[] timeParts = parts[1].split(":");
-                                
-                                int month = Integer.parseInt(dateParts[0]);
-                                int day = Integer.parseInt(dateParts[1]);
-                                int hour = Integer.parseInt(timeParts[0]);
-                                int minute = Integer.parseInt(timeParts[1]);
-                                
-                                // 년도는 expectedDate에서 가져오기
-                                int year = expectedDate.getYear();
-                                
-                                matchDateTime1 = LocalDate.of(year, month, day).atTime(hour, minute);
-                                log.info("box_head에서 경기 시간 크롤링 성공: " + matchDateTime1);
-                                
-                                // 경기장 정보도 추출
-                                if (headText.contains("(") && headText.contains(")")) {
-                                    String stadiumKey = headText.replaceAll(".*\\(([^)]+)\\).*", "$1");
-                                    if (stadiumNameMap.containsKey(stadiumKey)) {
-                                        stadium = stadiumNameMap.get(stadiumKey);
-                                        log.info("경기장 정보 추출: " + stadiumKey + " -> " + stadium);
-                                    }
-                                }
-                                break; // 찾으면 종료
-                            } catch (Exception parseEx) {
-                                log.info("[시간 크롤링] 파싱 실패: " + parseEx.getMessage());
-                            }
-                        }
-                    }
-                }
-                
-                // 방법 2: 기존 방법 (fallback)
-                if (matchDateTime1 == null) {
-                    Element gameInfoBox = doc.selectFirst("div.box_type_boared .item_box.w100");
-                    if (gameInfoBox != null) {
-                        log.info("[시간 크롤링] gameInfoBox 찾음: " + gameInfoBox.text());
-                        
-                        Element dateTimeElement = gameInfoBox.selectFirst("strong");
-                        if (dateTimeElement != null) {
-                            String dateTimeText = dateTimeElement.text().trim();
-                            log.info("[시간 크롤링] dateTimeText: " + dateTimeText);
-                            
-                            // 기존 파싱 로직...
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.info("경기 시간/경기장 크롤링 실패: " + e.getMessage());
-                e.printStackTrace();
-            }
-            
-            if (existingSchedule.isPresent()) {
-                Schedule existing = existingSchedule.get();
-                status = existing.getStatus() != null ? existing.getStatus() : "종료";
-                if (stadium.equals("미정") && existing.getStadium() != null) {
-                    stadium = existing.getStadium();
-                }
-                if (matchDateTime1 == null && existing.getMatchDate() != null) {
-                    matchDateTime1 = existing.getMatchDate().toLocalDateTime();
-                }
-            } else {
-                log.info("기존 Schedule 정보를 찾을 수 없음 - statizId: " + statizId);
-                // 기본값으로 크롤링 대상 날짜 사용 (실제 크롤링이 실패한 경우에만)
-                if (matchDateTime1 == null) {
-                    matchDateTime1 = expectedDate.atTime(18, 30);
-                    log.info("기본 날짜 사용: " + matchDateTime1);
+            // 이닝별 점수 파싱
+            List<Integer> awayScores = parseInningScores(awayTds);
+            List<Integer> homeScores = parseInningScores(homeTds);
+
+            // R, H, E, B 통계 파싱
+            int awayR = parseStatValue(awayTds, columnIndex.get("R"));
+            int homeR = parseStatValue(homeTds, columnIndex.get("R"));
+            int awayH = parseStatValue(awayTds, columnIndex.get("H"));
+            int homeH = parseStatValue(homeTds, columnIndex.get("H"));
+            int awayE = parseStatValue(awayTds, columnIndex.get("E"));
+            int homeE = parseStatValue(homeTds, columnIndex.get("E"));
+            int awayB = parseStatValue(awayTds, columnIndex.get("B"));
+            int homeB = parseStatValue(homeTds, columnIndex.get("B"));
+
+            // 승부투수 정보 추출
+            String[] pitchers = extractPitchers(doc);
+
+            return ScoreBoardInfo.builder()
+                    .awayScores(awayScores)
+                    .homeScores(homeScores)
+                    .awayR(awayR).awayH(awayH).awayE(awayE).awayB(awayB)
+                    .homeR(homeR).homeH(homeH).homeE(homeE).homeB(homeB)
+                    .winPitcher(pitchers[0])
+                    .losePitcher(pitchers[1])
+                    .savePitcher(pitchers[2])
+                    .build();
+
+        } catch (Exception e) {
+            log.error("ScoreBoard 추출 실패: {}", e.getMessage(), e);
+            return createEmptyScoreBoardInfo();
+        }
+    }
+
+    /**
+     * 빈 ScoreBoardInfo를 생성합니다.
+     */
+    private ScoreBoardInfo createEmptyScoreBoardInfo() {
+        List<Integer> emptyScores = new ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            emptyScores.add(0);
+        }
+
+        return ScoreBoardInfo.builder()
+                .awayScores(emptyScores)
+                .homeScores(new ArrayList<>(emptyScores))
+                .awayR(0).awayH(0).awayE(0).awayB(0)
+                .homeR(0).homeH(0).homeE(0).homeB(0)
+                .build();
+    }
+
+    /**
+     * 헤더에서 컬럼 인덱스를 찾습니다.
+     */
+    private Map<String, Integer> findColumnIndices(Elements headerCols) {
+        Map<String, Integer> indices = new HashMap<>();
+        String[] targets = {"R", "H", "E", "B"};
+
+        for (int i = 0; i < headerCols.size(); i++) {
+            String header = headerCols.get(i).text().trim();
+            for (String target : targets) {
+                if (header.equals(target)) {
+                    indices.put(target, i);
                 }
             }
+        }
 
-            // 점수 파싱 - HTML 구조에 맞게 수정
-            Integer awayScore = null;
-            Integer homeScore = null;
-            try {
-                // HTML 구조를 보면 R, H, E, B는 각각 13, 14, 15, 16번째 컬럼입니다
-                // 하지만 실제로는 연장전이 없으면 10, 11, 12번째 컬럼이 비어있고
-                // R은 13번째가 아니라 더 뒤에 있을 수 있습니다
-                
-                // 헤더에서 R 컬럼의 위치를 동적으로 찾기
-                int rColumnIndex = -1;
-                Elements headerCols = scoreTable.select("thead > tr > th");
-                for (int i = 0; i < headerCols.size(); i++) {
-                    String headerText = headerCols.get(i).text().trim();
-                    if (headerText.equals("R")) {
-                        rColumnIndex = i;
-                        log.info("R 컬럼 위치 찾음: " + i);
-                        break;
-                    }
-                }
-                
-                if (rColumnIndex != -1 && rColumnIndex < awayTds.size() && rColumnIndex < homeTds.size()) {
-                    Element awayScoreElement = awayTds.get(rColumnIndex).selectFirst("div.score");
-                    Element homeScoreElement = homeTds.get(rColumnIndex).selectFirst("div.score");
-                    
-                    if (awayScoreElement != null && homeScoreElement != null) {
-                        String awayScoreText = awayScoreElement.ownText().trim();
-                        String homeScoreText = homeScoreElement.ownText().trim();
-                        
-                        if (!awayScoreText.equals("-") && !awayScoreText.isEmpty()) {
-                            awayScore = Integer.parseInt(awayScoreText);
-                        }
-                        if (!homeScoreText.equals("-") && !homeScoreText.isEmpty()) {
-                            homeScore = Integer.parseInt(homeScoreText);
-                        }
-                        
-                        log.info("점수 파싱 성공: " + awayTeam + " " + awayScore + " vs " + homeScore + " " + homeTeam);
-                    }
-                } else {
-                    log.info("R 컬럼을 찾을 수 없음. 헤더 개수: " + headerCols.size() + ", Away TD 개수: " + awayTds.size());
-                    // 디버깅을 위해 헤더 출력
-                    for (int i = 0; i < headerCols.size(); i++) {
-                        log.info("헤더 " + i + ": " + headerCols.get(i).text());
-                    }
-                }
-            } catch (Exception e) {
-                log.info("점수 파싱 실패: " + e.getMessage());
-                log.info("awayTds 크기: " + awayTds.size() + ", homeTds 크기: " + homeTds.size());
-                e.printStackTrace();
+        log.debug("컬럼 인덱스: {}", indices);
+        return indices;
+    }
+
+    /**
+     * 1-9이닝 점수를 파싱합니다.
+     */
+    private List<Integer> parseInningScores(Elements cols) {
+        List<Integer> scores = new ArrayList<>();
+
+        for (int i = 1; i <= 9 && i < cols.size(); i++) {
+            Element scoreElement = cols.get(i).selectFirst("div.score");
+            String scoreText = scoreElement != null ? scoreElement.ownText().trim() : "0";
+
+            int score = (scoreText.equals("-") || scoreText.isEmpty()) ? 0 : Integer.parseInt(scoreText);
+            scores.add(score);
+        }
+
+        // 9이닝 미만이면 0으로 채우기
+        while (scores.size() < 9) {
+            scores.add(0);
+        }
+
+        return scores;
+    }
+
+    /**
+     * 통계 값을 파싱합니다.
+     */
+    private int parseStatValue(Elements cols, Integer index) {
+        if (index == null || index >= cols.size()) {
+            return 0;
+        }
+
+        Element statElement = cols.get(index).selectFirst("div.score");
+        if (statElement == null) {
+            return 0;
+        }
+
+        String text = statElement.ownText().trim();
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /**
+     * 승부투수 정보를 추출합니다. [승리, 패배, 세이브]
+     */
+    private String[] extractPitchers(Document doc) {
+        String[] pitchers = new String[3];  // [승리, 패배, 세이브]
+
+        try {
+            // 전략 1: game_result 영역에서 추출
+            Element gameResultSection = doc.selectFirst("div.game_result");
+            if (gameResultSection != null) {
+                pitchers[0] = extractPitcherName(gameResultSection, ".win");
+                pitchers[1] = extractPitcherName(gameResultSection, ".lose");
+                pitchers[2] = extractPitcherName(gameResultSection, ".save");
             }
 
-            // Schedule 저장
-            Schedule schedule = new Schedule();
-            schedule.setMatchDate(matchDateTime1 != null ? Timestamp.valueOf(matchDateTime1) : null);
-            schedule.setHomeTeamId(homeTeamId);
-            schedule.setAwayTeamId(awayTeamId);
-            schedule.setHomeTeamScore(homeScore);
-            schedule.setAwayTeamScore(awayScore);
-            schedule.setStadium(stadium);
-            schedule.setStatus(status);
-            schedule.setStatizId(statizId);
-
-            try {
-                scheduleService.saveOrUpdate(schedule);
-                log.info(String.format(
-                    "[Schedule 업데이트 완료] statizId=%d, matchDateTime=%s, %d vs %d (%s)\n",
-                    statizId, matchDateTime1, homeTeamId, awayTeamId, status
-                ));
-            } catch (Exception e) {
-                log.info("[Schedule 저장 실패] statizId: " + statizId + ", 오류: " + e.getMessage());
-                // 중복 데이터 문제일 가능성이 높으므로 계속 진행
-            }         
-
-            // ----------------------- scoreBox 크롤링 ----------------------
-            Integer scheduleId = null;
-            try {
-                scheduleId = scheduleService.findIdByStatizId(statizId);
-            } catch (Exception e) {
-                log.info("Schedule ID 조회 실패 - statizId: " + statizId + ", 오류: " + e.getMessage());
-                // 중복 데이터가 있을 수 있으므로 다른 방법으로 시도
-                try {
-                    // 팀 정보와 날짜로 다시 시도
-                    if (matchDateTime1 != null) {
-                        scheduleId = scheduleService.findScheduleIdByMatchInfo(
-                            Timestamp.valueOf(matchDateTime1), homeTeamId, awayTeamId);
-                    }
-                } catch (Exception e2) {
-                    log.info("대체 방법으로도 Schedule ID 조회 실패: " + e2.getMessage());
-                }
-            }
-            
-            if (scheduleId == null) {
-                log.info("Schedule ID를 찾을 수 없어 상세 정보 크롤링을 건너뜁니다 - statizId: " + statizId);
-                return;
+            // 전략 2: 투구기록 테이블에서 추출 (전략 1 실패 시)
+            if (pitchers[0] == null || pitchers[1] == null) {
+                extractPitchersFromTable(doc, pitchers);
             }
 
-            // 이닝별 점수와 R, H, E, B 통계 파싱
-            List<Integer> awayScores = new ArrayList<>();
-            List<Integer> homeScores = new ArrayList<>();
-            int awayR = 0, awayH = 0, awayE = 0, awayB = 0;
-            int homeR = 0, homeH = 0, homeE = 0, homeB = 0;
-            
-            try {
-                // 헤더에서 각 컬럼의 위치를 동적으로 찾기
-                Elements headerCols = scoreTable.select("thead > tr > th");
-                int rIndex = -1, hIndex = -1, eIndex = -1, bIndex = -1;
-                
-                for (int i = 0; i < headerCols.size(); i++) {
-                    String headerText = headerCols.get(i).text().trim();
-                    if (headerText.equals("R")) rIndex = i;
-                    else if (headerText.equals("H")) hIndex = i;
-                    else if (headerText.equals("E")) eIndex = i;
-                    else if (headerText.equals("B")) bIndex = i;
-                }
-                
-                log.info("컬럼 인덱스 - R: " + rIndex + ", H: " + hIndex + ", E: " + eIndex + ", B: " + bIndex);
-                
-                // 1-9이닝 점수 파싱 (1번째부터 9번째 컬럼까지)
-                for (int i = 1; i <= 9 && i < awayTds.size() && i < homeTds.size(); i++) {
-                    Element awayScoreTd = awayTds.get(i).selectFirst("div.score");
-                    Element homeScoreTd = homeTds.get(i).selectFirst("div.score");
+            log.debug("투수 정보 - 승: {}, 패: {}, 세: {}", pitchers[0], pitchers[1], pitchers[2]);
 
-                    String awayText = awayScoreTd != null ? awayScoreTd.ownText().trim() : "0";
-                    String homeText = homeScoreTd != null ? homeScoreTd.ownText().trim() : "0";
+        } catch (Exception e) {
+            log.error("투수 정보 추출 실패: {}", e.getMessage(), e);
+        }
 
-                    awayScores.add(awayText.equals("-") || awayText.isEmpty() ? 0 : Integer.parseInt(awayText));
-                    homeScores.add(homeText.equals("-") || homeText.isEmpty() ? 0 : Integer.parseInt(homeText));
-                }
-                
-                // R, H, E, B 통계 파싱
-                if (rIndex != -1 && rIndex < awayTds.size() && rIndex < homeTds.size()) {
-                    Element awayRElement = awayTds.get(rIndex).selectFirst("div.score");
-                    Element homeRElement = homeTds.get(rIndex).selectFirst("div.score");
-                    if (awayRElement != null) awayR = Integer.parseInt(awayRElement.ownText().trim());
-                    if (homeRElement != null) homeR = Integer.parseInt(homeRElement.ownText().trim());
-                }
-                
-                if (hIndex != -1 && hIndex < awayTds.size() && hIndex < homeTds.size()) {
-                    Element awayHElement = awayTds.get(hIndex).selectFirst("div.score");
-                    Element homeHElement = homeTds.get(hIndex).selectFirst("div.score");
-                    if (awayHElement != null) awayH = Integer.parseInt(awayHElement.ownText().trim());
-                    if (homeHElement != null) homeH = Integer.parseInt(homeHElement.ownText().trim());
-                }
-                
-                if (eIndex != -1 && eIndex < awayTds.size() && eIndex < homeTds.size()) {
-                    Element awayEElement = awayTds.get(eIndex).selectFirst("div.score");
-                    Element homeEElement = homeTds.get(eIndex).selectFirst("div.score");
-                    if (awayEElement != null) awayE = Integer.parseInt(awayEElement.ownText().trim());
-                    if (homeEElement != null) homeE = Integer.parseInt(homeEElement.ownText().trim());
-                }
-                
-                if (bIndex != -1 && bIndex < awayTds.size() && bIndex < homeTds.size()) {
-                    Element awayBElement = awayTds.get(bIndex).selectFirst("div.score");
-                    Element homeBElement = homeTds.get(bIndex).selectFirst("div.score");
-                    if (awayBElement != null) awayB = Integer.parseInt(awayBElement.ownText().trim());
-                    if (homeBElement != null) homeB = Integer.parseInt(homeBElement.ownText().trim());
-                }
-                
-                log.info("이닝별 점수 파싱 완료 - Away: " + awayScores + ", Home: " + homeScores);
-                log.info("통계 파싱 완료 - Away R:" + awayR + " H:" + awayH + " E:" + awayE + " B:" + awayB);
-                log.info("통계 파싱 완료 - Home R:" + homeR + " H:" + homeH + " E:" + homeE + " B:" + homeB);
-                
-            } catch (Exception e) {
-                log.info("스코어보드 통계 파싱 실패: " + e.getMessage());
-                e.printStackTrace();
-                
-                // 에러 발생 시 기본값으로 설정
-                for (int i = awayScores.size(); i < 9; i++) {
-                    awayScores.add(0);
-                    homeScores.add(0);
+        return pitchers;
+    }
+
+    /**
+     * 특정 셀렉터에서 투수 이름을 추출합니다.
+     */
+    private String extractPitcherName(Element section, String selector) {
+        Element element = section.selectFirst(selector);
+        if (element != null) {
+            Element link = element.selectFirst("a");
+            if (link != null) {
+                return link.text().trim();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 투구기록 테이블에서 승부투수를 추출합니다.
+     */
+    private void extractPitchersFromTable(Document doc, String[] pitchers) {
+        Elements pitcherSections = doc.select("div.box_type_boared:has(.box_head:contains(투구기록))");
+        for (Element section : pitcherSections) {
+            Element table = section.selectFirst("table");
+            if (table == null) continue;
+
+            Elements rows = table.select("tbody > tr:not(.total)");
+            for (Element row : rows) {
+                Elements cols = row.select("td");
+                if (cols.isEmpty()) continue;
+
+                String pitcherInfo = cols.get(0).text().trim();
+                Matcher matcher = PITCHER_RESULT_PATTERN.matcher(pitcherInfo);
+
+                if (matcher.find()) {
+                    String name = pitcherInfo.substring(0, matcher.start()).trim();
+                    String result = matcher.group(1);
+
+                    if (result.equals("승") && pitchers[0] == null) {
+                        pitchers[0] = name;
+                    } else if (result.equals("패") && pitchers[1] == null) {
+                        pitchers[1] = name;
+                    } else if (result.equals("세") && pitchers[2] == null) {
+                        pitchers[2] = name;
+                    }
                 }
             }
+        }
+    }
 
-            // 승리/패배 투수 정보 추출 - 여러 방법으로 시도
-            String winPitcher = null;
-            String losePitcher = null;
-            String savePitcher = null;
-            
-            try {
-                log.info("투수 정보 추출 시작");
-                
-                // 방법 1: 경기 결과 영역에서 승부투수 찾기
-                Element gameResultSection = doc.selectFirst("div.game_result");
-                if (gameResultSection != null) {
-                    log.info("game_result 영역 발견");
-                    
-                    // 승리 투수
-                    Element winElement = gameResultSection.selectFirst(".win");
-                    if (winElement != null) {
-                        Element winLink = winElement.selectFirst("a");
-                        if (winLink != null) {
-                            winPitcher = winLink.text().trim();
-                            log.info("승리 투수 (방법1): " + winPitcher);
-                        }
-                    }
-                    
-                    // 패배 투수
-                    Element loseElement = gameResultSection.selectFirst(".lose");
-                    if (loseElement != null) {
-                        Element loseLink = loseElement.selectFirst("a");
-                        if (loseLink != null) {
-                            losePitcher = loseLink.text().trim();
-                            log.info("패배 투수 (방법1): " + losePitcher);
-                        }
-                    }
-                    
-                    // 세이브 투수
-                    Element saveElement = gameResultSection.selectFirst(".save");
-                    if (saveElement != null) {
-                        Element saveLink = saveElement.selectFirst("a");
-                        if (saveLink != null) {
-                            savePitcher = saveLink.text().trim();
-                            log.info("세이브 투수 (방법1): " + savePitcher);
-                        }
-                    }
-                }
-                
-                // 방법 2: 투구기록 테이블에서 승부 정보 찾기 (방법1이 실패한 경우)
-                if (winPitcher == null || losePitcher == null) {
-                    log.info("방법2 시도: 투구기록 테이블에서 검색");
-                    Elements pitcherSections = doc.select("div.box_type_boared:has(.box_head:contains(투구기록))");
-                    for (Element section : pitcherSections) {
-                        Element table = section.selectFirst("table");
-                        if (table != null) {
-                            Elements pitcherRows = table.select("tbody > tr:not(.total)");
-                            for (Element row : pitcherRows) {
-                                Elements cols = row.select("td");
-                                if (cols.size() > 0) {
-                                    String pitcherInfo = cols.get(0).text().trim();
-                                    
-                                    if (pitcherInfo.contains("(승") && winPitcher == null) {
-                                        // 승리 투수 추출: "김태훈 (승, 2-2)" -> "김태훈"
-                                        winPitcher = pitcherInfo.replaceAll("\\s*\\(승.*", "").trim();
-                                        log.info("승리 투수 (방법2): " + winPitcher);
-                                    } else if (pitcherInfo.contains("(패") && losePitcher == null) {
-                                        // 패배 투수 추출: "최지강 (패, 2-5)" -> "최지강"
-                                        losePitcher = pitcherInfo.replaceAll("\\s*\\(패.*", "").trim();
-                                        log.info("패배 투수 (방법2): " + losePitcher);
-                                    } else if (pitcherInfo.contains("(세") && savePitcher == null) {
-                                        // 세이브 투수 추출: "이호성 (세, 7)" -> "이호성"
-                                        savePitcher = pitcherInfo.replaceAll("\\s*\\(세.*", "").trim();
-                                        log.info("세이브 투수 (방법2): " + savePitcher);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // 방법 3: 전체 페이지에서 승부투수 패턴 검색
-                if (winPitcher == null || losePitcher == null) {
-                    log.info("방법3 시도: 전체 페이지 패턴 검색");
-                    String htmlText = doc.text();
-                    
-                    // 승리 투수 패턴 찾기
-                    if (winPitcher == null && htmlText.contains("승")) {
-                        Elements allLinks = doc.select("a");
-                        for (Element link : allLinks) {
-                            String linkText = link.text().trim();
-                            Element parent = link.parent();
-                            String parentText = parent != null ? parent.text() : "";
-                            if (parentText.contains("승") && !linkText.isEmpty() && linkText.length() < 10) {
-                                winPitcher = linkText;
-                                log.info("승리 투수 (방법3): " + winPitcher);
-                                break;
-                            }
-                        }
-                    }
-                    
-                    // 패배 투수 패턴 찾기
-                    if (losePitcher == null && htmlText.contains("패")) {
-                        Elements allLinks = doc.select("a");
-                        for (Element link : allLinks) {
-                            String linkText = link.text().trim();
-                            Element parent = link.parent();
-                            String parentText = parent != null ? parent.text() : "";
-                            if (parentText.contains("패") && !linkText.isEmpty() && linkText.length() < 10 && !linkText.equals(winPitcher)) {
-                                losePitcher = linkText;
-                                log.info("패배 투수 (방법3): " + losePitcher);
-                                break;
-                            }
-                        }
-                    }
-                }
-                
-                log.info("최종 투수 정보 - 승: " + winPitcher + ", 패: " + losePitcher + ", 세: " + savePitcher);
-                
-            } catch (Exception e) {
-                log.info("투수 정보 파싱 실패: " + e.getMessage());
-                e.printStackTrace();
-            }
-
+    /**
+     * ScoreBoard를 저장합니다.
+     */
+    private void saveScoreBoard(Integer scheduleId, ScoreBoardInfo info) {
+        try {
             ScoreBoard sb = ScoreBoard.builder()
                     .scheduleId(scheduleId)
-                    .homeScore(homeR).awayScore(awayR)
-                    .homeInningScores(toInningString(homeScores))
-                    .awayInningScores(toInningString(awayScores))
-                    .homeR(homeR).homeH(homeH).homeE(homeE).homeB(homeB)
-                    .awayR(awayR).awayH(awayH).awayE(awayE).awayB(awayB)
-                    .winPitcher(winPitcher)
-                    .losePitcher(losePitcher)
+                    .homeScore(info.getHomeR())
+                    .awayScore(info.getAwayR())
+                    .homeInningScores(toInningString(info.getHomeScores()))
+                    .awayInningScores(toInningString(info.getAwayScores()))
+                    .homeR(info.getHomeR()).homeH(info.getHomeH())
+                    .homeE(info.getHomeE()).homeB(info.getHomeB())
+                    .awayR(info.getAwayR()).awayH(info.getAwayH())
+                    .awayE(info.getAwayE()).awayB(info.getAwayB())
+                    .winPitcher(info.getWinPitcher())
+                    .losePitcher(info.getLosePitcher())
                     .build();
-            
-            try {
-                scoreBoardService.saveOrUpdate(sb);
-                log.info("ScoreBoard 저장 완료 - scheduleId: " + scheduleId);
-            } catch (Exception e) {
-                log.info("ScoreBoard 저장 실패 - scheduleId: " + scheduleId + ", 오류: " + e.getMessage());
-            }
-            
-            // ----------------------- gameHighlight 크롤링 ----------------------
-            Element highlightBox = doc.selectFirst("div.sh_box:has(.box_head:contains(결정적 장면 Best 5)) table");
-            if (highlightBox == null) {
-                // 다른 선택자들로 시도
-                highlightBox = doc.selectFirst("div:contains(결정적 장면 Best 5) table");
-                if (highlightBox == null) {
-                    highlightBox = doc.selectFirst("h5:contains(결정적 장면) ~ table");
-                    if (highlightBox == null) {
-                        // 모든 테이블에서 "결정적 장면" 관련 테이블 찾기
-                        Elements allTables = doc.select("table");
-                        for (Element table : allTables) {
-                            if (table.text().contains("결정적") || table.text().contains("장면") || 
-                                table.text().contains("이닝") && table.text().contains("투수") && table.text().contains("타자")) {
-                                highlightBox = table;
-                                log.info("결정적 장면 테이블 대체 방법으로 발견");
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-            
-            if (highlightBox != null) {
-                log.info("결정적 장면 테이블 발견");
-                Elements highlightRows = highlightBox.select("tbody > tr");
-                if (highlightRows.isEmpty()) {
-                    // tbody가 없는 경우 직접 tr 찾기
-                    highlightRows = highlightBox.select("tr");
-                    if (highlightRows.size() > 1) {
-                        // 첫 번째 행이 헤더인 경우 제거
-                        highlightRows.remove(0);
-                    }
-                }
-                
-                log.info("결정적 장면 행 수: " + highlightRows.size());
-                int ranking = 1;
-                for (int i = 0; i < highlightRows.size(); i++) {
-                    Elements tds = highlightRows.get(i).select("td");
-                    log.info("행 " + i + " 컬럼 수: " + tds.size());
-                    if (tds.size() >= 7) {
-                        GameHighlightDTO dto = GameHighlightDTO.builder()
-                                .scheduleId(scheduleId)
-                                .ranking(ranking++)
-                                .inning(tds.get(0).text().trim())
-                                .pitcherName(tds.get(1).text().trim())
-                                .batterName(tds.get(2).text().trim())
-                                .pitchCount(tds.get(3).text().trim())
-                                .result(tds.get(4).text().trim())
-                                .beforeSituation(tds.get(5).text().trim())
-                                .afterSituation(tds.get(6).text().trim())
-                                .build();
-                        try {
-                            gameHighlightService.saveOrUpdate(dto);
-                            log.info("GameHighlight 저장 성공 - ranking: " + (ranking-1));
-                        } catch (Exception e) {
-                            log.info("GameHighlight 저장 실패 - ranking: " + ranking + ", 오류: " + e.getMessage());
-                        }
-                    }
-                }
-            } else {
-                log.info("결정적 장면 테이블을 찾을 수 없습니다.");
+
+            scoreBoardService.saveOrUpdate(sb);
+            log.info("ScoreBoard 저장 완료 - scheduleId: {}", scheduleId);
+
+        } catch (Exception e) {
+            log.error("ScoreBoard 저장 실패 - scheduleId: {}: {}", scheduleId, e.getMessage(), e);
+        }
+    }
+
+    // ==================== GameHighlight 처리 ====================
+
+    /**
+     * Summary 페이지에서 GameHighlight를 추출하고 저장합니다.
+     */
+    private void saveGameHighlights(Document doc, Integer scheduleId) {
+        try {
+            Element highlightTable = findHighlightTable(doc);
+            if (highlightTable == null) {
+                log.warn("결정적 장면 테이블을 찾을 수 없음");
+                return;
             }
 
-            // ------------------------ boxscore 크롤링 ---------------------
-            String boxscoreUrl = "https://statiz.sporki.com/schedule/?m=boxscore&s_no=" + statizId;
-            log.info("Boxscore URL 접속: " + boxscoreUrl);
-            driver.get(boxscoreUrl);
-            Thread.sleep(3000);
+            Elements rows = highlightTable.select("tbody > tr");
+            if (rows.isEmpty()) {
+                rows = highlightTable.select("tr");
+                if (!rows.isEmpty()) {
+                    rows.remove(0);  // 헤더 행 제거
+                }
+            }
 
-            String boxHtml = driver.getPageSource();
-            Document boxDoc = Jsoup.parse(boxHtml);
+            log.info("결정적 장면: {} 개", rows.size());
 
-            try {
-                log.info("Boxscore 크롤링 시작 - scheduleId: " + scheduleId);
-                Map<String, Integer> sbMap = extractStolenBases(boxDoc);
-                log.info("도루 데이터 추출 완료: " + sbMap.size() + "개");
-                
-                saveBatterRecords(boxDoc, scheduleId, awayTeamId, sbMap);
-                log.info("원정팀 타자 기록 저장 완료");
-                
-                saveBatterRecords(boxDoc, scheduleId, homeTeamId, sbMap);
-                log.info("홈팀 타자 기록 저장 완료");
-                
-                savePitcherRecords(boxDoc, scheduleId);
-                log.info("투수 기록 저장 완료");
-                
-                log.info("Boxscore 크롤링 완료 - scheduleId: " + scheduleId);
-            } catch (Exception e) {
-                log.info("Boxscore 크롤링 실패 - scheduleId: " + scheduleId + ", 오류: " + e.getMessage());
-                e.printStackTrace();
+            int ranking = 1;
+            for (Element row : rows) {
+                Elements tds = row.select("td");
+                if (tds.size() >= 7) {
+                    GameHighlightDTO dto = GameHighlightDTO.builder()
+                            .scheduleId(scheduleId)
+                            .ranking(ranking++)
+                            .inning(tds.get(0).text().trim())
+                            .pitcherName(tds.get(1).text().trim())
+                            .batterName(tds.get(2).text().trim())
+                            .pitchCount(tds.get(3).text().trim())
+                            .result(tds.get(4).text().trim())
+                            .beforeSituation(tds.get(5).text().trim())
+                            .afterSituation(tds.get(6).text().trim())
+                            .build();
+
+                    gameHighlightService.saveOrUpdate(dto);
+                    log.debug("GameHighlight 저장: ranking {}", ranking - 1);
+                }
             }
 
         } catch (Exception e) {
-            log.info("오류 발생: " + statizId);
-            e.printStackTrace();
-        } finally {
-            if (driver != null) driver.quit();
+            log.error("GameHighlight 저장 실패: {}", e.getMessage(), e);
         }
-    }
-    
-    // 이닝 숫자 -> 문자열로 변경
-    private String toInningString(List<Integer> scores) {
-        String result = "";
-        for (int i = 0; i < scores.size(); i++) {
-            result += scores.get(i);
-            if (i < scores.size() - 1) result += " ";
-        }
-        return result;
     }
 
-    
-    // 도루 정보 추출
+    /**
+     * 결정적 장면 테이블을 찾습니다.
+     */
+    private Element findHighlightTable(Document doc) {
+        // 전략 1: 기본 선택자
+        Element table = doc.selectFirst(SELECTOR_HIGHLIGHT_TABLE);
+        if (table != null) return table;
+
+        // 전략 2: 대체 선택자들
+        String[] selectors = {
+            "div:contains(결정적 장면 Best 5) table",
+            "h5:contains(결정적 장면) ~ table"
+        };
+
+        for (String selector : selectors) {
+            table = doc.selectFirst(selector);
+            if (table != null) {
+                log.debug("대체 선택자로 하이라이트 테이블 발견: {}", selector);
+                return table;
+            }
+        }
+
+        // 전략 3: 모든 테이블 검사
+        Elements allTables = doc.select("table");
+        for (Element tbl : allTables) {
+            String text = tbl.text();
+            if ((text.contains("결정적") || text.contains("장면")) &&
+                text.contains("이닝") && text.contains("투수") && text.contains("타자")) {
+                log.debug("패턴 매칭으로 하이라이트 테이블 발견");
+                return tbl;
+            }
+        }
+
+        return null;
+    }
+
+    // ==================== Boxscore 처리 ====================
+
+    /**
+     * Boxscore 페이지를 크롤링하고 타자/투수 기록을 저장합니다.
+     */
+    private void crawlBoxscore(WebDriver driver, int statizId, Integer scheduleId,
+                                Integer homeTeamId, Integer awayTeamId) {
+        try {
+            String url = "https://statiz.sporki.com/schedule/?m=boxscore&s_no=" + statizId;
+            log.debug("Boxscore 페이지 접속: {}", url);
+
+            driver.get(url);
+            Thread.sleep(PAGE_LOAD_WAIT_MS);
+
+            String html = driver.getPageSource();
+            Document doc = Jsoup.parse(html);
+
+            // 도루 정보 추출
+            Map<String, Integer> sbMap = extractStolenBases(doc);
+            log.debug("도루 데이터: {} 개", sbMap.size());
+
+            // 타자 기록 저장
+            saveBatterRecords(doc, scheduleId, awayTeamId, sbMap);
+            saveBatterRecords(doc, scheduleId, homeTeamId, sbMap);
+
+            // 투수 기록 저장
+            savePitcherRecords(doc, scheduleId);
+
+            log.info("Boxscore 크롤링 완료 - scheduleId: {}", scheduleId);
+
+        } catch (Exception e) {
+            log.error("Boxscore 크롤링 실패 - scheduleId: {}: {}", scheduleId, e.getMessage(), e);
+        }
+    }
+
+    // ==================== 유틸리티 메서드 ====================
+
+    /**
+     * 이닝 점수 리스트를 문자열로 변환합니다.
+     */
+    private String toInningString(List<Integer> scores) {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < scores.size(); i++) {
+            result.append(scores.get(i));
+            if (i < scores.size() - 1) {
+                result.append(" ");
+            }
+        }
+        return result.toString();
+    }
+
+    // ==================== Helper 메서드 (Boxscore 관련) ====================
+
+    /**
+     * 도루 정보를 추출합니다.
+     */
     private Map<String, Integer> extractStolenBases(Document doc) {
         Map<String, Integer> sbMap = new HashMap<>();
 
@@ -982,7 +1126,7 @@ public class StatizGameCrawler {
             if (head == null || !head.text().contains("타격기록")) continue;
 
             String teamName = head.text().replaceAll(".*\\((.*?)\\).*", "$1").trim();
-            Integer extractedTeamId = teamNameToId.get(teamName);
+            Integer extractedTeamId = getTeamId(teamName);
             if (extractedTeamId == null || !extractedTeamId.equals(teamId)) continue;
 
             Element table = section.selectFirst("table");
@@ -1034,7 +1178,7 @@ public class StatizGameCrawler {
             if (head == null || !head.text().contains("투구기록")) continue;
 
             String teamName = head.text().replaceAll(".*\\((.*?)\\).*", "$1").trim();
-            Integer teamId = teamNameToId.get(teamName);
+            Integer teamId = getTeamId(teamName);
             if (teamId == null) continue;
 
             Element table = section.selectFirst(".table_type03 table");
@@ -1080,5 +1224,68 @@ public class StatizGameCrawler {
                 }
             }
         }
+    }
+
+    // ==================== 내부 DTO ====================
+
+    /**
+     * 경기 기본 정보를 담는 DTO
+     */
+    @Data
+    @Builder
+    private static class GameInfo {
+        private int statizId;
+        private String awayTeam;
+        private String homeTeam;
+        private Integer awayTeamId;
+        private Integer homeTeamId;
+        private Integer awayScore;
+        private Integer homeScore;
+        private LocalDateTime matchDateTime;
+        private String stadium;
+        private String status;
+    }
+
+    /**
+     * 스코어보드 정보를 담는 DTO
+     */
+    @Data
+    @Builder
+    private static class ScoreBoardInfo {
+        private List<Integer> awayScores;
+        private List<Integer> homeScores;
+        private int awayR;
+        private int awayH;
+        private int awayE;
+        private int awayB;
+        private int homeR;
+        private int homeH;
+        private int homeE;
+        private int homeB;
+        private String winPitcher;
+        private String losePitcher;
+        private String savePitcher;
+    }
+
+    /**
+     * 크롤링 결과를 담는 DTO
+     */
+    @Data
+    @Builder
+    private static class CrawlResult {
+        private boolean success;
+        private int gameCount;
+        private String errorMessage;
+    }
+
+    /**
+     * 팀 정보를 담는 DTO
+     */
+    @Data
+    @Builder
+    private static class TeamInfo {
+        private String name;
+        private Integer id;
+        private Integer score;
     }
 }

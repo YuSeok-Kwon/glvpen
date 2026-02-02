@@ -1,20 +1,20 @@
 package com.kepg.BaseBallLOCK.crawler.player;
 
+import static com.kepg.BaseBallLOCK.crawler.util.CrawlerUtils.*;
+import static com.kepg.BaseBallLOCK.crawler.util.TeamMappingConstants.*;
+
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import com.kepg.BaseBallLOCK.crawler.util.WebDriverFactory;
 import com.kepg.BaseBallLOCK.modules.player.domain.Player;
 import com.kepg.BaseBallLOCK.modules.player.dto.PlayerDTO;
 import com.kepg.BaseBallLOCK.modules.player.service.PlayerService;
@@ -24,16 +24,20 @@ import com.kepg.BaseBallLOCK.modules.player.stats.statsDto.BatterStatsDTO;
 import com.kepg.BaseBallLOCK.modules.player.stats.statsDto.PitcherStatsDTO;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class StatizPlayerUnifiedCrawler {
 
-    private static final Logger logger = LoggerFactory.getLogger(StatizPlayerUnifiedCrawler.class);
-    
     private final PlayerService playerService;
     private final BatterStatsService batterStatsService;
     private final PitcherStatsService pitcherStatsService;
+
+    // ==================== 상수 정의 ====================
+    private static final int PAGE_LOAD_WAIT_MS = 3000;
+    private static final int CURRENT_YEAR = LocalDate.now().getYear();
 
     private static final Map<Integer, String> teamTeIds = new HashMap<>();
     static {
@@ -49,116 +53,168 @@ public class StatizPlayerUnifiedCrawler {
         teamTeIds.put(10, "10001"); // 키움
     }
 
-    // 매일 자정 이후에 플레이어 데이터 크롤링 실행
-    @Scheduled(cron = "0 0 1 * * *")
+    // ==================== 공개 메서드 ====================
+
+    /**
+     * 매일 자정 이후에 플레이어 데이터 크롤링을 자동 실행합니다.
+     */
+    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
     public void runScheduledCrawling() {
-        logger.info("=== 플레이어 데이터 크롤링 시작 ===");
+        log.info("=== 플레이어 데이터 자동 크롤링 시작: {} ===", CURRENT_YEAR);
         crawlAllPlayerData();
-        logger.info("=== 플레이어 데이터 크롤링 완료 ===");
+        log.info("=== 플레이어 데이터 자동 크롤링 완료 ===");
     }
 
-    // 수동 실행용 메서드
+    /**
+     * 모든 플레이어 데이터를 크롤링합니다 (수동 실행용).
+     */
     public void crawlAllPlayerData() {
         crawlBatterStats();
         crawlPitcherStats();
     }
 
-    // 타자 통계 크롤링
+    /**
+     * 타자 통계를 크롤링합니다.
+     */
     public void crawlBatterStats() {
-        int currentYear = 2025;
-        logger.info("타자 데이터 크롤링 시작: {}", currentYear);
+        log.info("=== 타자 데이터 크롤링 시작: {} ===", CURRENT_YEAR);
 
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--disable-gpu");
-        options.addArguments("--remote-allow-origins=*");
-
-        WebDriver driver = new ChromeDriver(options);
+        WebDriver driver = null;
+        int totalTeams = teamTeIds.size();
+        int successTeams = 0;
+        int totalPlayers = 0;
 
         try {
+            driver = createWebDriver();
+
             for (Map.Entry<Integer, String> entry : teamTeIds.entrySet()) {
                 int teamId = entry.getKey();
                 String teId = entry.getValue();
-                
-                logger.info("팀 {} 타자 데이터 크롤링 시작", teamId);
-                
-                String url = String.format("https://statiz.sporki.com/team/?m=playerrecord&t_code=%s&year=%d&stt=1", 
-                                         teId, currentYear);
-                driver.get(url);
-                Thread.sleep(3000);
 
-                String html = driver.getPageSource();
-                Document doc = Jsoup.parse(html);
+                log.info("팀 {} 타자 데이터 크롤링 시작", teamId);
 
-                Elements rows = doc.select("table tbody tr");
+                try {
+                    String url = buildPlayerUrl(teId, CURRENT_YEAR, 1);
+                    Document doc = loadPage(driver, url);
+                    Elements rows = doc.select("table tbody tr");
 
-                for (Element row : rows) {
-                    try {
-                        processBatterRow(row, teamId, currentYear);
-                    } catch (Exception e) {
-                        logger.error("타자 데이터 처리 중 오류: {}", e.getMessage());
+                    int playerCount = 0;
+                    for (Element row : rows) {
+                        try {
+                            processBatterRow(row, teamId, CURRENT_YEAR);
+                            playerCount++;
+                        } catch (Exception e) {
+                            log.error("타자 데이터 처리 중 오류: {}", e.getMessage());
+                        }
                     }
+
+                    totalPlayers += playerCount;
+                    successTeams++;
+                    log.info("팀 {} 타자 데이터 크롤링 완료: {} 명", teamId, playerCount);
+
+                } catch (Exception e) {
+                    log.error("팀 {} 타자 크롤링 실패: {}", teamId, e.getMessage(), e);
                 }
-                
-                logger.info("팀 {} 타자 데이터 크롤링 완료", teamId);
             }
 
         } catch (Exception e) {
-            logger.error("타자 크롤링 중 오류 발생: {}", e.getMessage(), e);
+            log.error("타자 크롤링 중 오류 발생: {}", e.getMessage(), e);
         } finally {
-            driver.quit();
+            if (driver != null) {
+                driver.quit();
+            }
         }
+
+        // 크롤링 통계
+        log.info("=== 타자 크롤링 완료 ===");
+        log.info("총 {}팀 중 {}팀 성공", totalTeams, successTeams);
+        log.info("총 {}명의 타자 데이터 처리", totalPlayers);
     }
 
-    // 투수 통계 크롤링
+    /**
+     * 투수 통계를 크롤링합니다.
+     */
     public void crawlPitcherStats() {
-        int currentYear = 2025;
-        logger.info("투수 데이터 크롤링 시작: {}", currentYear);
+        log.info("=== 투수 데이터 크롤링 시작: {} ===", CURRENT_YEAR);
 
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("--disable-gpu");
-        options.addArguments("--remote-allow-origins=*");
-
-        WebDriver driver = new ChromeDriver(options);
+        WebDriver driver = null;
+        int totalTeams = teamTeIds.size();
+        int successTeams = 0;
+        int totalPlayers = 0;
 
         try {
+            driver = createWebDriver();
+
             for (Map.Entry<Integer, String> entry : teamTeIds.entrySet()) {
                 int teamId = entry.getKey();
                 String teId = entry.getValue();
-                
-                logger.info("팀 {} 투수 데이터 크롤링 시작", teamId);
-                
-                String url = String.format("https://statiz.sporki.com/team/?m=playerrecord&t_code=%s&year=%d&stt=2", 
-                                         teId, currentYear);
-                driver.get(url);
-                Thread.sleep(3000);
 
-                String html = driver.getPageSource();
-                Document doc = Jsoup.parse(html);
+                log.info("팀 {} 투수 데이터 크롤링 시작", teamId);
 
-                Elements rows = doc.select("table tbody tr");
+                try {
+                    String url = buildPlayerUrl(teId, CURRENT_YEAR, 2);
+                    Document doc = loadPage(driver, url);
+                    Elements rows = doc.select("table tbody tr");
 
-                for (Element row : rows) {
-                    try {
-                        processPitcherRow(row, teamId, currentYear);
-                    } catch (Exception e) {
-                        logger.error("투수 데이터 처리 중 오류: {}", e.getMessage());
+                    int playerCount = 0;
+                    for (Element row : rows) {
+                        try {
+                            processPitcherRow(row, teamId, CURRENT_YEAR);
+                            playerCount++;
+                        } catch (Exception e) {
+                            log.error("투수 데이터 처리 중 오류: {}", e.getMessage());
+                        }
                     }
+
+                    totalPlayers += playerCount;
+                    successTeams++;
+                    log.info("팀 {} 투수 데이터 크롤링 완료: {} 명", teamId, playerCount);
+
+                } catch (Exception e) {
+                    log.error("팀 {} 투수 크롤링 실패: {}", teamId, e.getMessage(), e);
                 }
-                
-                logger.info("팀 {} 투수 데이터 크롤링 완료", teamId);
             }
 
         } catch (Exception e) {
-            logger.error("투수 크롤링 중 오류 발생: {}", e.getMessage(), e);
+            log.error("투수 크롤링 중 오류 발생: {}", e.getMessage(), e);
         } finally {
-            driver.quit();
+            if (driver != null) {
+                driver.quit();
+            }
         }
+
+        // 크롤링 통계
+        log.info("=== 투수 크롤링 완료 ===");
+        log.info("총 {}팀 중 {}팀 성공", totalTeams, successTeams);
+        log.info("총 {}명의 투수 데이터 처리", totalPlayers);
+    }
+
+    // ==================== 헬퍼 메서드 ====================
+
+    /**
+     * WebDriver 인스턴스를 생성합니다.
+     */
+    private WebDriver createWebDriver() {
+        return WebDriverFactory.createChromeDriverWithExtendedOptions();
+    }
+
+    /**
+     * 플레이어 통계 페이지 URL을 생성합니다.
+     *
+     * @param teId 팀 ID
+     * @param year 시즌 년도
+     * @param stt 통계 타입 (1: 타자, 2: 투수)
+     */
+    private String buildPlayerUrl(String teId, int year, int stt) {
+        return String.format("https://statiz.sporki.com/team/?m=playerrecord&t_code=%s&year=%d&stt=%d",
+                           teId, year, stt);
+    }
+
+    /**
+     * 페이지를 로드하고 파싱합니다.
+     */
+    private Document loadPage(WebDriver driver, String url) throws InterruptedException {
+        return CrawlerUtils.loadPage(driver, url, PAGE_LOAD_WAIT_MS);
     }
 
     // 타자 데이터 처리
@@ -207,10 +263,10 @@ public class StatizPlayerUnifiedCrawler {
                 saveBatterStat(playerId, year, position, "WAR", parseDouble(cols.get(18)));
             }
 
-            logger.debug("타자 데이터 저장: {} ({})", name, position);
+            log.debug("타자 데이터 저장: {} ({})", name, position);
 
         } catch (Exception e) {
-            logger.error("타자 행 처리 중 오류: {}", e.getMessage());
+            log.error("타자 행 처리 중 오류: {}", e.getMessage());
         }
     }
 
@@ -257,10 +313,10 @@ public class StatizPlayerUnifiedCrawler {
                 savePitcherStat(playerId, year, position, "WAR", parseDouble(cols.get(17)));
             }
 
-            logger.debug("투수 데이터 저장: {} ({})", name, position);
+            log.debug("투수 데이터 저장: {} ({})", name, position);
 
         } catch (Exception e) {
-            logger.error("투수 행 처리 중 오류: {}", e.getMessage());
+            log.error("투수 행 처리 중 오류: {}", e.getMessage());
         }
     }
 
@@ -290,18 +346,5 @@ public class StatizPlayerUnifiedCrawler {
                 .build();
         
         pitcherStatsService.savePitcherStats(dto);
-    }
-
-    // 숫자 파싱 헬퍼 메서드
-    private double parseDouble(Element element) {
-        try {
-            String text = element.text().trim();
-            if (text.isEmpty() || text.equals("-")) {
-                return 0.0;
-            }
-            return Double.parseDouble(text);
-        } catch (NumberFormatException e) {
-            return 0.0;
-        }
     }
 }

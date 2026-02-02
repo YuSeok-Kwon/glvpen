@@ -1,23 +1,22 @@
 package com.kepg.BaseBallLOCK.crawler.game;
 
-import java.sql.Timestamp;
+import static com.kepg.BaseBallLOCK.crawler.util.CrawlerUtils.*;
+import static com.kepg.BaseBallLOCK.crawler.util.TeamMappingConstants.*;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.stereotype.Component;
+
+import com.kepg.BaseBallLOCK.crawler.util.WebDriverFactory;
 
 import com.kepg.BaseBallLOCK.modules.game.highlight.dto.GameHighlightDTO;
 import com.kepg.BaseBallLOCK.modules.game.highlight.service.GameHighlightService;
@@ -37,38 +36,29 @@ public class StatizGameSummaryCrawler {
     private final ScoreBoardService scoreBoardService;
     private final GameHighlightService gameHighlightService;
 
-    private static final Map<String, Integer> teamNameToId = new HashMap<>();
-    static {
-        teamNameToId.put("KIA", 1);
-        teamNameToId.put("두산", 2);
-        teamNameToId.put("삼성", 3);
-        teamNameToId.put("SSG", 4);
-        teamNameToId.put("LG", 5);
-        teamNameToId.put("한화", 6);
-        teamNameToId.put("NC", 7);
-        teamNameToId.put("KT", 8);
-        teamNameToId.put("롯데", 9);
-        teamNameToId.put("키움", 10);
-    }
-    
-    // 1경기의 스코어보드 기록(scoreBoard) 및 하이라이트(gameHighlight)
-    public void crawl() {
-        String baseUrl = "https://statiz.sporki.com/schedule/?m=summary&s_no=%d";
+    // ==================== 상수 정의 ====================
+    private static final int PAGE_LOAD_WAIT_MS = 5000;
+    private static final String BASE_URL = "https://statiz.sporki.com/schedule/?m=summary&s_no=%d";
 
-        for (int statizId = 20250191; statizId <= 20250200; statizId++) {
-            log.info("크롤링 시작: " + statizId);
+    // ==================== 공개 메서드 ====================
+
+    /**
+     * 지정된 범위의 경기 요약을 크롤링합니다.
+     */
+    public void crawl(int startId, int endId) {
+        log.info("=== 경기 요약 크롤링 시작: {} ~ {} ===", startId, endId);
+
+        int totalGames = endId - startId + 1;
+        int successGames = 0;
+
+        for (int statizId = startId; statizId <= endId; statizId++) {
+            log.info("경기 크롤링 시작: {}", statizId);
             WebDriver driver = null;
             try {
-                ChromeOptions options = new ChromeOptions();
-                options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
-                driver = new ChromeDriver(options);
+                driver = WebDriverFactory.createChromeDriver();
 
-                String url = String.format(baseUrl, statizId);
-                driver.get(url);
-                Thread.sleep(5000);
-
-                String html = driver.getPageSource();
-                Document doc = Jsoup.parse(html);
+                String url = String.format(BASE_URL, statizId);
+                Document doc = CrawlerUtils.loadPage(driver, url, PAGE_LOAD_WAIT_MS);
 
                 Element scoreTable = doc.selectFirst("div.box_type_boared > div.item_box.w100 .table_type03 table");
 
@@ -92,8 +82,8 @@ public class StatizGameSummaryCrawler {
                 String awayTeam = awayTds.get(0).text().trim();
                 String homeTeam = homeTds.get(0).text().trim();
 
-                int homeTeamId = teamNameToId.getOrDefault(homeTeam, 0);
-                int awayTeamId = teamNameToId.getOrDefault(awayTeam, 0);
+                int homeTeamId = getTeamIdOrDefault(homeTeam, 0);
+                int awayTeamId = getTeamIdOrDefault(awayTeam, 0);
                 if (homeTeamId == 0 || awayTeamId == 0) {
                     log.info("TeamId 추출 실패");
                     continue;

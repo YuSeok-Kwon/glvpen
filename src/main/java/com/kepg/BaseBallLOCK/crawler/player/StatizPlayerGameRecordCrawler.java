@@ -1,19 +1,20 @@
 package com.kepg.BaseBallLOCK.crawler.player;
 
+import static com.kepg.BaseBallLOCK.crawler.util.CrawlerUtils.*;
+import static com.kepg.BaseBallLOCK.crawler.util.TeamMappingConstants.*;
+
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.stereotype.Component;
 
+import com.kepg.BaseBallLOCK.crawler.util.WebDriverFactory;
 import com.kepg.BaseBallLOCK.modules.game.lineUp.service.LineupService;
 import com.kepg.BaseBallLOCK.modules.game.record.service.RecordService;
 import com.kepg.BaseBallLOCK.modules.game.schedule.service.ScheduleService;
@@ -33,55 +34,49 @@ public class StatizPlayerGameRecordCrawler {
     private final LineupService lineupService;
     private final RecordService recordService;
 
-    private static final Map<String, Integer> teamNameToId = new HashMap<>();
-    static {
-        teamNameToId.put("KIA", 1);
-        teamNameToId.put("두산", 2);
-        teamNameToId.put("삼성", 3);
-        teamNameToId.put("SSG", 4);
-        teamNameToId.put("LG", 5);
-        teamNameToId.put("한화", 6);
-        teamNameToId.put("NC", 7);
-        teamNameToId.put("KT", 8);
-        teamNameToId.put("롯데", 9);
-        teamNameToId.put("키움", 10);
-    }
+    // ==================== 상수 정의 ====================
+    private static final int PAGE_LOAD_WAIT_MS = 5000;
+    private static final String BASE_URL = "https://statiz.sporki.com/schedule/?m=boxscore&s_no=%d";
 
-    // 1경기의 타자 및 투수 기록(batterLineUp, BatterRecord, PitcherRecord)
-    public void crawl() {
-        int startId = 20250171;
-        int endId = 20250175;
-        String baseUrl = "https://statiz.sporki.com/schedule/?m=boxscore&s_no=%d";
+    // ==================== 공개 메서드 ====================
+
+    /**
+     * 지정된 범위의 경기 기록을 크롤링합니다.
+     */
+    public void crawl(int startId, int endId) {
+        log.info("=== 경기 기록 크롤링 시작: {} ~ {} ===", startId, endId);
+
+        int totalGames = endId - startId + 1;
+        int successGames = 0;
 
         for (int statizId = startId; statizId <= endId; statizId++) {
-        	WebDriver driver = null;
-        	try {
-        	    String url = String.format(baseUrl, statizId);
-        	    log.info("크롤링 시작: " + statizId);
+            WebDriver driver = null;
+            try {
+                log.info("경기 크롤링 시작: {}", statizId);
 
-        	    ChromeOptions options = new ChromeOptions();
-        	    options.addArguments("--headless");
-        	    options.addArguments("--no-sandbox");
-        	    options.addArguments("--disable-dev-shm-usage");
-
-        	    driver = new ChromeDriver(options);
-        	    driver.get(url);
-
-        	    Thread.sleep(5000);
-
-        	    String html = driver.getPageSource();
-        	    Document doc = Jsoup.parse(html);
+                driver = createWebDriver();
+                String url = String.format(BASE_URL, statizId);
+                Document doc = loadPage(driver, url);
 
                 Timestamp matchDate = extractMatchDate(doc);
-                if (matchDate == null) continue;
+                if (matchDate == null) {
+                    log.warn("경기 날짜 추출 실패: {}", statizId);
+                    continue;
+                }
 
                 Integer[] teamIds = extractTeamIds(doc);
                 Integer awayTeamId = teamIds[0];
                 Integer homeTeamId = teamIds[1];
-                if (awayTeamId == null || homeTeamId == null) continue;
+                if (awayTeamId == null || homeTeamId == null) {
+                    log.warn("팀 ID 추출 실패: {}", statizId);
+                    continue;
+                }
 
                 Integer scheduleId = scheduleService.findScheduleIdByMatchInfo(matchDate, homeTeamId, awayTeamId);
-                if (scheduleId == null) continue;
+                if (scheduleId == null) {
+                    log.warn("Schedule ID 조회 실패: {}", statizId);
+                    continue;
+                }
 
                 Map<String, Integer> sbMap = extractStolenBases(doc);
 
@@ -89,15 +84,44 @@ public class StatizPlayerGameRecordCrawler {
                 saveBatterRecords(doc, scheduleId, homeTeamId, sbMap);
                 savePitcherRecords(doc, scheduleId);
 
-                log.info("저장 완료 batterLineUp, BatterRecord, PitcherRecord " + statizId + " (" + scheduleId + ") " + matchDate);
-                Thread.sleep(3000);
+                successGames++;
+                log.info("경기 기록 저장 완료: statizId={}, scheduleId={}, date={}", statizId, scheduleId, matchDate);
 
             } catch (Exception e) {
-                log.info(String.format("오류 발생: %d, %s\n", statizId, e.getMessage()));
+                log.error("경기 크롤링 실패: {}, 오류: {}", statizId, e.getMessage(), e);
             } finally {
-                if (driver != null) driver.quit();
+                if (driver != null) {
+                    driver.quit();
+                }
             }
         }
+
+        // 크롤링 통계
+        log.info("=== 경기 기록 크롤링 완료 ===");
+        log.info("총 {}경기 중 {}경기 성공", totalGames, successGames);
+    }
+
+    /**
+     * 기본 범위로 크롤링을 실행합니다.
+     */
+    public void crawl() {
+        crawl(20250171, 20250175);
+    }
+
+    // ==================== 헬퍼 메서드 ====================
+
+    /**
+     * WebDriver 인스턴스를 생성합니다.
+     */
+    private WebDriver createWebDriver() {
+        return WebDriverFactory.createChromeDriver();
+    }
+
+    /**
+     * 페이지를 로드하고 파싱합니다.
+     */
+    private Document loadPage(WebDriver driver, String url) throws InterruptedException {
+        return CrawlerUtils.loadPage(driver, url, PAGE_LOAD_WAIT_MS);
     }
     
     // 경기 날짜 추출
@@ -120,7 +144,7 @@ public class StatizPlayerGameRecordCrawler {
         if (headers.size() < 2) return new Integer[]{null, null};
         String away = headers.get(0).text().replace("타격기록", "").replaceAll("[()]", "").trim();
         String home = headers.get(1).text().replace("타격기록", "").replaceAll("[()]", "").trim();
-        return new Integer[]{teamNameToId.get(away), teamNameToId.get(home)};
+        return new Integer[]{getTeamId(away), getTeamId(home)};
     }
     
     // 도루기록 추출
@@ -156,7 +180,7 @@ public class StatizPlayerGameRecordCrawler {
             }
 
             String teamName = head.text().replaceAll(".*\\((.*?)\\).*", "$1").trim();
-            Integer extractedTeamId = teamNameToId.get(teamName);
+            Integer extractedTeamId = getTeamId(teamName);
             if (extractedTeamId == null || !extractedTeamId.equals(teamId)) {
                 log.info("TeamId 추출 실패");
                 continue;
@@ -171,38 +195,41 @@ public class StatizPlayerGameRecordCrawler {
             for (Element row : table.select("tbody > tr:not(.total)")) {
                 Elements cols = row.select("td");
                 if (cols.size() < 22) {
-                    log.info("행 부족");
-                	continue;
+                    log.debug("컬럼 수 부족: {}", cols.size());
+                    continue;
                 }
 
-                while (true) {
+                try {
                     String name = cols.get(1).text().trim();
+
+                    // 플레이어가 없으면 생성
                     Optional<Player> player = playerService.findByNameAndTeamId(name, teamId);
                     if (player.isEmpty()) {
                         playerService.savePlayer(name, teamId);
-                        continue;
+                        player = playerService.findByNameAndTeamId(name, teamId);
+                        if (player.isEmpty()) {
+                            log.warn("플레이어 생성 실패: {}", name);
+                            continue;
+                        }
                     }
 
-                    try {
-                        int pa = Integer.parseInt(cols.get(3).text().trim());
-                        int ab = Integer.parseInt(cols.get(4).text().trim());
-                        int hits = Integer.parseInt(cols.get(6).text().trim());
-                        int hr = Integer.parseInt(cols.get(7).text().trim());
-                        int rbi = Integer.parseInt(cols.get(8).text().trim());
-                        int bb = Integer.parseInt(cols.get(9).text().trim());
-                        int so = Integer.parseInt(cols.get(11).text().trim());
-                        int sb = sbMap.getOrDefault(name, 0);
-                        int order = cols.get(0).text().isEmpty() ? 0 : Integer.parseInt(cols.get(0).text().trim());
-                        String pos = cols.get(2).text().trim();
+                    int pa = Integer.parseInt(cols.get(3).text().trim());
+                    int ab = Integer.parseInt(cols.get(4).text().trim());
+                    int hits = Integer.parseInt(cols.get(6).text().trim());
+                    int hr = Integer.parseInt(cols.get(7).text().trim());
+                    int rbi = Integer.parseInt(cols.get(8).text().trim());
+                    int bb = Integer.parseInt(cols.get(9).text().trim());
+                    int so = Integer.parseInt(cols.get(11).text().trim());
+                    int sb = sbMap.getOrDefault(name, 0);
+                    int order = cols.get(0).text().isEmpty() ? 0 : Integer.parseInt(cols.get(0).text().trim());
+                    String pos = cols.get(2).text().trim();
 
-                        lineupService.saveBatterLineup(scheduleId, teamId, order, pos, name);
-                        recordService.saveBatterRecord(scheduleId, teamId, pa, ab, hits, hr, rbi, bb, so, sb, name);
-                        log.info("타자 저장 : " + name);
-                        break;
-                    } catch (Exception e) {
-                        log.info("타자 저장 중 에러: " + name);
-                        break;
-                    }
+                    lineupService.saveBatterLineup(scheduleId, teamId, order, pos, name);
+                    recordService.saveBatterRecord(scheduleId, teamId, pa, ab, hits, hr, rbi, bb, so, sb, name);
+                    log.debug("타자 데이터 저장: {}", name);
+
+                } catch (Exception e) {
+                    log.error("타자 데이터 저장 실패: {}", e.getMessage());
                 }
             }
         }
@@ -218,7 +245,7 @@ public class StatizPlayerGameRecordCrawler {
             }
 
             String teamName = head.text().replaceAll(".*\\((.*?)\\).*", "$1").trim();
-            Integer teamId = teamNameToId.get(teamName);
+            Integer teamId = getTeamId(teamName);
             if (teamId == null) {
             	log.info("TeamId 추출 실패");
             	continue;
@@ -233,39 +260,49 @@ public class StatizPlayerGameRecordCrawler {
             for (Element row : table.select("tbody > tr:not(.total)")) {
                 Elements cols = row.select("td");
                 if (cols.size() < 18) {
-                	log.info("행 부족");
-                	continue;
+                    log.debug("컬럼 수 부족: {}", cols.size());
+                    continue;
                 }
 
-                while (true) {
+                try {
                     Element nameAnchor = cols.get(0).selectFirst("a");
-                    if (nameAnchor == null) break;
+                    if (nameAnchor == null) {
+                        log.debug("투수 이름 링크 없음");
+                        continue;
+                    }
+
                     String fullText = cols.get(0).text();
-                    String decision = fullText.contains("(승") ? "W" : fullText.contains("(패") ? "L" : fullText.contains("(세") ? "SV" : fullText.contains("(홀") ? "HLD" : "";
+                    String decision = fullText.contains("(승") ? "W" :
+                                    fullText.contains("(패") ? "L" :
+                                    fullText.contains("(세") ? "SV" :
+                                    fullText.contains("(홀") ? "HLD" : "";
                     String name = fullText.replaceAll("\\s*\\([^)]*\\)", "").trim();
 
+                    // 플레이어가 없으면 생성
                     Optional<Player> player = playerService.findByNameAndTeamId(name, teamId);
                     if (player.isEmpty()) {
                         playerService.savePlayer(name, teamId);
-                        continue;
+                        player = playerService.findByNameAndTeamId(name, teamId);
+                        if (player.isEmpty()) {
+                            log.warn("플레이어 생성 실패: {}", name);
+                            continue;
+                        }
                     }
-                    try {
-                        double innings = Double.parseDouble(cols.get(1).text().trim());
-                        int strikeouts = Integer.parseInt(cols.get(8).text().trim());
-                        int bb = Integer.parseInt(cols.get(6).text().trim());
-                        int hbp = Integer.parseInt(cols.get(7).text().trim());
-                        int runs = Integer.parseInt(cols.get(4).text().trim());
-                        int er = Integer.parseInt(cols.get(5).text().trim());
-                        int hits = Integer.parseInt(cols.get(3).text().trim());
-                        int hr = Integer.parseInt(cols.get(9).text().trim());
 
-                        recordService.savePitcherRecord(scheduleId, teamId, name, innings, strikeouts, bb, hbp, runs, er, hits, hr, decision);
-                        log.info("투수 저장 : " + name);
-                        break;
-                    } catch (Exception e) {
-                        log.info("투수 저장 중 에러: " + name);
-                        break;
-                    }
+                    double innings = Double.parseDouble(cols.get(1).text().trim());
+                    int strikeouts = Integer.parseInt(cols.get(8).text().trim());
+                    int bb = Integer.parseInt(cols.get(6).text().trim());
+                    int hbp = Integer.parseInt(cols.get(7).text().trim());
+                    int runs = Integer.parseInt(cols.get(4).text().trim());
+                    int er = Integer.parseInt(cols.get(5).text().trim());
+                    int hits = Integer.parseInt(cols.get(3).text().trim());
+                    int hr = Integer.parseInt(cols.get(9).text().trim());
+
+                    recordService.savePitcherRecord(scheduleId, teamId, name, innings, strikeouts, bb, hbp, runs, er, hits, hr, decision);
+                    log.debug("투수 데이터 저장: {}", name);
+
+                } catch (Exception e) {
+                    log.error("투수 데이터 저장 실패: {}", e.getMessage());
                 }
             }
         }
