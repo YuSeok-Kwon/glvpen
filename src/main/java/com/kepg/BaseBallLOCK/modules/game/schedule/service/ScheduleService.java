@@ -148,19 +148,33 @@ public class ScheduleService {
         Map<LocalDate, List<ScheduleCardView>> grouped = new LinkedHashMap<>();
 
         for (Schedule schedule : schedules) {
+            if (schedule.getMatchDate() == null) {
+                log.warn("경기 날짜가 null입니다. scheduleId: {}", schedule.getId());
+                continue;
+            }
+
             LocalDate date = schedule.getMatchDate().toLocalDateTime().toLocalDate();
             Team homeTeam = teamService.getTeamById(schedule.getHomeTeamId());
             Team awayTeam = teamService.getTeamById(schedule.getAwayTeamId());
-            if (homeTeam == null || awayTeam == null) continue;
+
+            // 팀 정보가 없는 경우 로그 출력 및 기본값 사용
+            if (homeTeam == null) {
+                log.warn("홈팀을 찾을 수 없습니다. scheduleId: {}, homeTeamId: {}, 날짜: {}",
+                         schedule.getId(), schedule.getHomeTeamId(), date);
+            }
+            if (awayTeam == null) {
+                log.warn("원정팀을 찾을 수 없습니다. scheduleId: {}, awayTeamId: {}, 날짜: {}",
+                         schedule.getId(), schedule.getAwayTeamId(), date);
+            }
 
             ScheduleCardView view = ScheduleCardView.builder()
                     .id(schedule.getId())
                     .statizId(schedule.getStatizId())
                     .matchDate(schedule.getMatchDate())
-                    .homeTeamName(homeTeam.getName())
-                    .awayTeamName(awayTeam.getName())
-                    .homeTeamLogo(homeTeam.getLogoName())
-                    .awayTeamLogo(awayTeam.getLogoName())
+                    .homeTeamName(homeTeam != null ? homeTeam.getName() : "알 수 없는 팀 (ID: " + schedule.getHomeTeamId() + ")")
+                    .awayTeamName(awayTeam != null ? awayTeam.getName() : "알 수 없는 팀 (ID: " + schedule.getAwayTeamId() + ")")
+                    .homeTeamLogo(homeTeam != null ? homeTeam.getLogoName() : "unknown")
+                    .awayTeamLogo(awayTeam != null ? awayTeam.getLogoName() : "unknown")
                     .homeTeamScore(schedule.getHomeTeamScore())
                     .awayTeamScore(schedule.getAwayTeamScore())
                     .stadium(schedule.getStadium())
@@ -205,14 +219,27 @@ public class ScheduleService {
             int homeTeamId = schedule.getHomeTeamId();
             int awayTeamId = schedule.getAwayTeamId();
 
+            String homeTeamName = teamService.getTeamNameById(homeTeamId);
+            String awayTeamName = teamService.getTeamNameById(awayTeamId);
+            String homeTeamLogo = teamService.getTeamLogoById(homeTeamId);
+            String awayTeamLogo = teamService.getTeamLogoById(awayTeamId);
+
+            // 팀 정보가 없는 경우 로그 출력
+            if ("팀 없음".equals(homeTeamName)) {
+                log.warn("홈팀 정보 없음. scheduleId: {}, homeTeamId: {}", schedule.getId(), homeTeamId);
+            }
+            if ("팀 없음".equals(awayTeamName)) {
+                log.warn("원정팀 정보 없음. scheduleId: {}, awayTeamId: {}", schedule.getId(), awayTeamId);
+            }
+
             return ScheduleCardView.builder()
                     .id(schedule.getId())
                     .statizId(schedule.getStatizId())
                     .matchDate(schedule.getMatchDate())
-                    .homeTeamName(teamService.getTeamNameById(homeTeamId))
-                    .awayTeamName(teamService.getTeamNameById(awayTeamId))
-                    .homeTeamLogo(teamService.getTeamLogoById(homeTeamId))
-                    .awayTeamLogo(teamService.getTeamLogoById(awayTeamId))
+                    .homeTeamName(homeTeamName)
+                    .awayTeamName(awayTeamName)
+                    .homeTeamLogo(homeTeamLogo != null ? homeTeamLogo : "unknown")
+                    .awayTeamLogo(awayTeamLogo != null ? awayTeamLogo : "unknown")
                     .homeTeamScore(schedule.getHomeTeamScore())
                     .awayTeamScore(schedule.getAwayTeamScore())
                     .stadium(schedule.getStadium())
