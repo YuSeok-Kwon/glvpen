@@ -21,4 +21,9 @@ public class ScheduleCardView {
     private String awayTeamLogo;
     private Integer awayTeamScore;
     private String status;
+
+    // 더블헤더 관련 필드
+    private Boolean isDoubleHeader;      // 더블헤더 여부
+    private Integer doubleHeaderSeq;     // 더블헤더 순서 (1, 2)
+    private String matchTime;            // 경기 시간 (HH:mm)
 }

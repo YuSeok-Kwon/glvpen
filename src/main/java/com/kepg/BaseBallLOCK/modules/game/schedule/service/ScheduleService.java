@@ -196,6 +196,10 @@ public class ScheduleService {
                          awayTeam != null ? awayTeam.getName() : "알 수 없음");
             }
 
+            // 경기 시간 추출 (HH:mm)
+            String matchTime = schedule.getMatchDate().toLocalDateTime().toLocalTime()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
             ScheduleCardView view = ScheduleCardView.builder()
                     .id(schedule.getId())
                     .statizId(schedule.getStatizId())
@@ -208,12 +212,49 @@ public class ScheduleService {
                     .awayTeamScore(schedule.getAwayTeamScore())
                     .stadium(schedule.getStadium())
                     .status(schedule.getStatus())
+                    .matchTime(matchTime)
                     .build();
 
             grouped.computeIfAbsent(date, k -> new ArrayList<>()).add(view);
         }
 
+        // 더블헤더 정보 추가 (그룹핑 후 처리)
+        for (Map.Entry<LocalDate, List<ScheduleCardView>> entry : grouped.entrySet()) {
+            enrichDoubleHeaderInfo(entry.getValue());
+        }
+
         return grouped;
+    }
+
+    /**
+     * 같은 날짜의 경기 리스트에 더블헤더 정보 추가
+     */
+    private void enrichDoubleHeaderInfo(List<ScheduleCardView> games) {
+        // 팀별 경기 수 카운트
+        Map<String, List<ScheduleCardView>> teamGames = new HashMap<>();
+
+        for (ScheduleCardView game : games) {
+            String homeTeam = game.getHomeTeamName();
+            String awayTeam = game.getAwayTeamName();
+
+            teamGames.computeIfAbsent(homeTeam, k -> new ArrayList<>()).add(game);
+            teamGames.computeIfAbsent(awayTeam, k -> new ArrayList<>()).add(game);
+        }
+
+        // 더블헤더 표시
+        for (Map.Entry<String, List<ScheduleCardView>> entry : teamGames.entrySet()) {
+            List<ScheduleCardView> teamGameList = entry.getValue();
+            if (teamGameList.size() >= 2) {
+                // 시간순 정렬
+                teamGameList.sort((a, b) -> a.getMatchDate().compareTo(b.getMatchDate()));
+
+                // 더블헤더 정보 설정
+                for (int i = 0; i < teamGameList.size(); i++) {
+                    teamGameList.get(i).setIsDoubleHeader(true);
+                    teamGameList.get(i).setDoubleHeaderSeq(i + 1);
+                }
+            }
+        }
     }
     
     // 오늘 날짜 우선으로 Map정리

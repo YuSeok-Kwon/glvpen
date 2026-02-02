@@ -36,9 +36,20 @@
                th:style="${game.statizId != null} ? 'cursor: pointer;' : 'cursor: not-allowed; opacity: 0.6;'"
                th:onclick="${game.statizId != null} ? |location.href='@{/schedule/detail-view(statizId=${game.statizId})}'| : ''">
 
-            <!-- 경기장 -->
-            <div class="text-center text-muted fs-6 ps-3 mt-2" th:text="${game.stadium}">
-              서울 잠실야구장
+            <!-- 경기 시간 & 경기장 & 더블헤더 표시 -->
+            <div class="d-flex justify-content-center align-items-center gap-2 text-muted fs-6 ps-3 mt-2">
+              <!-- 경기 시간 -->
+              <span class="fw-bold" th:text="${game.matchTime}">18:30</span>
+
+              <!-- 더블헤더 배지 -->
+              <span th:if="${game.isDoubleHeader != null && game.isDoubleHeader}"
+                    class="badge bg-danger text-white"
+                    th:text="${game.doubleHeaderSeq == 1} ? '1차전' : '2차전'">
+                1차전
+              </span>
+
+              <!-- 경기장 -->
+              <span th:text="${game.stadium}">서울 잠실야구장</span>
             </div>
 
             <!-- 팀 & VS 정보 -->
