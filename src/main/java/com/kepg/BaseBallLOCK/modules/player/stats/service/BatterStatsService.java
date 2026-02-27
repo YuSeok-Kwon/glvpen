@@ -43,13 +43,18 @@ public class BatterStatsService {
 	// Logger 추가 (Lombok @Slf4j 없으므로)
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(BatterStatsService.class);
 
-	// 타자 스탯 저장 또는 업데이트 (playerId + season + category 기준 중복 확인)
+	// 타자 스탯 저장 또는 업데이트 (6-key: playerId+season+series+situationType+situationValue+category)
 	public void saveBatterStats(BatterStatsDTO dto) {
-	    Optional<BatterStats> optional = batterStatsRepository.findByPlayerIdAndSeasonAndCategory(dto.getPlayerId(), dto.getSeason(), dto.getCategory());
+	    String series = dto.getSeries() != null ? dto.getSeries() : "0";
+	    String sitType = dto.getSituationType() != null ? dto.getSituationType() : "";
+	    String sitValue = dto.getSituationValue() != null ? dto.getSituationValue() : "";
+
+	    Optional<BatterStats> optional = batterStatsRepository.findByFullKey(
+	            dto.getPlayerId(), dto.getSeason(), dto.getCategory(), series, sitType, sitValue);
 
 	    optional.ifPresent(existing -> {
 	        batterStatsRepository.delete(existing);
-	        log.info("[DELETE-AND-INSERT] 기존 데이터 삭제: playerId={}, category={}", dto.getPlayerId(), dto.getCategory());
+	        batterStatsRepository.flush();
 	    });
 
 	    BatterStats entity = BatterStats.builder()
@@ -59,10 +64,12 @@ public class BatterStatsService {
 	            .category(dto.getCategory())
 	            .value(dto.getValue())
 	            .ranking(dto.getRanking())
+	            .series(series)
+	            .situationType(sitType)
+	            .situationValue(sitValue)
 	            .build();
 
 	    batterStatsRepository.save(entity);
-	    log.info("[INSERT] playerId={}, category={}, value={}", dto.getPlayerId(), dto.getCategory(), dto.getValue());
 	}
     
     // 팀별 WAR 1위 타자 조회 (AVG, OPS, HR 포함)
@@ -290,6 +297,7 @@ public class BatterStatsService {
             case OBP -> dto.getObp() != null ? dto.getObp() : 0.0;
             case SLG -> dto.getSlg() != null ? dto.getSlg() : 0.0;
             case WRCPLUS -> dto.getWrcPlus() != null ? dto.getWrcPlus() : 0.0;
+            case BABIP, ISO, K_RATE, BB_RATE -> 0.0;
         };
     }
 

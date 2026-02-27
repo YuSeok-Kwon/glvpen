@@ -41,8 +41,17 @@ public class BatterStats {
     private Double value;
 
     private Integer ranking;
-    
+
     private String position;
+
+    @Column(length = 10, columnDefinition = "VARCHAR(10) DEFAULT '0'")
+    private String series;
+
+    @Column(length = 20, columnDefinition = "VARCHAR(20) DEFAULT ''")
+    private String situationType;
+
+    @Column(length = 50, columnDefinition = "VARCHAR(50) DEFAULT ''")
+    private String situationValue;
     
     @Column(name = "updatedAt")
     @LastModifiedDate

@@ -43,15 +43,19 @@ public class PitcherStatsService {
 	// Logger 추가
 	private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PitcherStatsService.class);
 	
-	// 투수 스탯 저장 또는 업데이트 (playerId + season + category 기준 중복 확인)
+	// 투수 스탯 저장 또는 업데이트 (6-key: playerId+season+series+situationType+situationValue+category)
 	@Transactional
 	public void savePitcherStats(PitcherStatsDTO dto) {
-	    Optional<PitcherStats> optional = pitcherStatsRepository
-	            .findByPlayerIdAndSeasonAndCategory(dto.getPlayerId(), dto.getSeason(), dto.getCategory());
+	    String series = dto.getSeries() != null ? dto.getSeries() : "0";
+	    String sitType = dto.getSituationType() != null ? dto.getSituationType() : "";
+	    String sitValue = dto.getSituationValue() != null ? dto.getSituationValue() : "";
+
+	    Optional<PitcherStats> optional = pitcherStatsRepository.findByFullKey(
+	            dto.getPlayerId(), dto.getSeason(), dto.getCategory(), series, sitType, sitValue);
 
 	    optional.ifPresent(existing -> {
 	        pitcherStatsRepository.delete(existing);
-	        log.info("[DELETE-AND-INSERT] 기존 데이터 삭제: playerId={}, category={}", dto.getPlayerId(), dto.getCategory());
+	        pitcherStatsRepository.flush();
 	    });
 
 	    PitcherStats entity = PitcherStats.builder()
@@ -61,10 +65,12 @@ public class PitcherStatsService {
 	            .value(dto.getValue())
 	            .ranking(dto.getRanking())
 	            .position(dto.getPosition())
+	            .series(series)
+	            .situationType(sitType)
+	            .situationValue(sitValue)
 	            .build();
 
 	    pitcherStatsRepository.save(entity);
-	    log.info("[INSERT] playerId={}, category={}, value={}", dto.getPlayerId(), dto.getCategory(), dto.getValue());
 	}
 	
 	// 팀별 WAR 1위 투수 조회 (ERA, WHIP, W/SV/HLD 중 최고값 포함)
@@ -292,6 +298,7 @@ public class PitcherStatsService {
 	        case H -> dto.getH() != null ? dto.getH() : Double.MIN_VALUE;
 	        case HR -> dto.getHr() != null ? dto.getHr() : Double.MIN_VALUE;
 	        case WAR -> dto.getWar() != null ? dto.getWar() : Double.MIN_VALUE;
+	        case FIP, XFIP, K9, BB9 -> 0.0;
 	    };
 	}
 

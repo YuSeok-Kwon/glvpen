@@ -7,17 +7,13 @@ import lombok.Setter;
 @Builder
 @Getter
 @Setter
-public class BatterStatsDTO {
+public class DefenseStatsDTO {
     private int playerId;
     private int season;
+    @Builder.Default
+    private String series = "0";
     private String position;
     private String category;
     private double value;
     private Integer ranking;
-    @Builder.Default
-    private String series = "0";
-    @Builder.Default
-    private String situationType = "";
-    @Builder.Default
-    private String situationValue = "";
 }

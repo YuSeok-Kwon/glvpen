@@ -14,4 +14,10 @@ public class PitcherStatsDTO {
     private String category;
     private double value;
     private Integer ranking;
+    @Builder.Default
+    private String series = "0";
+    @Builder.Default
+    private String situationType = "";
+    @Builder.Default
+    private String situationValue = "";
 }
