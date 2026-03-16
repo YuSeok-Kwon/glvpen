@@ -166,13 +166,14 @@ class DBConnector:
     def get_schedules(self, season: int) -> pd.DataFrame:
         """완료된 경기 일정"""
         sql = """
-            SELECT s.id, s.gameDate, s.homeTeamId, s.awayTeamId,
-                   s.homeScore, s.awayScore, s.stadium, s.status,
+            SELECT s.id, s.matchDate AS gameDate, s.homeTeamId, s.awayTeamId,
+                   s.homeTeamScore AS homeScore, s.awayTeamScore AS awayScore,
+                   s.stadium, s.status,
                    t1.name AS homeTeamName, t2.name AS awayTeamName
-            FROM schedule s
+            FROM kbo_schedule s
             JOIN team t1 ON s.homeTeamId = t1.id
             JOIN team t2 ON s.awayTeamId = t2.id
-            WHERE s.season = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
         """
         return self.query(sql, (season,))
 
@@ -215,9 +216,9 @@ class DBConnector:
         """이닝별 스코어보드"""
         sql = """
             SELECT sb.*
-            FROM score_board sb
-            JOIN schedule s ON sb.scheduleId = s.id
-            WHERE s.season = %s AND s.status = '완료'
+            FROM kbo_score_board sb
+            JOIN kbo_schedule s ON sb.scheduleId = s.id
+            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
         """
         return self.query(sql, (season,))
 
@@ -225,7 +226,7 @@ class DBConnector:
         """관중 데이터"""
         sql = """
             SELECT cs.*, t.name AS teamName
-            FROM crowd_stats cs
+            FROM kbo_crowd_stats cs
             JOIN team t ON cs.homeTeamId = t.id
             WHERE cs.season = %s
         """
@@ -242,8 +243,8 @@ class DBConnector:
             FROM kbo_batter_record br
             JOIN player p ON br.playerId = p.id
             JOIN team t ON br.teamId = t.id
-            JOIN schedule s ON br.scheduleId = s.id
-            WHERE s.season = %s AND s.status = '완료'
+            JOIN kbo_schedule s ON br.scheduleId = s.id
+            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
         """
         return self.query(sql, (season,))
 
@@ -258,8 +259,8 @@ class DBConnector:
             FROM kbo_pitcher_record pr
             JOIN player p ON pr.playerId = p.id
             JOIN team t ON pr.teamId = t.id
-            JOIN schedule s ON pr.scheduleId = s.id
-            WHERE s.season = %s AND s.status = '완료'
+            JOIN kbo_schedule s ON pr.scheduleId = s.id
+            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
         """
         return self.query(sql, (season,))
 
@@ -272,8 +273,8 @@ class DBConnector:
             FROM kbo_batter_lineup bl
             JOIN player p ON bl.playerId = p.id
             JOIN team t ON bl.teamId = t.id
-            JOIN schedule s ON bl.scheduleId = s.id
-            WHERE s.season = %s AND s.status = '완료'
+            JOIN kbo_schedule s ON bl.scheduleId = s.id
+            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
         """
         return self.query(sql, (season,))
 
@@ -481,14 +482,15 @@ class DBConnector:
     def get_schedules_with_month(self, season: int) -> pd.DataFrame:
         """월 정보 포함 경기 일정"""
         sql = """
-            SELECT s.id, s.gameDate, MONTH(s.gameDate) AS gameMonth,
+            SELECT s.id, s.matchDate AS gameDate, MONTH(s.matchDate) AS gameMonth,
                    s.homeTeamId, s.awayTeamId,
-                   s.homeScore, s.awayScore, s.stadium, s.status,
+                   s.homeTeamScore AS homeScore, s.awayTeamScore AS awayScore,
+                   s.stadium, s.status,
                    t1.name AS homeTeamName, t2.name AS awayTeamName
-            FROM schedule s
+            FROM kbo_schedule s
             JOIN team t1 ON s.homeTeamId = t1.id
             JOIN team t2 ON s.awayTeamId = t2.id
-            WHERE s.season = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
         """
         return self.query(sql, (season,))
 
@@ -505,9 +507,9 @@ class DBConnector:
     def get_available_months(self, season: int) -> list:
         """해당 시즌에 경기가 있는 월 목록 조회 (오름차순)"""
         sql = """
-            SELECT DISTINCT MONTH(gameDate) AS m
-            FROM schedule
-            WHERE season = %s AND status = '완료'
+            SELECT DISTINCT MONTH(matchDate) AS m
+            FROM kbo_schedule
+            WHERE YEAR(matchDate) = %s AND status = '완료'
             ORDER BY m ASC
         """
         df = self.query(sql, (season,))

@@ -60,7 +60,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
                    s.gameDate
             FROM game_umpire gu
             JOIN umpire u ON gu.umpireId = u.id
-            JOIN schedule s ON gu.scheduleId = s.id
+            JOIN kbo_schedule s ON gu.scheduleId = s.id
             JOIN team t1 ON s.homeTeamId = t1.id
             JOIN team t2 ON s.awayTeamId = t2.id
             WHERE s.season = %s AND s.status = '완료'

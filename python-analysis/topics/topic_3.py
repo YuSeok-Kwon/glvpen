@@ -27,7 +27,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
 
     # ==================== 타자 BABIP 분석 ====================
     if 'BABIP' in batters.columns and 'AVG' in batters.columns:
-        babip_data = batters[['playerName', 'teamName', 'BABIP', 'AVG', 'WAR']].dropna()
+        babip_data = batters[['playerName', 'teamName', 'BABIP', 'AVG']].dropna()
         stats_dict['BABIP_기술통계'] = StatsUtils.descriptive(babip_data['BABIP'].values, 'BABIP')
         league_babip = babip_data['BABIP'].mean()
 
@@ -63,7 +63,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
 
     # ==================== 투수 ERA-FIP 갭 분석 ====================
     if not pitchers.empty and 'ERA' in pitchers.columns and 'FIP' in pitchers.columns:
-        pit_data = pitchers[['playerName', 'teamName', 'ERA', 'FIP', 'WAR']].dropna()
+        pit_data = pitchers[['playerName', 'teamName', 'ERA', 'FIP']].dropna()
         pit_data['ERA_FIP_gap'] = pit_data['ERA'] - pit_data['FIP']
 
         stats_dict['ERA_FIP_갭_기술통계'] = StatsUtils.descriptive(

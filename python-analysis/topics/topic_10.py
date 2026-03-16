@@ -24,7 +24,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
 
     # RISP(득점권 타율)와 일반 AVG 비교
     if 'RISP' in batters.columns and 'AVG' in batters.columns:
-        data = batters[['playerName', 'teamName', 'AVG', 'RISP', 'WAR']].dropna()
+        data = batters[['playerName', 'teamName', 'AVG', 'RISP']].dropna()
         data['clutch_gap'] = data['RISP'] - data['AVG']
 
         stats_dict['clutch_갭_기술통계'] = StatsUtils.descriptive(

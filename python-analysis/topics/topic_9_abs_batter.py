@@ -37,21 +37,24 @@ def analyze(season: int, db: DBConnector) -> tuple:
         prev = batters_multi[batters_multi['season'] == prev_season]
         curr = batters_multi[batters_multi['season'] == season]
 
-        prev_vals = prev.set_index('playerId')[metric]
-        curr_vals = curr.set_index('playerId')[metric]
+        prev_vals = prev.groupby('playerId')[metric].first()
+        curr_vals = curr.groupby('playerId')[metric].first()
         common = prev_vals.index.intersection(curr_vals.index)
 
         if len(common) >= 10:
+            paired = pd.DataFrame({'prev': prev_vals.loc[common], 'curr': curr_vals.loc[common]}).dropna()
+            if len(paired) < 10:
+                continue
             stats_dict[f'타자_{metric}_{prev_season}'] = StatsUtils.descriptive(
-                prev_vals.loc[common].dropna().values, f'{prev_season} {metric}'
+                paired['prev'].values, f'{prev_season} {metric}'
             )
             stats_dict[f'타자_{metric}_{season}'] = StatsUtils.descriptive(
-                curr_vals.loc[common].dropna().values, f'{season} {metric}'
+                paired['curr'].values, f'{season} {metric}'
             )
 
             hypothesis[f'타자_{metric}_전후비교'] = StatsUtils.t_test_paired(
-                prev_vals.loc[common].dropna().values,
-                curr_vals.loc[common].dropna().values,
+                paired['prev'].values,
+                paired['curr'].values,
                 f'타자 {metric} ({prev_season} vs {season})'
             )
             findings.append(f"타자 {metric}: {hypothesis[f'타자_{metric}_전후비교']['interpretation']}")
@@ -87,8 +90,8 @@ def analyze(season: int, db: DBConnector) -> tuple:
 
     # 가장 크게 변한 선수 Top 5
     if 'AVG' in batters_multi.columns:
-        prev = batters_multi[batters_multi['season'] == prev_season].set_index('playerId')
-        curr = batters_multi[batters_multi['season'] == season].set_index('playerId')
+        prev = batters_multi[batters_multi['season'] == prev_season].drop_duplicates('playerId').set_index('playerId')
+        curr = batters_multi[batters_multi['season'] == season].drop_duplicates('playerId').set_index('playerId')
         common_ids = prev.index.intersection(curr.index)
         if len(common_ids) >= 5:
             diff = (curr.loc[common_ids, 'AVG'] - prev.loc[common_ids, 'AVG']).dropna()

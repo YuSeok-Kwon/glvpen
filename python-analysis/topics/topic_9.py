@@ -34,24 +34,27 @@ def analyze(season: int, db: DBConnector) -> tuple:
         prev = batters_multi[batters_multi['season'] == prev_season]
         curr = batters_multi[batters_multi['season'] == season]
 
-        prev_vals = prev.set_index('playerId')[metric]
-        curr_vals = curr.set_index('playerId')[metric]
+        prev_vals = prev.groupby('playerId')[metric].first()
+        curr_vals = curr.groupby('playerId')[metric].first()
         common = prev_vals.index.intersection(curr_vals.index)
 
         if len(common) >= 10:
-            stats_dict[f'타자_{metric}_{prev_season}'] = StatsUtils.descriptive(
-                prev_vals.loc[common].dropna().values, f'{prev_season} {metric}'
-            )
-            stats_dict[f'타자_{metric}_{season}'] = StatsUtils.descriptive(
-                curr_vals.loc[common].dropna().values, f'{season} {metric}'
-            )
+            import pandas as pd
+            paired = pd.DataFrame({'prev': prev_vals.loc[common], 'curr': curr_vals.loc[common]}).dropna()
+            if len(paired) >= 10:
+                stats_dict[f'타자_{metric}_{prev_season}'] = StatsUtils.descriptive(
+                    paired['prev'].values, f'{prev_season} {metric}'
+                )
+                stats_dict[f'타자_{metric}_{season}'] = StatsUtils.descriptive(
+                    paired['curr'].values, f'{season} {metric}'
+                )
 
-            hypothesis[f'타자_{metric}_전후비교'] = StatsUtils.t_test_paired(
-                prev_vals.loc[common].dropna().values,
-                curr_vals.loc[common].dropna().values,
-                f'타자 {metric} ({prev_season} vs {season})'
-            )
-            findings.append(f"타자 {metric} 변화: {hypothesis[f'타자_{metric}_전후비교']['interpretation']}")
+                hypothesis[f'타자_{metric}_전후비교'] = StatsUtils.t_test_paired(
+                    paired['prev'].values,
+                    paired['curr'].values,
+                    f'타자 {metric} ({prev_season} vs {season})'
+                )
+                findings.append(f"타자 {metric} 변화: {hypothesis[f'타자_{metric}_전후비교']['interpretation']}")
 
     # ==================== 투수 K/9, BB/9 변화 ====================
     for metric in ['K/9', 'BB/9', 'ERA']:
@@ -61,17 +64,20 @@ def analyze(season: int, db: DBConnector) -> tuple:
         prev = pitchers_multi[pitchers_multi['season'] == prev_season]
         curr = pitchers_multi[pitchers_multi['season'] == season]
 
-        prev_vals = prev.set_index('playerId')[metric]
-        curr_vals = curr.set_index('playerId')[metric]
+        prev_vals = prev.groupby('playerId')[metric].first()
+        curr_vals = curr.groupby('playerId')[metric].first()
         common = prev_vals.index.intersection(curr_vals.index)
 
         if len(common) >= 10:
-            hypothesis[f'투수_{metric}_전후비교'] = StatsUtils.t_test_paired(
-                prev_vals.loc[common].dropna().values,
-                curr_vals.loc[common].dropna().values,
-                f'투수 {metric} ({prev_season} vs {season})'
-            )
-            findings.append(f"투수 {metric} 변화: {hypothesis[f'투수_{metric}_전후비교']['interpretation']}")
+            import pandas as pd
+            paired = pd.DataFrame({'prev': prev_vals.loc[common], 'curr': curr_vals.loc[common]}).dropna()
+            if len(paired) >= 10:
+                hypothesis[f'투수_{metric}_전후비교'] = StatsUtils.t_test_paired(
+                    paired['prev'].values,
+                    paired['curr'].values,
+                    f'투수 {metric} ({prev_season} vs {season})'
+                )
+                findings.append(f"투수 {metric} 변화: {hypothesis[f'투수_{metric}_전후비교']['interpretation']}")
 
     # ==================== 차트 ====================
     # 전후 비교 Bar

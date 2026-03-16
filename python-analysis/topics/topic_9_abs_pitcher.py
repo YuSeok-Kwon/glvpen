@@ -37,21 +37,25 @@ def analyze(season: int, db: DBConnector) -> tuple:
         prev = pitchers_multi[pitchers_multi['season'] == prev_season]
         curr = pitchers_multi[pitchers_multi['season'] == season]
 
-        prev_vals = prev.set_index('playerId')[metric]
-        curr_vals = curr.set_index('playerId')[metric]
+        prev_vals = prev.groupby('playerId')[metric].first()
+        curr_vals = curr.groupby('playerId')[metric].first()
         common = prev_vals.index.intersection(curr_vals.index)
 
         if len(common) >= 10:
+            import pandas as pd
+            paired = pd.DataFrame({'prev': prev_vals.loc[common], 'curr': curr_vals.loc[common]}).dropna()
+            if len(paired) < 10:
+                continue
             stats_dict[f'투수_{metric}_{prev_season}'] = StatsUtils.descriptive(
-                prev_vals.loc[common].dropna().values, f'{prev_season} {metric}'
+                paired['prev'].values, f'{prev_season} {metric}'
             )
             stats_dict[f'투수_{metric}_{season}'] = StatsUtils.descriptive(
-                curr_vals.loc[common].dropna().values, f'{season} {metric}'
+                paired['curr'].values, f'{season} {metric}'
             )
 
             hypothesis[f'투수_{metric}_전후비교'] = StatsUtils.t_test_paired(
-                prev_vals.loc[common].dropna().values,
-                curr_vals.loc[common].dropna().values,
+                paired['prev'].values,
+                paired['curr'].values,
                 f'투수 {metric} ({prev_season} vs {season})'
             )
             findings.append(f"투수 {metric}: {hypothesis[f'투수_{metric}_전후비교']['interpretation']}")
@@ -87,8 +91,8 @@ def analyze(season: int, db: DBConnector) -> tuple:
 
     # ERA 가장 개선된 투수 Top 5
     if 'ERA' in pitchers_multi.columns:
-        prev = pitchers_multi[pitchers_multi['season'] == prev_season].set_index('playerId')
-        curr = pitchers_multi[pitchers_multi['season'] == season].set_index('playerId')
+        prev = pitchers_multi[pitchers_multi['season'] == prev_season].drop_duplicates('playerId').set_index('playerId')
+        curr = pitchers_multi[pitchers_multi['season'] == season].drop_duplicates('playerId').set_index('playerId')
         common_ids = prev.index.intersection(curr.index)
         if len(common_ids) >= 5:
             diff = (prev.loc[common_ids, 'ERA'] - curr.loc[common_ids, 'ERA']).dropna()
