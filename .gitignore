@@ -40,6 +40,10 @@ out/
 .DS_Store
 *.DS_Store
 
+### Python ###
+__pycache__/
+*.pyc
+
 security-variable.yml
 
 ### 로그 파일 ###
