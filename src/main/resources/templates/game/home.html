@@ -5,7 +5,7 @@
   layout:decorate="~{layouts/userDefault}"
 >
   <head>
-    <title>게임 모드 선택 - BaseBall LOCK</title>
+    <title>시뮬레이션 - glvpen</title>
     <style>
       body {
         background-image: url('/static/game/stadium-bg.png');
@@ -56,9 +56,6 @@
           padding: 1rem 0.75rem;
           min-height: 150px;
         }
-        .game-menu-card .emoji {
-          font-size: 2rem !important;
-        }
         .game-menu-card .label {
           font-size: 1rem !important;
         }
@@ -83,57 +80,29 @@
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
       }
 
-      .game-menu-card .emoji {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
-      }
-
       .game-menu-card .label {
         font-size: 1.1rem;
         font-weight: 600;
       }
 
       .game-menu-card.start {
-        background: linear-gradient(135deg, #ffd700, #ff9800);
+        background: linear-gradient(135deg, #22C55E, #166534);
         color: white;
-        box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+        box-shadow: 0 6px 16px rgba(22, 101, 52, 0.4);
       }
     </style>
   </head>
   <th:block layout:fragment="contents">
     <div class="container text-center my-5">
       <div class="overlay">
-        <h2 class="mb-5 fw-bold text-white">⚾ 야구 게임 모드 선택</h2>
+        <h2 class="mb-5 fw-bold text-white">Classic Simulation</h2>
 
         <div class="row g-4 justify-content-center">
-          <!-- Real Match Mode -->
-          <div class="col-lg-4 col-md-6">
-            <a href="/game/real-match-mode" class="game-menu-card">
-              <div class="emoji">🏟️</div>
-              <div class="label">Real Match Mode</div>
-              <small class="text-muted"
-                >실제 KBO 스케줄과 라인업으로 진행하는 리얼 시뮬레이션</small
-              >
-            </a>
-          </div>
-
-          <!-- Custom Hitter Mode -->
-          <div class="col-lg-4 col-md-6">
-            <a href="/game/custom-hitter-mode" class="game-menu-card">
-              <div class="emoji">⚔️</div>
-              <div class="label">Custom Hitter Mode</div>
-              <small class="text-muted"
-                >나만의 타자를 키우는 실시간 RPG형 야구 게임</small
-              >
-            </a>
-          </div>
-
           <!-- Classic Sim Mode -->
-          <div class="col-lg-4 col-md-6">
-            <a href="/game/classic-sim-mode" class="game-menu-card">
-              <div class="emoji">🎲</div>
+          <div class="col-lg-6 col-md-8">
+            <a href="/game/classic-sim-mode" class="game-menu-card start">
               <div class="label">Classic Sim Mode</div>
-              <small class="text-muted"
+              <small class="text-white"
                 >라인업 구성 후 자동 진행되는 클래식 시뮬레이션</small
               >
             </a>

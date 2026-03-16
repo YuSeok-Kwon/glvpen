@@ -6,17 +6,11 @@
 	  <!-- 시즌 선택 -->
 	  <div class="d-flex flex-column flex-md-row align-items-center mb-4 mx-2 mx-md-4 gap-2">
 	     <div class="d-flex gap-2">
-	       <a href="/ranking/teamranking-view" class="btn btn-outline-secondary" style="background-color: #FACC15;">팀 랭킹</a>
-	  	   <a href="/ranking/playerranking-view" class="btn btn-outline-primary" style="background-color: #FACC15;">개인 랭킹</a>
+	       <a href="/ranking/teamranking-view" class="btn btn-accent">팀 랭킹</a>
+	  	   <a href="/ranking/playerranking-view" class="btn btn-accent">개인 랭킹</a>
 	     </div>
 	    <form class="d-flex align-items-center">
 	      <select id="season-select" class="form-select" name="season" style="width:120px;" onchange="changeSeason(this.value)">
-	        <option value="2025">2025</option>
-	        <option value="2024">2024</option>
-	        <option value="2023">2023</option>
-	        <option value="2022">2022</option>
-	        <option value="2021">2021</option>
-	        <option value="2020">2020</option>
 	      </select>
 		  <input type="hidden" id="current-sort" name="sort" value="TotalWAR">
 		  <input type="hidden" id="current-direction" name="direction" value="DESC">
@@ -63,6 +57,21 @@
 
  <th:block layout:fragment="script">
 <script>
+	// 시즌 드롭다운 동적 생성 (2022 ~ 현재 연도)
+	(function() {
+	  var currentYear = new Date().getFullYear();
+	  var minYear = 2022;
+	  var defaultSeason = currentYear - 1; // 데이터가 확보된 최신 시즌
+	  var select = document.getElementById('season-select');
+	  for (var y = currentYear; y >= minYear; y--) {
+	    var opt = document.createElement('option');
+	    opt.value = y;
+	    opt.textContent = y;
+	    if (y === defaultSeason) opt.selected = true;
+	    select.appendChild(opt);
+	  }
+	})();
+
 	//페이지 로드 시 시즌 값 읽어와 데이터 요청
 	$(document).ready(function () {
 	  var season = $('#season-select').val();

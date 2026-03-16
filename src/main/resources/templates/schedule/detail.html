@@ -4,18 +4,18 @@
       layout:decorate="~{layouts/default}">
 
 <th:block layout:fragment="contents">
-  <div class="container-fluid px-2 px-md-4 py-5">
+  <div class="container-fluid px-2 px-md-4 py-5 bg-light">
     
     <!-- 날짜 및 네비게이션 -->
 	<div class="text-center mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 gap-md-3">
-	  <a th:if="${prevStatizId != null}"
-	     th:href="@{/schedule/detail-view(statizId=${prevStatizId})}"
+	  <a th:if="${prevMatchId != null}"
+	     th:href="@{/schedule/detail-view(matchId=${prevMatchId})}"
 	     class="btn btn-outline-secondary order-1 order-md-0">
 	    &laquo; 이전
 	  </a>
       <div class="fs-4 fs-md-3 fw-bold order-0 order-md-1" th:text="${#dates.format(game.matchDate, 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
-	  <a th:if="${nextStatizId != null}"
-	     th:href="@{/schedule/detail-view(statizId=${nextStatizId})}"
+	  <a th:if="${nextMatchId != null}"
+	     th:href="@{/schedule/detail-view(matchId=${nextMatchId})}"
 	     class="btn btn-outline-secondary order-2">
 	    다음 &raquo;
 	  </a>
@@ -23,10 +23,11 @@
 
     <!-- 전체 경기 결과 요약 -->
 	<div class="d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-4">
-	  <div class="border rounded px-2 px-md-3 py-2 text-center bg-light"
+	  <div class="border rounded px-2 px-md-3 py-2 text-center bg-white"
 	       th:each="g : ${otherGames}"
-	       th:onclick="|location.href='@{/schedule/detail-view(statizId=${g.statizId})}'|"
-	       style="cursor: pointer; min-width: 180px; max-width: 220px; flex: 1 1 180px;">
+	       th:onclick="|location.href='@{/schedule/detail-view(matchId=${g.id})}'|"
+	       style="cursor: pointer; min-width: 180px; max-width: 220px; flex: 1 1 180px;"
+	       th:classappend="${g.id == game.id} ? 'border-dark border-2' : ''">
 	    
 	    <!-- 원정팀 -->
 	    <div class="d-flex flex-column align-items-center mb-1">
@@ -68,24 +69,51 @@
 	  </div>
 	</div>
 
-	<!-- 경기 취소 / 예정 상태 메시지 -->
-	<div class="text-center mt-3 fs-5 fw-bold"
-         th:class="|text-center mt-3 fs-5 fw-bold ${game.status == '취소' ? 'alert alert-danger' : ''} ${game.status == '예정' ? 'alert alert-primary' : ''}|">
-	
-	  <span th:if="${game.status == '예정'}">
+	<!-- 취소된 경기 -->
+	<div th:if="${game.status == '취소'}" class="border rounded text-center py-4 py-md-5 px-4 mb-4 mx-4 shadow-sm bg-white">
+	  <div class="fs-4 mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-3">
+	    <div class="d-flex align-items-center gap-2">
+	      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" style="width: 40px; height: 40px;">
+	      <span class="fw-bold" th:text="${game.awayTeamName}">원정팀</span>
+	    </div>
+	    <span class="text-secondary fw-bold">VS</span>
+	    <div class="d-flex align-items-center gap-2">
+	      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" style="width: 40px; height: 40px;">
+	      <span class="fw-bold" th:text="${game.homeTeamName}">홈팀</span>
+	    </div>
+	  </div>
+	  <div class="alert alert-danger d-inline-block px-5 py-3 fs-5 fw-bold mb-3">
+	    경기가 취소되었습니다.
+	  </div>
+	  <div class="text-secondary" th:text="${game.stadium}">구장명</div>
+	</div>
+
+	<!-- 예정된 경기 -->
+	<div th:if="${game.status != '종료' and game.status != '취소'}" class="border rounded text-center py-4 py-md-5 px-4 mb-4 mx-4 shadow-sm bg-white">
+	  <div class="fs-4 mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-3">
+	    <div class="d-flex align-items-center gap-2">
+	      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" style="width: 40px; height: 40px;">
+	      <span class="fw-bold" th:text="${game.awayTeamName}">원정팀</span>
+	    </div>
+	    <span class="text-secondary fw-bold">VS</span>
+	    <div class="d-flex align-items-center gap-2">
+	      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" style="width: 40px; height: 40px;">
+	      <span class="fw-bold" th:text="${game.homeTeamName}">홈팀</span>
+	    </div>
+	  </div>
+	  <div class="alert alert-primary d-inline-block px-5 py-3 fs-5 fw-bold mb-3">
 	    예정된 경기입니다.
 	    <span id="countdownText"
 	          th:data-datetime="${#dates.format(game.matchDate, 'yyyy-MM-dd\'T\'HH:mm:ss')}"></span>
-	  </span>
-	
-	  <span th:if="${game.status == '취소'}">취소된 경기입니다.</span>
+	  </div>
+	  <div class="text-secondary" th:text="${game.stadium}">구장명</div>
 	</div>
     
 	<!-- 경기 상태가 정상인 경우만 출력 -->
 	<div th:if="${game.status == '종료'}">
 	
 	  <!-- 메인 경기 박스 -->
-	  <div class="border bg-warning-subtle rounded text-center py-3 py-md-4 px-5 mb-4 mx-4 shadow-sm">
+	  <div class="border rounded text-center py-3 py-md-4 px-5 mb-4 mx-4 shadow-sm bg-white">
 		    <!-- 상단: 경기 팀 정보 -->
 		    <div class="fs-4 fs-md-3 mb-3 mb-md-4 d-flex flex-column flex-md-row justify-content-center align-items-center text-center gap-2 gap-md-0" style="width: 100%;">
 		    
@@ -122,12 +150,13 @@
 	      <table class="table table-bordered text-center bg-white fs-6 fs-md-5"
 			     style="table-layout: auto; min-width: 600px;">
 			<thead class="table-light fs-6 fs-md-5">
-			  <tr style="background-color: #fff3cd;">
-			   <th style="min-width: 120px;" class="bg-light">팀</th>
+			  <tr style="background-color: var(--color-accent-subtle);">
+			   <th style="min-width: 120px;" class="bg-white">팀</th>
 			   <th th:each="i : ${#numbers.sequence(1, 9)}" style="min-width: 40px;" th:text="${i}">1</th>
 			   <th style="min-width: 50px;">R</th>
 			   <th style="min-width: 50px;">H</th>
 			   <th style="min-width: 50px;">E</th>
+			   <th style="min-width: 50px;">B</th>
 			  </tr>
 			</thead>
 			<tbody>
@@ -139,6 +168,7 @@
 			   <td style="min-width: 50px;" th:text="${game.awayTeamScore}">3</td>
 			   <td style="min-width: 50px;" th:text="${game.awayH}">7</td>
 			   <td style="min-width: 50px;" th:text="${game.awayE}">0</td>
+			   <td style="min-width: 50px;" th:text="${game.awayB}">0</td>
 			 </tr>
 			 <tr style="background-color: #f3f6f9;">
 			  <th class="fs-6 fs-md-5 text-white"
@@ -148,6 +178,7 @@
 			   <td style="min-width: 50px;" th:text="${game.homeTeamScore}">6</td>
 			   <td style="min-width: 50px;" th:text="${game.homeH}">9</td>
 			   <td style="min-width: 50px;" th:text="${game.homeE}">1</td>
+			   <td style="min-width: 50px;" th:text="${game.homeB}">0</td>
 			 </tr>
 		  </tbody>
 		</table>
@@ -161,52 +192,366 @@
   		<span th:if="${game.losePitcher != null}"><b>패전투수 : </b><span th:text="${game.losePitcher}" class="me-2">권석유</span></span>
 	  </div>
 	  
-	  <!-- 결정적 장면 Best 5 -->
-		<div class="card mt-5 border-warning shadow-sm">
-			<div class="text-center px-3 py-2 border-bottom d-flex align-items-center gap-2"
-			     style="background-color: #fef9c3;">
-			  <i class="bi bi-lightning-charge-fill text-warning fs-4"></i>
-			  <h5 class="mb-0 fw-bold text-dark">결정적 장면 Best 5</h5>
-			</div>
-		    <div class="card-body p-0">
-		      <div class="table-responsive-xl">
-		        <table class="table table-bordered mb-0 text-center align-middle" style="min-width: 700px;">
-		        <thead class="table-light">
-		         <tr class="align-middle">
-		            <th style="width: 6%;">순위</th>
-		            <th style="width: 10%;">이닝</th>
-		            <th style="width: 14%;">투수</th>
-		            <th style="width: 14%;">타자</th>
-		            <th style="width: 12%;">이전 상황</th>
-		            <th style="width: 18%;">결과</th>
-		            <th style="width: 12%;">이후 상황</th>
-		          </tr>
-		        </thead>
-		       <tbody>
-		            <tr th:each="highlight : ${game.highlights}">
-		            <td class="fw-bold " th:text="${highlight.ranking}">1</td>
-		            <td class="fw-bold text-warning-emphasis" th:text="${highlight.inning}">2회초</td>
-		            <td th:text="${highlight.pitcherName}">김도현</td>
-		            <td th:text="${highlight.batterName}">김형준</td>
-		            <td th:text="${highlight.beforeSituation}">2사 1,3루 0:0</td>
-		            <td class="text-center ps-3" th:text="${highlight.result}">좌익수 뒤 홈런</td>
-		            <td class="fw-bold text-warning-emphasis" th:text="${highlight.afterSituation}">2사 3:0</td>
-		          </tr>
-		        </tbody>
-		        </table>
-		      </div>
-		    </div>
-		</div>
+	  <!-- 경기 정보 (관중, 시간) -->
+	  <div class="d-flex flex-wrap justify-content-center gap-3 mt-3 text-secondary small">
+	    <span th:if="${game.crowd != null}"><i class="bi bi-people-fill me-1"></i>관중 <b th:text="${game.crowd}">12,141</b></span>
+	    <span th:if="${game.startTime != null}"><i class="bi bi-clock me-1"></i>개시 <b th:text="${game.startTime}">18:30</b></span>
+	    <span th:if="${game.endTime != null}">종료 <b th:text="${game.endTime}">21:19</b></span>
+	    <span th:if="${game.gameTime != null}"><i class="bi bi-stopwatch me-1"></i>경기시간 <b th:text="${game.gameTime}">2:49</b></span>
+	  </div>
+
+	  <!-- ===== 경기 분석 탭 ===== -->
+	  <div class="card mt-4 shadow-sm" style="border-color: #e5e7eb; text-align: left;">
+	    <div style="padding: 0 12px; border-bottom: 2px solid #e5e7eb; background: #fff;">
+	      <ul class="nav" id="analysisTab" role="tablist" style="gap: 0; flex-wrap: nowrap; overflow-x: auto;">
+	        <li class="nav-item" th:if="${game.mvpPlayers != null and !game.mvpPlayers.isEmpty()}">
+	          <button class="nav-link active" onclick="switchTab(this, '#mvpPane')" type="button">
+	            <i class="bi bi-trophy-fill me-1"></i>경기 MVP
+	          </button>
+	        </li>
+	        <li class="nav-item" th:if="${game.keyMoments != null and !game.keyMoments.isEmpty()}">
+	          <button class="nav-link" th:classappend="${game.mvpPlayers == null or game.mvpPlayers.isEmpty()} ? 'active' : ''" onclick="switchTab(this, '#momentPane')" type="button">
+	            <i class="bi bi-lightning-charge-fill me-1"></i>결정적 장면
+	          </button>
+	        </li>
+	        <li class="nav-item" th:if="${game.keyPlayersByMetric != null and !game.keyPlayersByMetric.isEmpty()}">
+	          <button class="nav-link" onclick="switchTab(this, '#keyrecordPane')" type="button">
+	            <i class="bi bi-bar-chart-fill me-1"></i>주요 기록
+	          </button>
+	        </li>
+	        <li class="nav-item" th:if="${(game.homeBatterLineup != null and !game.homeBatterLineup.isEmpty()) or (game.awayBatterLineup != null and !game.awayBatterLineup.isEmpty())}">
+	          <button class="nav-link" onclick="switchTab(this, '#lineupPane')" type="button">
+	            <i class="bi bi-list-ol me-1"></i>라인업
+	          </button>
+	        </li>
+	        <li class="nav-item" th:if="${game.highlights != null and !game.highlights.isEmpty()}">
+	          <button class="nav-link" onclick="switchTab(this, '#highlightPane')" type="button">
+	            <i class="bi bi-star-fill me-1"></i>하이라이트
+	          </button>
+	        </li>
+	        <li class="nav-item" th:if="${game.summaryRecords != null and !game.summaryRecords.isEmpty()}">
+	          <button class="nav-link" onclick="switchTab(this, '#summaryPane')" type="button">
+	            <i class="bi bi-journal-text me-1"></i>상세기록
+	          </button>
+	        </li>
+	      </ul>
+	    </div>
+
+	    <div class="tab-content" id="analysisTabContent">
+
+	      <!-- ===== 경기 MVP 탭 ===== -->
+	      <div class="tab-pane fade show active" id="mvpPane" role="tabpanel"
+	           th:if="${game.mvpPlayers != null and !game.mvpPlayers.isEmpty()}">
+	        <!-- 타자/투수 서브 탭 -->
+	        <nav class="nav sub-tab-group" id="mvpSubTab">
+	          <button class="nav-link active" onclick="switchSubTab(this, '#mvpHitter')" type="button">타자</button>
+	          <button class="nav-link" onclick="switchSubTab(this, '#mvpPitcher')" type="button">투수</button>
+	        </nav>
+	        <div class="tab-content">
+	          <div class="tab-pane fade show active" id="mvpHitter" role="tabpanel">
+	            <div class="table-responsive">
+	              <table class="table table-bordered mb-0 text-center align-middle">
+	                <thead class="table-light"><tr><th style="width:10%;">순위</th><th style="width:20%;">선수</th><th>기록</th></tr></thead>
+	                <tbody>
+	                  <tr th:each="mvp : ${game.mvpPlayers}" th:if="${mvp.playerType == 'HITTER'}">
+	                    <td class="fw-bold" th:text="${mvp.ranking}">1</td>
+	                    <td class="fw-bold" th:text="${mvp.playerName}">김주원</td>
+	                    <td class="text-start ps-3" th:utext="${mvp.recordInfo}">41%</td>
+	                  </tr>
+	                </tbody>
+	              </table>
+	            </div>
+	          </div>
+	          <div class="tab-pane fade" id="mvpPitcher" role="tabpanel">
+	            <div class="table-responsive">
+	              <table class="table table-bordered mb-0 text-center align-middle">
+	                <thead class="table-light"><tr><th style="width:10%;">순위</th><th style="width:20%;">선수</th><th>기록</th></tr></thead>
+	                <tbody>
+	                  <tr th:each="mvp : ${game.mvpPlayers}" th:if="${mvp.playerType == 'PITCHER'}">
+	                    <td class="fw-bold" th:text="${mvp.ranking}">1</td>
+	                    <td class="fw-bold" th:text="${mvp.playerName}">김진호</td>
+	                    <td class="text-start ps-3" th:utext="${mvp.recordInfo}">11.5%</td>
+	                  </tr>
+	                </tbody>
+	              </table>
+	            </div>
+	          </div>
+	        </div>
+	      </div>
+
+	      <!-- ===== 결정적 장면 탭 ===== -->
+	      <div class="tab-pane fade" th:classappend="${game.mvpPlayers == null or game.mvpPlayers.isEmpty()} ? 'show active' : ''" id="momentPane" role="tabpanel"
+	           th:if="${game.keyMoments != null and !game.keyMoments.isEmpty()}">
+	        <nav class="nav sub-tab-group" id="momentSubTab">
+	          <button class="nav-link active" onclick="switchSubTab(this, '#momentHitter')" type="button">타자</button>
+	          <button class="nav-link" onclick="switchSubTab(this, '#momentPitcher')" type="button">투수</button>
+	        </nav>
+	        <div class="tab-content">
+	          <div class="tab-pane fade show active" id="momentHitter" role="tabpanel">
+	            <div class="table-responsive">
+	              <table class="table table-bordered mb-0 text-center align-middle">
+	                <thead class="table-light"><tr><th style="width:10%;">순위</th><th style="width:20%;">선수</th><th>상황</th></tr></thead>
+	                <tbody>
+	                  <tr th:each="m : ${game.keyMoments}" th:if="${m.playerType == 'HITTER'}">
+	                    <td class="fw-bold" th:text="${m.ranking}">1</td>
+	                    <td class="fw-bold" th:text="${m.playerName}">데이비슨</td>
+	                    <td class="text-start ps-3" th:utext="${m.recordInfo}">6회초 볼넷</td>
+	                  </tr>
+	                </tbody>
+	              </table>
+	            </div>
+	          </div>
+	          <div class="tab-pane fade" id="momentPitcher" role="tabpanel">
+	            <div class="table-responsive">
+	              <table class="table table-bordered mb-0 text-center align-middle">
+	                <thead class="table-light"><tr><th style="width:10%;">순위</th><th style="width:20%;">선수</th><th>상황</th></tr></thead>
+	                <tbody>
+	                  <tr th:each="m : ${game.keyMoments}" th:if="${m.playerType == 'PITCHER'}">
+	                    <td class="fw-bold" th:text="${m.ranking}">1</td>
+	                    <td class="fw-bold" th:text="${m.playerName}">김진호</td>
+	                    <td class="text-start ps-3" th:utext="${m.recordInfo}">7회말 포수 파울플라이 아웃</td>
+	                  </tr>
+	                </tbody>
+	              </table>
+	            </div>
+	          </div>
+	        </div>
+	      </div>
+
+	      <!-- ===== 주요 기록 탭 (추가 metrics) ===== -->
+	      <div class="tab-pane fade" id="keyrecordPane" role="tabpanel"
+	           th:if="${game.keyPlayersByMetric != null and !game.keyPlayersByMetric.isEmpty()}">
+	        <!-- 타자/투수 서브 탭 -->
+	        <nav class="nav sub-tab-group" id="keyrecordSubTab">
+	          <button class="nav-link active" onclick="switchSubTab(this, '#keyrecordHitter')" type="button">타자</button>
+	          <button class="nav-link" onclick="switchSubTab(this, '#keyrecordPitcher')" type="button">투수</button>
+	        </nav>
+	        <div class="tab-content">
+	          <!-- 타자 기록 -->
+	          <div class="tab-pane fade show active" id="keyrecordHitter" role="tabpanel">
+	            <div class="p-3">
+	              <div class="row g-3">
+	                <!-- 홈런 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['HR_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">홈런</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['HR_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">2홈런</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 안타 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['HIT_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">안타</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['HIT_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">4안타</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 타점 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['RBI_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">타점</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['RBI_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">4타점</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 도루 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['SB_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">도루</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['SB_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">2도루</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 득점 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['RUNS_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">득점</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['RUNS_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">2득점</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	              </div>
+	            </div>
+	          </div>
+	          <!-- 투수 기록 -->
+	          <div class="tab-pane fade" id="keyrecordPitcher" role="tabpanel">
+	            <div class="p-3">
+	              <div class="row g-3">
+	                <!-- 탈삼진 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['KK_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">탈삼진</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['KK_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">7삼진</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 방어율 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['ERA_RT'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">방어율</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['ERA_RT']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">0.00</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- WHIP -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['WHIP_RT'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">WHIP</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['WHIP_RT']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">0.50</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 이닝 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['INN2_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">이닝</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['INN2_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">7이닝</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	                <!-- 구원 삼진 -->
+	                <div class="col-md-6 col-lg-3" th:if="${game.keyPlayersByMetric['RELIEF_KK_CN'] != null}">
+	                  <div class="card h-100 border-0 bg-white">
+	                    <div class="card-body p-2">
+	                      <h6 class="card-title fw-bold mb-2 text-center">구원 삼진</h6>
+	                      <div th:each="p : ${game.keyPlayersByMetric['RELIEF_KK_CN']}" class="d-flex justify-content-between align-items-center py-1 border-bottom">
+	                        <span><span class="badge bg-secondary me-1" th:text="${p.ranking}">1</span><span th:text="${p.playerName}">홍길동</span></span>
+	                        <small class="text-muted" th:utext="${p.recordInfo}">3삼진</small>
+	                      </div>
+	                    </div>
+	                  </div>
+	                </div>
+	              </div>
+	            </div>
+	          </div>
+	        </div>
+	      </div>
+
+	      <!-- ===== 라인업 탭 ===== -->
+	      <div class="tab-pane fade" id="lineupPane" role="tabpanel"
+	           th:if="${(game.homeBatterLineup != null and !game.homeBatterLineup.isEmpty()) or (game.awayBatterLineup != null and !game.awayBatterLineup.isEmpty())}">
+	        <div class="row g-0">
+	          <!-- 홈팀 라인업 -->
+	          <div class="col-md-6 p-3">
+	            <h6 class="fw-bold mb-2 text-center">
+	              <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" style="height:20px;" class="me-1">
+	              <span th:text="${game.homeTeamName}">홈팀</span>
+	            </h6>
+	            <table class="table table-sm text-center mb-0">
+	              <thead class="table-light"><tr><th>타순</th><th>포지션</th><th>선수</th></tr></thead>
+	              <tbody>
+	                <tr th:each="l : ${game.homeBatterLineup}">
+	                  <td th:text="${l.order}">1</td>
+	                  <td th:text="${l.position}">SS</td>
+	                  <td class="fw-bold" th:text="${l.playerName}">김주원</td>
+	                </tr>
+	              </tbody>
+	            </table>
+	          </div>
+	          <!-- 원정팀 라인업 -->
+	          <div class="col-md-6 p-3 border-start">
+	            <h6 class="fw-bold mb-2 text-center">
+	              <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" style="height:20px;" class="me-1">
+	              <span th:text="${game.awayTeamName}">원정팀</span>
+	            </h6>
+	            <table class="table table-sm text-center mb-0">
+	              <thead class="table-light"><tr><th>타순</th><th>포지션</th><th>선수</th></tr></thead>
+	              <tbody>
+	                <tr th:each="l : ${game.awayBatterLineup}">
+	                  <td th:text="${l.order}">1</td>
+	                  <td th:text="${l.position}">CF</td>
+	                  <td class="fw-bold" th:text="${l.playerName}">홍길동</td>
+	                </tr>
+	              </tbody>
+	            </table>
+	          </div>
+	        </div>
+	      </div>
+
+	      <!-- ===== 하이라이트 탭 ===== -->
+	      <div class="tab-pane fade" id="highlightPane" role="tabpanel"
+	           th:if="${game.highlights != null and !game.highlights.isEmpty()}">
+	        <div class="table-responsive">
+	          <table class="table table-bordered mb-0 text-center align-middle">
+	            <thead class="table-light">
+	              <tr><th style="width:8%;">#</th><th style="width:10%;">이닝</th><th style="width:15%;">투수</th><th style="width:15%;">타자</th><th style="width:10%;">투구수</th><th>결과</th></tr>
+	            </thead>
+	            <tbody>
+	              <tr th:each="h : ${game.highlights}">
+	                <td th:text="${h.ranking}">1</td>
+	                <td th:text="${h.inning}">3회초</td>
+	                <td th:text="${h.pitcherName}">김영민</td>
+	                <td class="fw-bold" th:text="${h.batterName}">홍길동</td>
+	                <td th:text="${h.pitchCount}">6</td>
+	                <td class="text-start ps-2" th:text="${h.result}">좌중간 홈런</td>
+	              </tr>
+	            </tbody>
+	          </table>
+	        </div>
+	      </div>
+
+	      <!-- ===== 상세기록 탭 ===== -->
+	      <div class="tab-pane fade" id="summaryPane" role="tabpanel"
+	           th:if="${game.summaryRecords != null and !game.summaryRecords.isEmpty()}">
+	        <div class="p-3">
+	          <div th:each="sr : ${game.summaryRecords}" class="d-flex align-items-start mb-2">
+	            <span class="badge bg-dark me-2 d-inline-block text-center flex-shrink-0" style="min-width: 56px;" th:text="${sr.category}">결승타</span>
+	            <span th:text="${sr.content}">케이브(3회 무사 만루서 좌전 안타)</span>
+	          </div>
+	        </div>
+	      </div>
+
+	    </div>
+	  </div>
   </div>
 	
  </div> 
 
-		<!-- 홈팀 타자 기록 -->
-		<div class="row mx-4 mx-md-4" th:if="${game.status == '종료'}">
+		<!-- 타자 기록 -->
+		<div class="border rounded py-3 py-md-4 px-3 px-md-5 mb-4 mx-4 shadow-sm bg-white" th:if="${game.status == '종료'}">
+		<h4 class="fw-bold mb-3">타자 기록</h4>
+		<div class="row">
 		 <div class="col-md-6">
-		  <div class="border p-3 rounded"
+		  <div class="p-3 rounded"
 	       	   th:if="${game.homeTeamColor != null}"
-	           th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.homeTeamColor, 0.3)});|">
+	           th:style="|border: 2px solid ${game.homeTeamColor}; background-color: #fff;|">
 		    <h5 class="fw-bold mb-3" th:text="${game.homeTeamName + ' 타자 기록'}">홈 타자</h5>
 		    <div class="table-responsive-xl">
 		      <table class="table table-sm text-center" style="min-width: 500px;">
@@ -235,9 +580,9 @@
 	
 	    <!-- 원정팀 타자 기록 -->
 	    <div class="col-md-6">
-   	      <div class="border p-3 rounded"
+   	      <div class="p-3 rounded"
          	   th:if="${game.homeTeamColor != null}"
-               th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.awayTeamColor, 0.3)});|">
+               th:style="|border: 2px solid ${game.awayTeamColor}; background-color: #fff;|">
 	        <h5 class="fw-bold mb-3" th:text="${game.awayTeamName + ' 타자 기록'}">원정 타자</h5>
 	        <div class="table-responsive-xl">
 	      	  <table class="table table-sm text-center" style="min-width: 500px;">
@@ -264,12 +609,16 @@
 	      </div>
 	    </div>
 	  </div>
-	
-  <!-- 홈팀 투수 기록 -->
-	<div class="row mt-4 mx-1 mx-md-4" th:if="${game.status == '종료'}">	  <div class="col-md-6">
-		<div class="border p-3 rounded"
+	</div>
+
+	<!-- 투수 기록 -->
+	<div class="border rounded py-3 py-md-4 px-3 px-md-5 mb-4 mx-4 shadow-sm bg-white" th:if="${game.status == '종료'}">
+	<h4 class="fw-bold mb-3">투수 기록</h4>
+	<div class="row">
+	  <div class="col-md-6">
+		<div class="p-3 rounded"
 	       	 th:if="${game.homeTeamColor != null}"
-	         th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.homeTeamColor, 0.3)});|">
+	         th:style="|border: 2px solid ${game.homeTeamColor}; background-color: #fff;|">
 	      <h5 class="fw-bold mb-3" th:text="${game.homeTeamName + ' 투수 기록'}">홈 투수</h5>
 	      <div class="table-responsive-xl">
 	        <table class="table table-sm text-center" style="min-width: 600px;">
@@ -281,7 +630,7 @@
 	        <tbody>
 	          <tr th:each="record : ${game.homePitcherRecords}">
 	            <td th:text="${record.playerName}">권유석</td>
-	            <td th:text="${record.innings}">5.0</td>
+	            <td th:text="${record.formattedInnings}">5</td>
 	            <td th:text="${record.strikeouts}">3</td>
 	            <td th:text="${record.bb}">1</td>
 	            <td th:text="${record.hbp}">0</td>
@@ -299,9 +648,9 @@
 	
 	  <!-- 원정팀 투수 기록 -->
 	  <div class="col-md-6">
-		<div class="border p-3 rounded"
+		<div class="p-3 rounded"
 		     th:if="${game.homeTeamColor != null}"
-		     th:style="|background-color: rgba(${T(com.kepg.BaseBallLOCK.common.ColorUtil).toRgba(game.awayTeamColor, 0.3)});|">
+		     th:style="|border: 2px solid ${game.awayTeamColor}; background-color: #fff;|">
 	      <h5 class="fw-bold mb-3" th:text="${game.awayTeamName + ' 투수 기록'}">원정 투수</h5>
 	      <div class="table-responsive-xl">
 	        <table class="table table-sm text-center" style="min-width: 600px;">
@@ -313,7 +662,7 @@
 	        <tbody>
 	          <tr th:each="record : ${game.awayPitcherRecords}">
 	            <td th:text="${record.playerName}">김영민</td>
-	            <td th:text="${record.innings}">4.1</td>
+	            <td th:text="${record.formattedInnings}">4 1/3</td>
 	            <td th:text="${record.strikeouts}">2</td>
 	            <td th:text="${record.bb}">2</td>
 	            <td th:text="${record.hbp}">1</td>
@@ -328,46 +677,12 @@
 	      </div>
 	    </div>
 	  </div>
-  </div>
+	</div>
+	</div>
 </div>
 </th:block>
 <th:block layout:fragment="script">
-<script>
-	document.addEventListener('DOMContentLoaded', function () {
-	    const countdownSpan = document.getElementById('countdownText');
-	    if (!countdownSpan) return;
-	
-	    const matchTimeStr = countdownSpan.dataset.datetime;
-	    const matchTime = new Date(matchTimeStr);
-	
-	    function updateCountdown() {
-	        const now = new Date();
-	        const diffMs = matchTime - now;
-	
-	        if (diffMs <= 0) {
-	            countdownSpan.textContent = "곧 시작합니다!";
-	            return;
-	        }
-	
-	        const totalSec = Math.floor(diffMs / 1000);
-	        const days = Math.floor(totalSec / 86400);
-	        const hours = Math.floor((totalSec % 86400) / 3600);
-	        const minutes = Math.floor((totalSec % 3600) / 60);
-	        const seconds = totalSec % 60;
-	
-	        const parts = [];
-	        if (days > 0) parts.push(`${days}일`);
-	        if (hours > 0 || days > 0) parts.push(`${hours}시간`);
-	        if (minutes > 0 || hours > 0 || days > 0) parts.push(`${minutes}분`);
-	        parts.push(`${seconds}초`);
-	
-	        countdownSpan.textContent = `(${parts.join(' ')})`;
-	    }
-	
-	    updateCountdown();
-	    setInterval(updateCountdown, 1000);
-	});
-</script>
-
+<script th:src="@{/static/js/detail-tabs.js}"></script>
+<script th:src="@{/static/js/detail-countdown.js}"></script>
 </th:block>
 </html>

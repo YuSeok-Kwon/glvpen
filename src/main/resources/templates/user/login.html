@@ -5,7 +5,8 @@
 
 		<section layout:fragment="contents" class="login-section">
 		  <div class="user-box text-center">
-		    <span class="full-logo-noheader display-2 d-block mb-4">BaseBall LOCK</span>
+		    <span class="full-logo-noheader display-2 d-block mb-2">glvpen</span>
+		    <span class="d-block mb-4" style="color: var(--color-text-secondary); font-size: 0.9rem;">글러브와 펜 · KBO 데이터 분석</span>
 		    <h1 class="mb-4">로그인</h1>
 		    <!-- 세션 만료 메시지 -->
 			<div th:if="${param.expired}">
@@ -15,7 +16,7 @@
 		    <form id="loginForm">
 		      <input type="text" class="form-control mt-3" placeholder="아이디를 입력하세요" id="loginIdInput" required>
 		      <input type="password" class="form-control mt-3" placeholder="비밀번호를 입력하세요" id="passwordInput" required>
-		      <button type="submit" class="btn btn-secondary w-100 mt-4 fw-bold fs-4" style="background-color: #FACC15;">Let's LOCK</button>
+		      <button type="submit" class="btn btn-accent w-100 mt-4 fw-bold fs-4">로그인</button>
 		    </form>
 		    
 		    <div class="text-center mt-4 fs-5">

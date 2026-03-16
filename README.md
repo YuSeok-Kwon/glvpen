@@ -1,164 +1,213 @@
-# BaseBall LOCK 2.0
+# glvpen 3.0
 
-KBO 야구 데이터 기반 시뮬레이션 게임
+**글러브와 펜** — KBO 데이터 분석 & 시뮬레이션 플랫폼
 
 ## 프로젝트 개요
 
-BaseBall LOCK은 실제 KBO 경기 데이터를 활용한 야구 시뮬레이션 게임입니다. 사용자는 실제 경기 일정과 라인업으로 게임을 즐기거나, 커스텀 타자를 육성하거나, 시뮬레이션 모드로 빠른 대전을 즐길 수 있습니다.
+glvpen은 KBO 공식 사이트에서 경기 데이터를 크롤링하여 **데이터 분석 인사이트를 도출**하고, 카드 기반 시뮬레이션 게임을 즐길 수 있는 플랫폼입니다. 다시즌(2020~2025) 데이터와 세이버메트릭스 지표를 활용한 분석 대시보드, AI 자동 분석 컬럼, 관중/퓨처스 리그 통계를 제공합니다.
 
 ### 핵심 기능
 
-- **실제 데이터 기반**: KBO 실제 경기 데이터를 크롤링하여 사용
-- **다양한 게임 모드**: Real Match, Custom Player, Simulation 3가지 모드 제공
-- **성장 시스템**: 커스텀 타자 육성 및 스탯 관리
-- **실시간 시뮬레이션**: WebSocket 기반 턴제 게임 진행
-- **통계 및 랭킹**: 상세한 경기 통계와 팀 순위 시스템
+- **데이터 분석 대시보드**: 포지션별 WAR 분포, 팀 타투 밸런스, 선수 성장 추이 차트
+- **분석 컬럼 (매거진)**: 선수/팀/경기/트렌드 분석 기사 (수동 작성 + AI 자동 생성)
+- **다시즌 크롤링**: 2020~2025 KBO 데이터 일괄 수집 (일정, 팀, 선수, 관중, 퓨처스, 게임센터)
+- **세이버메트릭스**: BABIP, ISO, K%, BB%, K/9, BB/9, FIP, xFIP 등 파생 지표
+- **시뮬레이션 게임**: 실제 선수 스탯 기반 카드 수집 및 대전
+- **AI 분석**: Google Gemini API를 활용한 분석 기사 자동 생성
+- **관중 통계**: 시즌별/팀별 관중 현황 분석
+- **퓨처스 리그**: 2군 경기 일정, 타자/투수/팀 통계
 
 ## 기술 스택
 
-### Backend
-- **Language**: Java 17+
-- **Framework**: Spring Boot
-- **ORM**: JPA (Hibernate)
-- **Database**: MySQL / MariaDB
-- **Authentication**: BCrypt, JWT (Access + Refresh Token)
-- **Real-time**: WebSocket
-
-### Frontend
-- **Framework**: React
-- **Language**: TypeScript
-- **Animation**: GSAP, SVG
-
-### Crawler
-- **Library**: Selenium, Jsoup
-- **Target**: Statiz.com (KBO 데이터)
+| 분류 | 기술 |
+|------|------|
+| Backend | Java 17, Spring Boot 3.3.10, Spring Data JPA, MyBatis |
+| Frontend | Thymeleaf (Layout Dialect), Bootstrap 5, Chart.js 4.4.1 |
+| Database | MySQL 8.0 (mysql-connector-j) |
+| Crawling | Playwright 1.49.0, Selenium 4.20.0, Jsoup 1.15.3 |
+| Auth | BCrypt (spring-security-crypto 6.3.0), Session 기반 |
+| AI | Google Gemini API (gemini-1.5-flash) |
+| Dev Tools | Lombok, P6Spy, Spring DevTools |
 
 ## 프로젝트 구조
 
 ```
-BaseBallLOCK/
-├── src/
-│   ├── main/
-│   │   ├── java/com/kepg/BaseBallLOCK/
-│   │   │   ├── modules/              # Feature-based 모듈 구조
-│   │   │   │   ├── user/            # 사용자 관리
-│   │   │   │   │   ├── controller/
-│   │   │   │   │   ├── service/
-│   │   │   │   │   ├── repository/
-│   │   │   │   │   ├── domain/
-│   │   │   │   │   └── dto/
-│   │   │   │   ├── gameMode/        # 게임 모드
-│   │   │   │   │   ├── realMatch/   # Real Match 모드
-│   │   │   │   │   ├── customPlayerMode/ # Custom Player 모드
-│   │   │   │   │   └── simulationMode/   # Simulation 모드
-│   │   │   │   ├── game/            # 경기 관련
-│   │   │   │   │   ├── schedule/    # 경기 일정
-│   │   │   │   │   ├── lineUp/      # 라인업
-│   │   │   │   │   ├── record/      # 경기 기록
-│   │   │   │   │   ├── scoreBoard/  # 스코어보드
-│   │   │   │   │   └── highlight/   # 하이라이트
-│   │   │   │   ├── player/          # 선수 정보
-│   │   │   │   │   ├── domain/
-│   │   │   │   │   ├── service/
-│   │   │   │   │   ├── repository/
-│   │   │   │   │   └── stats/       # 선수 통계
-│   │   │   │   ├── team/            # 팀 정보
-│   │   │   │   │   ├── domain/
-│   │   │   │   │   ├── service/
-│   │   │   │   │   ├── teamRanking/ # 팀 순위
-│   │   │   │   │   └── teamStats/   # 팀 통계
-│   │   │   │   └── review/          # 리뷰 시스템
-│   │   │   │       ├── controller/
-│   │   │   │       ├── service/
-│   │   │   │       ├── repository/
-│   │   │   │       └── summary/     # 리뷰 요약
-│   │   │   ├── crawler/             # 데이터 크롤링
-│   │   │   │   ├── game/            # 경기 크롤러
-│   │   │   │   ├── player/          # 선수 크롤러
-│   │   │   │   ├── schedule/        # 일정 크롤러
-│   │   │   │   ├── team/            # 팀 크롤러
-│   │   │   │   └── util/            # 크롤링 유틸리티
-│   │   │   ├── common/              # 공통 모듈
-│   │   │   │   ├── ai/              # AI 관련
-│   │   │   │   ├── game/            # 게임 공통 로직
-│   │   │   │   ├── enums/           # Enum 정의
-│   │   │   │   ├── exception/       # 예외 처리
-│   │   │   │   └── validator/       # 검증 로직
-│   │   │   └── config/              # 설정
-│   │   └── resources/
-│   │       ├── static/              # 정적 리소스
-│   │       │   ├── css/
-│   │       │   ├── game/
-│   │       │   ├── emblems/         # 팀 엠블럼
-│   │       │   ├── soundEffect/
-│   │       │   └── textures/
-│   │       ├── templates/           # Thymeleaf 템플릿
-│   │       │   ├── user/
-│   │       │   ├── game/
-│   │       │   ├── schedule/
-│   │       │   ├── review/
-│   │       │   ├── ranking/
-│   │       │   ├── realmatch/
-│   │       │   ├── customplayer/
-│   │       │   ├── fragments/
-│   │       │   └── layouts/
-│   │       └── db/
-│   │           └── migration/       # Flyway 마이그레이션
-│   └── test/
-├── docs/                            # 프로젝트 문서
-│   ├── planning/                    # 기획서 및 게임 기획
-│   ├── architecture/                # 아키텍처 설계 문서
-│   ├── database/                    # DB 스키마 및 ERD
-│   ├── reports/                     # 개발 리포트
-│   ├── migration/                   # 마이그레이션 가이드
-│   └── references/                  # 참고 자료
-├── build.gradle                     # Gradle 빌드 설정
-├── settings.gradle                  # Gradle 설정
-└── README.md                        # 프로젝트 소개
+glvpen/
+├── src/main/java/com/kepg/glvpen/
+│   ├── GlvpenApplication.java             # Spring Boot 메인 클래스
+│   │
+│   ├── config/                             # 설정
+│   │   ├── SecurityConfig                  #   BCrypt 인코더
+│   │   ├── WebMvcConfig                    #   MVC 인터셉터 등록
+│   │   └── LoginCheckInterceptor           #   세션 기반 인증 체크
+│   │
+│   ├── crawler/                            # 데이터 크롤링 (KBO 공식)
+│   │   ├── kbo/                            #   KBO 크롤러
+│   │   │   ├── KboPlayerStatsCrawler       #     선수 통계 (타자/투수/수비/주루)
+│   │   │   ├── KboTeamStatsCrawler         #     팀 순위/통계
+│   │   │   ├── KboScheduleCrawler          #     경기 일정
+│   │   │   ├── KboGameCenterCrawler        #     경기 상세 (스코어보드, 기록)
+│   │   │   ├── KboPlayerProfileCrawler     #     선수 프로필
+│   │   │   ├── KboCrowdCrawler             #     관중 현황
+│   │   │   ├── KboFuturesCrawler           #     퓨처스 리그
+│   │   │   └── util/                       #     KboConstants, PlaywrightFactory
+│   │   ├── CrawlersManualRunner            #   수동 실행 (다시즌 배치 포함)
+│   │   └── util/                           #   WebDriverFactory, CrawlerUtils, TeamMappingConstants
+│   │
+│   ├── common/                             # 공통 모듈
+│   │   ├── ai/GeminiClient                 #   Gemini API 클라이언트
+│   │   ├── stats/SabermetricsCalculator    #   세이버메트릭스 계산기
+│   │   ├── game/                           #   MvpCalculator, GameResultSaver, GameLogFormatter
+│   │   ├── enums/                          #   BatterSortType, PitcherSortType, DefenseSortType, RunnerSortType
+│   │   ├── exception/                      #   GlobalExceptionHandler
+│   │   └── validator/                      #   SeasonValidator
+│   │
+│   └── modules/                            # Feature-based 모듈
+│       ├── user/                           #   사용자 관리 (로그인/가입/세션)
+│       ├── game/                           #   경기 데이터
+│       │   ├── schedule/                   #     경기 일정 (controller/service/repository)
+│       │   ├── scoreBoard/                 #     스코어보드
+│       │   ├── highlight/                  #     경기 하이라이트
+│       │   ├── lineUp/                     #     타자 라인업
+│       │   ├── record/                     #     타자/투수 기록
+│       │   ├── keyPlayer/                  #     경기 주요 선수
+│       │   └── summaryRecord/              #     경기 요약 기록
+│       ├── player/                         #   선수 정보
+│       │   ├── stats/                      #     시즌 통계 + 세이버메트릭스
+│       │   │   ├── service/                #       BatterStats, PitcherStats, DefenseStats, RunnerStats
+│       │   │   ├── repository/             #       각 스탯별 Repository
+│       │   │   ├── dto/                    #       통계 DTO
+│       │   │   ├── statsDto/               #       랭킹 DTO (Batter/Pitcher/Defense/Runner)
+│       │   │   └── controller/             #       뷰 + REST 컨트롤러
+│       │   └── crawler/                    #     선수 크롤링 추가 로직
+│       ├── team/                           #   팀 정보
+│       │   ├── teamRanking/                #     팀 순위
+│       │   ├── teamStats/                  #     팀 통계
+│       │   ├── teamHeadToHead/             #     팀 간 상대 성적
+│       │   └── crawler/                    #     팀 크롤링 추가 로직
+│       ├── analysis/                       #   데이터 분석 (v3)
+│       │   ├── controller/                 #     대시보드/컬럼/매거진 뷰 + REST API
+│       │   ├── domain/                     #     AnalysisColumn Entity
+│       │   ├── dto/                        #     Dashboard, ChartData, PlayerAnalysis, TeamAnalysis
+│       │   ├── repository/                 #     AnalysisColumnRepository
+│       │   └── service/                    #     AnalysisService, ColumnService, AiColumnGeneratorService
+│       ├── crowd/                          #   관중 데이터
+│       ├── futures/                        #   퓨처스 리그
+│       │   ├── schedule/                   #     퓨처스 경기 일정
+│       │   └── stats/                      #     퓨처스 타자/투수/팀 통계
+│       └── gameMode/                       #   게임 모드
+│           └── simulationMode/             #     시뮬레이션 (카드/라인업/대전)
+│
+├── src/main/resources/
+│   ├── application.yml                     # 앱 설정
+│   ├── security-variable.yml               # 보안 변수 (gitignored)
+│   ├── db/migration/                       # Flyway 마이그레이션
+│   │   ├── V3__Drop_Custom_and_RealMatch_Tables.sql
+│   │   ├── V4__Drop_Review_Tables.sql
+│   │   └── V5__Add_AnalysisColumn_Magazine_Fields.sql
+│   ├── static/                             # 정적 리소스
+│   │   ├── css/style.css                   #   메인 스타일시트
+│   │   └── emblems/                        #   팀 로고 이미지
+│   └── templates/                          # Thymeleaf 템플릿
+│       ├── layouts/                        #   레이아웃 (default, userDefault, noheader)
+│       ├── fragments/                      #   공통 조각 (header, footer, userHeader)
+│       ├── analysis/                       #   분석 대시보드/매거진/컬럼 (7개)
+│       ├── game/                           #   시뮬레이션 게임 (11개)
+│       ├── ranking/                        #   팀/선수 순위 (7개)
+│       ├── schedule/                       #   경기 일정/결과 (2개)
+│       └── user/                           #   로그인/가입/홈 (6개)
+│
+├── docs/                                   # 프로젝트 문서
+├── build.gradle                            # Gradle 빌드 설정
+├── CLAUDE.md                               # AI 어시스턴트 가이드
+└── run_crawler.sh                          # 크롤러 실행 스크립트
 ```
 
-### Feature-based 구조의 장점
+## 데이터 분석 기능
 
-- **도메인별 관심사 집중**: 각 모듈이 독립적인 기능을 담당
-- **높은 응집도**: 관련된 코드가 한 곳에 모여 있음
-- **확장 가능성**: 새 기능 추가 시 폴더 하나로 확장
-- **테스트 용이성**: 모듈별 단위 테스트 작성 가능
-- **마이크로서비스 전환 용이**: 필요 시 독립적인 서비스로 분리 가능
+### 분석 대시보드
+
+Chart.js 기반 인터랙티브 차트로 KBO 데이터를 시각화합니다.
+
+| 차트 | 유형 | 데이터 |
+|------|------|--------|
+| 포지션별 WAR 분포 | Bar Chart | 포지션별 WAR 평균 |
+| 팀별 타투 밸런스 | Stacked Bar | 팀별 타자WAR vs 투수WAR |
+| 구단 전력 레이더 | Radar Chart | 타격/투구/수비/기동력/장타력 5축 |
+| 선수 성장 추이 | Line Chart | 개별 선수 시즌별 지표 |
+
+### 분석 컬럼 (매거진)
+
+데이터 기반 분석 기사를 작성하고 관리합니다.
+
+- **카테고리**: 선수(player), 팀(team), 경기(game), 트렌드(trend)
+- **AI 자동 생성**: Gemini API를 통해 매주 월요일 주간 분석 자동 생성
+- **인라인 차트**: 기사 내 Chart.js 차트 삽입 지원
+
+### 세이버메트릭스
+
+| 지표 | 설명 | 산출 방식 |
+|------|------|----------|
+| BABIP | 인플레이 타율 | (H-HR) / (AB-SO-HR+SF) |
+| ISO | 순장타력 | SLG - AVG |
+| K% | 삼진율 | SO / PA |
+| BB% | 볼넷율 | BB / PA |
+| K/9 | 9이닝당 삼진 | (SO/IP) × 9 |
+| BB/9 | 9이닝당 볼넷 | (BB/IP) × 9 |
+| FIP | 수비 무관 투구 | ((13×HR)+(3×BB)-(2×SO))/IP + 상수 |
+| xFIP | 기대 FIP | FIP에서 HR을 리그평균 HR/FB로 대체 |
+| wRC+ | 조정 득점 생산력 | KBO 크롤링 |
 
 ## 게임 모드
 
-### 1. Real Match Mode
+### Simulation Mode (시뮬레이션 대전)
 
-실제 KBO 경기 일정과 라인업을 기반으로 한 시뮬레이션 모드
+카드 기반 라인업을 구성하여 봇과 대전하는 모드
 
-- **데이터 소스**: Statiz.com 크롤링
-- **크롤링 스케줄**:
-  - 전일 라인업: 새벽 자동 크롤링
-  - 당일 라인업: 경기 1시간 전 크롤링
-- **주요 테이블**: `schedule`, `lineup`, `record`, `score_board`
-- **특징**: 실제 선수들의 최신 폼을 반영한 시뮬레이션
+- **카드 시스템**: 실제 선수 스탯 기반 오버올(0~200) 카드 수집
+- **라인업 구성**: 9명 타자 + 1명 투수로 라인업 편성
+- **봇 난이도**: EASY / NORMAL / HARD
+- **경기 시뮬레이션**: 이닝별 시뮬레이션, 이벤트 선택, MVP 선정
 
-### 2. Custom Player Mode
+## 크롤러 시스템
 
-유저가 만든 타자를 키우는 RPG형 성장 시스템
+### 크롤링 대상
 
-- **진행 방식**: WebSocket 기반 실시간 턴제
-- **성장 시스템**: 경험치 획득 및 레벨업
-- **스탯 종류**:
-  - **파워**: 홈런 확률 증가
-  - **정확**: 안타 확률 증가
-  - **속도**: 2루타 확률 증가
-  - **수비**: MVP 선정 평가 반영
-- **특별 보상**: MVP 달성 시 경험치 2배
+| 크롤러 | 대상 데이터 | 기술 |
+|--------|------------|------|
+| KboPlayerStatsCrawler | 선수 통계 (타자/투수/수비/주루 + 세이버메트릭스) | Playwright |
+| KboTeamStatsCrawler | 팀 순위/통계 | Playwright |
+| KboScheduleCrawler | 경기 일정 | Jsoup |
+| KboGameCenterCrawler | 경기 상세 (스코어보드, 라인업, 기록) | Playwright |
+| KboPlayerProfileCrawler | 선수 프로필 | Playwright |
+| KboCrowdCrawler | 관중 현황 | Playwright |
+| KboFuturesCrawler | 퓨처스 리그 (일정/타자/투수/팀 통계) | Playwright |
 
-### 3. Simulation Mode
+### 다시즌 배치 크롤링
 
-빠른 대전을 위한 자동 시뮬레이션 모드
+`CrawlersManualRunner`에서 크롤링 옵션을 설정하여 실행합니다.
 
-- **구성**: 유저 라인업 vs 봇 라인업
-- **난이도**: EASY / NORMAL / HARD
-- **연출**: 하이라이트 중심의 빠른 진행
-- **특징**: 시간 압축형 게임 플레이
+```bash
+# 기본 실행 (CrawlersManualRunner 내부 설정 사용)
+./run_crawler.sh
+
+# 시스템 프로퍼티로 옵션 오버라이드
+java -Dcrawl.seasonStart=2022 -Dcrawl.seasonEnd=2024 \
+     -Dcrawl.pitcherOnly=true \
+     -Dcrawl.sabermetrics=true \
+     -jar build/libs/glvpen-0.0.1-SNAPSHOT.war
+```
+
+**크롤링 옵션**:
+- `crawlSchedule` — 경기 일정
+- `crawlTeam` — 팀 데이터
+- `crawlPlayer` — 선수 데이터 (타자/투수/수비/주루)
+- `crawlPitcherOnly` / `crawlDefenseOnly` / `crawlRunnerOnly` — 포지션별 재크롤링
+- `crawlCrowd` — 관중 현황
+- `crawlPlayerProfile` — 선수 프로필
+- `crawlFutures` — 퓨처스 리그
+- `crawlGameCenter` — 게임센터 (경기 상세)
+- `calculateSabermetrics` — 세이버메트릭스 일괄 계산
 
 ## 시작하기
 
@@ -166,246 +215,115 @@ BaseBallLOCK/
 
 - Java 17 이상
 - MySQL 8.0 이상
-- Gradle 7.0 이상
-- Chrome WebDriver (크롤링용)
+- Playwright (크롤링용, 자동 설치)
 
 ### 설치 및 실행
 
-1. 저장소 클론
 ```bash
-git clone https://github.com/your-repo/BaseBallLOCK.git
-cd BaseBallLOCK
-```
+git clone https://github.com/your-repo/glvpen.git
+cd glvpen
 
-2. 데이터베이스 설정
-```sql
-CREATE DATABASE baseball_lock;
-```
+# DB 생성
+mysql -u root -p -e "CREATE DATABASE BaseBallLOCK;"
 
-3. application.yml 설정
-```yaml
-spring:
-  datasource:
-    url: jdbc:mysql://localhost:3306/baseball_lock
-    username: your_username
-    password: your_password
-```
+# 보안 변수 설정 (security-variable.yml)
+# mysql.password 및 gemini.api-key 설정
 
-4. 빌드 및 실행
-```bash
+# 빌드 및 실행
 ./gradlew build
 ./gradlew bootRun
 ```
 
-5. 브라우저에서 접속
-```
-http://localhost:8080
-```
-
-### 크롤링 실행
-
-```bash
-# 일정 크롤링
-./run_crawler.sh schedule
-
-# 선수 데이터 크롤링
-./run_crawler.sh player
-
-# 경기 기록 크롤링
-./run_crawler.sh game
-```
-
-## API 문서
-
-### RESTful API 설계 원칙
-
-- **네이밍**: kebab-case 사용 (`/api/custom-players`)
-- **복수형**: 리소스는 복수형으로 표현 (`/api/users`)
-- **HTTP 메서드**: GET (조회), POST (생성), PUT (전체 수정), PATCH (부분 수정), DELETE (삭제)
-
-### 주요 엔드포인트
-
-#### 사용자
-```
-GET    /api/users/{userId}           # 사용자 정보 조회
-PUT    /api/users/{userId}           # 사용자 정보 수정
-```
-
-#### 게임
-```
-GET    /api/games                    # 게임 목록 조회
-POST   /api/games                    # 게임 생성
-GET    /api/games/{gameId}           # 게임 상세 조회
-GET    /api/games/{gameId}/highlights # 하이라이트 조회
-```
-
-#### 커스텀 선수
-```
-GET    /api/custom-players           # 커스텀 선수 목록
-POST   /api/custom-players           # 커스텀 선수 생성
-POST   /api/custom-players/{id}/match-result  # 경기 결과 반영
-POST   /api/custom-players/{id}/allocate      # 스탯 포인트 할당
-```
-
-#### 리뷰
-```
-GET    /api/reviews                  # 리뷰 목록
-POST   /api/reviews                  # 리뷰 작성
-GET    /api/reviews/calendar         # 캘린더 형식 조회
-```
-
-상세한 API 문서는 `docs/architecture/RESTFUL_API_GUIDE.md`를 참조하세요.
-
-## 개발 가이드
-
-### 코딩 컨벤션
-
-#### 네이밍 규칙
-
-| 대상 | 규칙 | 예시 |
-|------|------|------|
-| 클래스 | PascalCase | `GameService` |
-| 메서드/변수 | camelCase | `calculateMvp()` |
-| 상수 | UPPER_SNAKE | `MAX_LEVEL` |
-| 테이블 | snake_case | `custom_player` |
-| URL | kebab-case | `/api/custom-players` |
-
-#### 파일 구조
-
-각 모듈은 다음과 같은 구조를 따릅니다:
+### 네비게이션 구조
 
 ```
-domain/
-├── controller/
-│   └── {Domain}Controller.java
-├── service/
-│   └── {Domain}Service.java
-├── repository/
-│   └── {Domain}Repository.java
-├── domain/
-│   └── {Domain}.java
-└── dto/
-    ├── {Domain}RequestDTO.java
-    └── {Domain}ResponseDTO.java
+일정/결과 | 랭킹 | 분석 | 시뮬레이션 | 락커룸
 ```
 
-### Git Commit Convention
+## 엔티티 관계도
 
-형식:
 ```
-[이름][type](<scope>): <description>
+User (사용자)
+├── favoriteTeam → Team (N:1)
+├── UserCard (1:N)              보유 카드
+├── UserLineup (1:N)            저장된 라인업
+└── GameResult (1:N)            시뮬레이션 결과
+
+Schedule (경기 일정)
+├── ScoreBoard (1:1)            이닝별 점수
+├── GameHighlight (1:N)         하이라이트
+├── BatterLineup (1:N)          타자 라인업
+├── BatterRecord (1:N)          타자 경기 기록
+├── PitcherRecord (1:N)         투수 경기 기록
+├── GameKeyPlayer (1:N)         주요 선수
+└── GameSummaryRecord (1:N)     경기 요약 기록
+
+Player (선수)
+├── BatterStats (1:N)           시즌별 타자 통계 + 세이버메트릭스
+├── PitcherStats (1:N)          시즌별 투수 통계 + 세이버메트릭스
+├── DefenseStats (1:N)          수비 통계
+├── RunnerStats (1:N)           기동력 통계
+└── PlayerCardOverall (1:N)     게임용 카드
+
+Team (팀)
+├── TeamRanking (1:N)           시즌별 순위
+├── TeamStats (1:N)             팀 통계
+└── TeamHeadToHead (1:N)        상대 성적
+
+AnalysisColumn (분석 컬럼)      데이터 분석 기사
+
+CrowdStats (관중 데이터)        시즌별/팀별 관중 현황
+
+Futures (퓨처스 리그)
+├── FuturesSchedule (1:N)       퓨처스 경기 일정
+├── FuturesBatterStats (1:N)    퓨처스 타자 통계
+├── FuturesPitcherStats (1:N)   퓨처스 투수 통계
+└── FuturesTeamStats (1:N)      퓨처스 팀 통계
 ```
 
-#### Type 종류
+## REST API
 
-| Type | 설명 |
+### 분석 API
+
+```http
+GET  /api/analysis/dashboard?season=2025
+GET  /api/analysis/player/{id}/trend?category=WAR&startYear=2020&endYear=2025
+GET  /api/analysis/team/{id}/balance?season=2025
+GET  /api/analysis/war-distribution?season=2025
+GET  /api/analysis/team-comparison?season=2025
+POST /api/analysis/columns/generate
+```
+
+### 시뮬레이션 API
+
+```http
+POST /api/simulation/start
+POST /api/simulation/select-event
+GET  /api/cards
+GET  /api/lineups
+GET  /api/game-results
+```
+
+### 통계 API
+
+```http
+GET  /api/player-stats
+GET  /api/team-ranking
+```
+
+## 프로젝트 통계
+
+| 항목 | 수량 |
 |------|------|
-| feat | 새 기능 추가 |
-| fix | 버그 수정 |
-| refactor | 리팩토링 |
-| docs | 문서 수정 |
-| style | 코드 스타일 변경 |
-| test | 테스트 추가/수정 |
-| chore | 빌드, 설정 변경 |
-| api | API 엔드포인트 변경 |
-| ui | UI/UX 변경 |
-| db | DB 스키마 변경 |
-
-#### 예시
-
-```
-[권유석][feat](custom-player): 타자 성장 시스템 구현
-[권유석][fix](auth): 토큰 갱신 로직 오류 수정
-[권유석][refactor](crawler): 크롤러 유틸리티 클래스 적용
-```
-
-### 개발 원칙
-
-1. **Entity 직접 사용 금지**: Controller와 Service 간에는 DTO 사용
-2. **Service 레이어 책임**: 모든 비즈니스 로직은 Service에서 처리
-3. **Hard-coding 최소화**: 설정값은 application.yml 또는 상수 클래스 사용
-4. **예외 처리**: 명확한 예외 메시지와 적절한 HTTP 상태 코드 반환
-5. **테스트 작성**: 주요 로직에 대한 단위 테스트 필수
-
-## 인증 시스템
-
-### 비밀번호 암호화
-- **방식**: BCrypt
-- **Salt Rounds**: 10-12
-
-### 토큰 기반 인증
-- **Access Token**: 15분 (HttpOnly Cookie)
-- **Refresh Token**: 7-30일 (HttpOnly Cookie + DB)
-
-### 보안
-- Secure 쿠키 (HTTPS only)
-- SameSite=Strict (CSRF 방지)
-- HttpOnly (XSS 방지)
-
-상세한 인증 시스템은 `docs/architecture/baseball-lock-auth-system.md`를 참조하세요.
-
-## 문서 구조
-
-### docs/planning
-- 게임 기획서
-- 게임 모드 상세 기획
-- UI/UX 설계
-
-### docs/architecture
-- 시스템 아키텍처
-- 인증 시스템 설계
-- 애니메이션 설계
-- RESTful API 가이드
-
-### docs/database
-- DB 스키마
-- ERD
-- 테이블 설계서
-
-### docs/reports
-- 개발 진행 리포트
-- 에러 체크 리포트
-- API 구현 리포트
-
-### docs/migration
-- 데이터 마이그레이션 가이드
-- 암호화 마이그레이션
-
-### docs/references
-- 참고 자료
-- 외부 프로젝트 문서
-
-## 크롤러 시스템
-
-### 크롤링 대상
-- **경기 일정**: 날짜별 경기 일정 및 결과
-- **선수 통계**: 타자/투수 시즌 통계
-- **경기 기록**: 경기별 타자/투수 개인 기록
-- **팀 순위**: 팀 순위 및 기본 통계
-
-### 크롤링 스케줄
-- **선수 데이터**: 매일 새벽 1시 (Cron: `0 0 1 * * *`)
-- **팀 데이터**: 매일 자정 직전 (Cron: `0 59 23 * * *`)
-- **경기 기록**: 수동 실행 (경기 종료 후)
-
-### 크롤러 유틸리티
-- `CrawlerUtils`: 공통 크롤링 메서드 (페이지 로딩, 숫자 파싱, 패턴 추출)
-- `TeamMappingConstants`: 팀/경기장 매핑 상수
-- `WebDriverFactory`: WebDriver 생성 팩토리
+| Java 파일 | 217개 |
+| 엔티티 클래스 | 41개 |
+| HTML 템플릿 | 40개 |
+| KBO 크롤러 | 7개 |
+| Flyway 마이그레이션 | 5개 |
 
 ## 라이선스
 
 이 프로젝트는 교육 목적으로 제작되었습니다.
-
-## 기여
-
-기여를 원하시는 분은 다음 절차를 따라주세요:
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m '[이름][feat]: Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
 
 ## 문의
 

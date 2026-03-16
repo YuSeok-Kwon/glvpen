@@ -3,29 +3,35 @@
         xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
         layout:decorate="~{layouts/noheader}">
 
-		<section layout:fragment="contents" class="login-section text-center pt-4">
-			<span class="full-logo-noheader display-2 mb-4">BaseBall LOCK</span>
-			<div class="user-box mx-auto rounded-3">
-			  <div class="d-flex flex-column p-4 align-items-center w-100">
-			    <h3 class="display-5 mb-4">아이디 찾기</h3>
-			
-			    <input type="text" id="nameInput" class="form-control mb-3" placeholder="이름을 입력하세요">
-			
-			    <div class="input-group mb-4">
-			      <input type="text" id="emailInput" class="form-control" placeholder="이메일을 입력하세요">
-			      <span class="input-group-text">@</span>
-			      <input type="text" id="emailDomainInput" class="form-control d-none" placeholder="이메일 도메인을 입력하세요">
-			      <select class="form-select" id="emailDomain">
-			        <option value="" selected disabled>이메일 도메인을 선택하세요</option>
-			        <option value="gmail.com">gmail.com</option>
-			        <option value="naver.com">naver.com</option>
-			        <option value="daum.net">daum.net</option>
-			        <option value="custom">직접입력</option>
-			      </select>
-			    </div>
-			
-			    <button type="button" class="btn fw-bold w-100 fs-4" id="findBtn" style="background-color: #FACC15;">FIND the LOCK</button>
-			  </div>
+		<section layout:fragment="contents" class="login-section">
+			<div class="user-box text-center">
+				<!-- 로고 -->
+				<img src="/images/Main_Logo.png" alt="글러브와 펜" style="width: 80px; height: 80px; margin-bottom: 12px;">
+				<span class="full-logo-noheader display-2 d-block mb-2">glvpen</span>
+				<span class="d-block mb-4" style="color: var(--color-text-secondary); font-size: 0.9rem;">글러브와 펜 · KBO 데이터 분석</span>
+
+				<h1 class="mb-4">아이디 찾기</h1>
+
+				<input type="text" id="nameInput" class="form-control mb-3" placeholder="이름을 입력하세요">
+
+				<div class="input-group mb-4">
+					<input type="text" id="emailInput" class="form-control" placeholder="이메일을 입력하세요">
+					<span class="input-group-text">@</span>
+					<input type="text" id="emailDomainInput" class="form-control d-none" placeholder="이메일 도메인을 입력하세요">
+					<select class="form-select" id="emailDomain">
+						<option value="" selected disabled>이메일 도메인을 선택하세요</option>
+						<option value="gmail.com">gmail.com</option>
+						<option value="naver.com">naver.com</option>
+						<option value="daum.net">daum.net</option>
+						<option value="custom">직접입력</option>
+					</select>
+				</div>
+
+				<button type="button" class="btn btn-accent fw-bold w-100 fs-4" id="findBtn">아이디 찾기</button>
+
+				<div class="text-center mt-4 fs-5">
+					<a href="/user/login-view">로그인으로 돌아가기</a>
+				</div>
 			</div>
 		</section>
 		

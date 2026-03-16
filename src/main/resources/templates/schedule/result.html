@@ -5,25 +5,53 @@
 
 <th:block layout:fragment="contents">
   <div class="container py-5">
-    
-    
-        
-    <!-- 월 이동 -->
-    <div class="text-center mb-4 d-flex flex-column flex-sm-row align-items-center justify-content-center gap-2">
-      <a th:href="@{/schedule/result-view(year=${prevYear}, month=${prevMonth})}" class="btn btn-outline-secondary order-1 order-sm-0" style="background-color: #FACC15;">&laquo; 이전</a>	  
-	  <strong class="fs-3 fs-md-3 month-title order-0 order-sm-1" onclick="openDatePicker(this)" 
-              th:text="${year + '년 ' + month + '월'}">2025년 4월</strong>
-      <!-- 달력용 input -->
-      <input type="date" id="hiddenDatePicker" class="d-none" onchange="goToSelectedDate()" />      
-      <a th:href="@{/schedule/result-view(year=${nextYear}, month=${nextMonth})}" class="btn btn-outline-secondary order-2" style="background-color: #FACC15;">다음 &raquo;</a>
+
+    <!-- 년도 선택 + 월 이동 + 리그 토글 -->
+    <div class="schedule-nav mb-4">
+      <div class="d-flex align-items-center justify-content-center gap-1">
+        <!-- 이전 버튼 -->
+        <a th:if="${prevMonth != null}" th:href="@{/schedule/result-view(year=${prevYear}, month=${prevMonth}, league=${league})}"
+           class="nav-arrow"><span>&lsaquo;</span></a>
+        <span th:unless="${prevMonth != null}" class="nav-arrow disabled"><span>&lsaquo;</span></span>
+
+        <!-- 년도 선택 -->
+        <select id="yearSelect" class="year-select" onchange="changeYear(this.value)">
+        </select>
+
+        <!-- 월 선택 (달력 열기) -->
+        <span class="month-label" onclick="openDatePicker(this)" th:text="${month + '월'}">4월</span>
+
+        <!-- 다음 버튼 -->
+        <a th:if="${nextMonth != null}" th:href="@{/schedule/result-view(year=${nextYear}, month=${nextMonth}, league=${league})}"
+           class="nav-arrow"><span>&rsaquo;</span></a>
+        <span th:unless="${nextMonth != null}" class="nav-arrow disabled"><span>&rsaquo;</span></span>
+
+        <!-- 구분선 -->
+        <span class="nav-divider"></span>
+
+        <!-- 1군/퓨처스 토글 -->
+        <div class="league-toggle" role="group">
+          <a th:href="@{/schedule/result-view(year=${year}, month=${month}, league='kbo')}"
+             class="league-btn"
+             th:classappend="${league == 'kbo' || league == null} ? ' active' : ''">1군</a>
+          <a th:href="@{/schedule/result-view(year=${year}, month=${month}, league='futures')}"
+             class="league-btn"
+             th:classappend="${league == 'futures'} ? ' active' : ''">퓨처스</a>
+        </div>
+      </div>
+      <!-- 달력용 input (레이아웃은 유지하되 보이지 않게) -->
+      <input type="text" id="hiddenDatePicker" tabindex="-1"
+             style="position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none;" />
     </div>
 
     <!-- 날짜별 카드 -->
-    <div th:each="entry : ${groupedSchedule}" class="mb-4">
+    <div th:each="entry : ${groupedSchedule}" class="mb-4"
+         th:id="'date-' + ${#temporals.format(entry.key, 'yyyy-MM-dd')}">
       <div class="card shadow-sm">
 
         <!-- 날짜 헤더 -->
-        <div class="card-header bg-warning text-dark fw-bold fs-5 py-2"
+        <div class="card-header fw-bold fs-6 py-2"
+             style="background-color: #153d00; color: #f9fafb; letter-spacing: 0.02em;"
 		     th:text="${#temporals.format(entry.key, 'M월 d일 (E)')}">
 		  4월 20일 (일)
 		</div>
@@ -33,8 +61,9 @@
 
           <!-- 경기 한 줄 -->
           <div th:each="game : ${entry.value}" class="mb-3 border-bottom pb-2"
-               th:style="${game.statizId != null} ? 'cursor: pointer;' : 'cursor: not-allowed; opacity: 0.6;'"
-               th:onclick="${game.statizId != null} ? |location.href='@{/schedule/detail-view(statizId=${game.statizId})}'| : ''">
+               th:classappend="${game.status != '종료'} ? 'text-muted opacity-50' : ''"
+               th:style="${league != 'futures' and game.status == '종료'} ? 'cursor: pointer;' : ''"
+               th:onclick="${league != 'futures' and game.status == '종료'} ? |location.href='@{/schedule/detail-view(matchId=${game.id})}'| : ''">
 
             <!-- 경기 시간 & 경기장 & 더블헤더 표시 -->
             <div class="d-flex justify-content-center align-items-center gap-2 text-muted fs-6 ps-3 mt-2">
@@ -86,33 +115,147 @@
 <th:block layout:fragment="script">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
-<script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+/* ── 스케줄 네비게이션 바 ── */
+.schedule-nav {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.nav-arrow {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px;
+  color: #374151; font-size: 1.3rem; font-weight: 600;
+  text-decoration: none; transition: all 0.15s;
+}
+.nav-arrow:hover { background: #f3f4f6; color: #111827; }
+.nav-arrow.disabled { color: #d1d5db; pointer-events: none; }
+.year-select {
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid #e5e7eb; border-radius: 8px;
+  padding: 4px 24px 4px 10px; font-size: 0.85rem; font-weight: 600;
+  color: #374151; background: #f9fafb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 8px center;
+  cursor: pointer; outline: none; height: 32px;
+}
+.year-select:focus { border-color: var(--color-accent); box-shadow: 0 0 0 2px rgba(34,197,94,0.15); }
+.month-label {
+  font-size: 1.1rem; font-weight: 700; color: #111827;
+  cursor: pointer; padding: 4px 8px; border-radius: 8px;
+  transition: background 0.15s; line-height: 32px;
+}
+.month-label:hover { background: #f3f4f6; }
+.nav-divider {
+  display: inline-block; width: 1px; height: 20px;
+  background: #d1d5db; margin: 0 8px;
+}
+.league-toggle {
+  display: inline-flex; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;
+}
+.league-btn {
+  padding: 4px 14px; font-size: 0.8rem; font-weight: 600;
+  color: #6b7280; text-decoration: none;
+  transition: all 0.15s; line-height: 22px; height: 32px;
+  display: inline-flex; align-items: center;
+  border-right: 1px solid #e5e7eb;
+}
+.league-btn:last-child { border-right: none; }
+.league-btn:hover { background: #f3f4f6; color: #374151; }
+.league-btn.active {
+  background: var(--color-primary); color: #fff;
+}
+/* 모바일: 구분선 숨기고 세로 정렬 */
+@media (max-width: 480px) {
+  .schedule-nav .d-flex { flex-wrap: wrap; gap: 8px !important; }
+  .nav-divider { display: none; }
+}
+
+/* ── flatpickr 커스텀 ── */
+.flatpickr-months { background: #fff !important; }
+.flatpickr-months .flatpickr-month { background: #fff !important; color: #333 !important; }
+.flatpickr-current-month .flatpickr-monthDropdown-months { background: #fff !important; }
+.flatpickr-weekdays { background: #374151 !important; }
+span.flatpickr-weekday { background: #374151 !important; color: #fff !important; }
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover { background: var(--color-accent) !important; border-color: var(--color-accent) !important; }
+.flatpickr-day.today { border-color: var(--color-primary) !important; }
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg { fill: var(--color-accent) !important; }
+</style>
+<script th:inline="javascript">
+const currentYear = /*[[${year}]]*/ 2025;
+const currentMonth = /*[[${month}]]*/ 1;
+const minYear = /*[[${minYear}]]*/ 2022;
+const maxYear = /*[[${maxYear}]]*/ 2026;
+const currentLeague = /*[[${league}]]*/ 'kbo';
+
+// 년도 드롭다운 동적 생성
+(function() {
+    const yearSelect = document.getElementById('yearSelect');
+    for (let y = maxYear; y >= minYear; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y + '년';
+        if (y === currentYear) opt.selected = true;
+        yearSelect.appendChild(opt);
+    }
+})();
+
+function changeYear(year) {
+    window.location.href = '/schedule/result-view?year=' + year + '&month=' + currentMonth + '&league=' + currentLeague;
+}
+
 flatpickr.localize(flatpickr.l10ns.ko);
+const monthLabelEl = document.querySelector('.month-label');
+const initDateStr = currentYear + "-" + String(currentMonth).padStart(2, '0') + "-01";
 const flatpickrInstance = flatpickr("#hiddenDatePicker", {
     dateFormat: "Y-m-d",
-    locale : "ko",
-    plugins: [
-        new monthSelectPlugin({
-            shorthand: false,
-            dateFormat: "Y-m-d",
-            altFormat: "Y년 m월"
-        })
-    ],
-    onChange: function(selectedDates, dateStr) {
-        if (dateStr) {
-            const date = new Date(dateStr);
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
-            window.location.href = `/schedule/result-view?year=${year}&month=${month}`;
+    locale: "ko",
+    defaultDate: initDateStr,
+    minDate: minYear + "-01-01",
+    maxDate: maxYear + "-12-31",
+    positionElement: monthLabelEl,
+    onChange: function(selectedDates) {
+        if (selectedDates.length > 0) {
+            const d = selectedDates[0];
+            const y = d.getFullYear();
+            const m = d.getMonth() + 1;
+            const day = d.getDate();
+            setTimeout(function() {
+                window.location.href = '/schedule/result-view?year=' + y + '&month=' + m + '&day=' + day + '&league=' + currentLeague;
+            }, 50);
         }
     }
 });
-	
-function openDatePicker(el) {
-    flatpickrInstance._positionElement = el;
+
+function openDatePicker() {
     flatpickrInstance.open();
 }
+
+// 특정 날짜로 스크롤 (달력에서 일 선택 시)
+(function() {
+    const scrollToDay = /*[[${scrollToDay}]]*/ null;
+    if (scrollToDay) {
+        const dayStr = String(scrollToDay).padStart(2, '0');
+        const monthStr = String(currentMonth).padStart(2, '0');
+        const targetDate = currentYear + '-' + monthStr + '-' + dayStr;
+        let el = document.getElementById('date-' + targetDate);
+        // 해당 날짜에 경기가 없으면 가장 가까운 이후 날짜 카드로 스크롤
+        if (!el) {
+            const allCards = document.querySelectorAll('[id^="date-"]');
+            for (const card of allCards) {
+                if (card.id.replace('date-', '') >= targetDate) {
+                    el = card;
+                    break;
+                }
+            }
+        }
+        if (el) {
+            setTimeout(() => el.scrollIntoView({behavior: 'smooth', block: 'start'}), 300);
+        }
+    }
+})();
 </script>
 </th:block>

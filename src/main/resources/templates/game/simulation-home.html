@@ -50,50 +50,41 @@
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
       }
 
-      .game-menu-card .emoji {
-        font-size: 2.5rem;
-        margin-bottom: 0.75rem;
-      }
-
       .game-menu-card .label {
         font-size: 1.1rem;
         font-weight: 600;
       }
 
       .game-menu-card.start {
-        background: linear-gradient(135deg, #ffd700, #ff9800);
+        background: linear-gradient(135deg, #22C55E, #166534);
         color: white;
-        box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+        box-shadow: 0 6px 16px rgba(22, 101, 52, 0.4);
       }
     </style>
   </head>
   <th:block layout:fragment="contents">
     <div class="container text-center my-5">
       <div class="overlay">
-        <h2 class="mb-5 fw-bold text-white">⚾ 시뮬레이션 게임 메뉴</h2>
+        <h2 class="mb-5 fw-bold text-white">시뮬레이션</h2>
 
         <div class="d-flex row g-4 justify-content-center align-items-center">
           <div class="col-md-3">
             <a href="/game/cards-view" class="game-menu-card">
-              <div class="emoji">📇</div>
               <div class="label">내 카드 보러가기</div>
             </a>
           </div>
           <div class="col-md-3">
             <a href="/game/draw-view" class="game-menu-card">
-              <div class="emoji">🎴</div>
               <div class="label">카드 뽑기</div>
             </a>
           </div>
           <div class="col-md-3">
             <a href="/game/lineup-view" class="game-menu-card">
-              <div class="emoji">🧢</div>
               <div class="label">라인업 구성</div>
             </a>
           </div>
           <div class="col-md-3">
-            <a href="/game/ready-view" class="game-menu-card">
-              <div class="emoji">🚀</div>
+            <a href="/game/ready-view" class="game-menu-card start">
               <div class="label">시뮬레이션 시작</div>
             </a>
           </div>
