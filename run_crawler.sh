@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "=== BaseBall LOCK 크롤러 실행 ==="
+echo "=== glvpen 크롤러 실행 ==="
 echo "현재 시간: $(date)"
 echo ""
 
@@ -19,9 +19,9 @@ echo ""
 echo "2. 크롤러 실행 중..."
 
 # WAR 파일로 크롤러 실행
-java -jar build/libs/BaseBallLOCK-0.0.1-SNAPSHOT.war \
+java -jar build/libs/glvpen-0.0.1-SNAPSHOT.war \
      --spring.main.web-application-type=none \
-     --spring.main.sources=com.kepg.BaseBallLOCK.crawler.util.CrawlersManualRunner
+     --spring.main.sources=com.kepg.glvpen.crawler.util.CrawlersManualRunner
 
 echo ""
 echo "=== 크롤러 실행 완료 ==="
