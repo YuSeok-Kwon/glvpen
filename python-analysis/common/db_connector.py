@@ -173,7 +173,7 @@ class DBConnector:
             FROM kbo_schedule s
             JOIN team t1 ON s.homeTeamId = t1.id
             JOIN team t2 ON s.awayTeamId = t2.id
-            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '종료'
         """
         return self.query(sql, (season,))
 
@@ -218,19 +218,25 @@ class DBConnector:
             SELECT sb.*
             FROM kbo_score_board sb
             JOIN kbo_schedule s ON sb.scheduleId = s.id
-            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '종료'
         """
         return self.query(sql, (season,))
 
     def get_crowd_stats(self, season: int) -> pd.DataFrame:
-        """관중 데이터"""
+        """관중 데이터 (해당 시즌 없으면 최신 시즌 fallback)"""
         sql = """
             SELECT cs.*, t.name AS teamName
             FROM kbo_crowd_stats cs
             JOIN team t ON cs.homeTeamId = t.id
             WHERE cs.season = %s
         """
-        return self.query(sql, (season,))
+        result = self.query(sql, (season,))
+        if result.empty:
+            fallback = self.query("SELECT MAX(season) as s FROM kbo_crowd_stats")
+            if not fallback.empty and fallback.iloc[0]['s']:
+                fb_season = int(fallback.iloc[0]['s'])
+                result = self.query(sql, (fb_season,))
+        return result
 
     # ==================== 경기 기록 데이터 ====================
 
@@ -244,7 +250,7 @@ class DBConnector:
             JOIN player p ON br.playerId = p.id
             JOIN team t ON br.teamId = t.id
             JOIN kbo_schedule s ON br.scheduleId = s.id
-            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '종료'
         """
         return self.query(sql, (season,))
 
@@ -260,7 +266,7 @@ class DBConnector:
             JOIN player p ON pr.playerId = p.id
             JOIN team t ON pr.teamId = t.id
             JOIN kbo_schedule s ON pr.scheduleId = s.id
-            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '종료'
         """
         return self.query(sql, (season,))
 
@@ -274,7 +280,7 @@ class DBConnector:
             JOIN player p ON bl.playerId = p.id
             JOIN team t ON bl.teamId = t.id
             JOIN kbo_schedule s ON bl.scheduleId = s.id
-            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '종료'
         """
         return self.query(sql, (season,))
 
@@ -490,7 +496,7 @@ class DBConnector:
             FROM kbo_schedule s
             JOIN team t1 ON s.homeTeamId = t1.id
             JOIN team t2 ON s.awayTeamId = t2.id
-            WHERE YEAR(s.matchDate) = %s AND s.status = '완료'
+            WHERE YEAR(s.matchDate) = %s AND s.status = '종료'
         """
         return self.query(sql, (season,))
 

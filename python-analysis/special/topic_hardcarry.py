@@ -15,14 +15,15 @@ import pandas as pd
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters, filter_qualified_pitchers
 
 
 TOPIC_INDEX = 15  # 특집 토픽 번호
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    batters = db.get_batters(season)
-    pitchers = db.get_pitchers(season)
+    batters = filter_qualified_batters(db.get_batters(season))
+    pitchers = filter_qualified_pitchers(db.get_pitchers(season))
     rankings = db.get_team_rankings(season)
 
     if batters.empty or rankings.empty:
@@ -33,40 +34,45 @@ def analyze(season: int, db: DBConnector) -> tuple:
     findings = []
     charts = []
 
+    # 가치 지표: WAR 우선, 없으면 OPS
+    val = 'WAR' if 'WAR' in batters.columns else 'OPS'
+
     # ==================== 팀별 캐리 의존도 계산 ====================
     carry_data = []
 
     for _, team_row in rankings.iterrows():
         team_name = team_row['teamName']
 
-        # 타자 WAR
+        # 타자 가치
         team_bat = batters[batters['teamName'] == team_name]
-        bat_war = team_bat['WAR'].dropna() if 'WAR' in team_bat.columns else []
+        bat_vals = team_bat[val].dropna().tolist() if val in team_bat.columns else []
 
-        # 투수 WAR
+        # 투수 가치 (투수는 WAR 없으면 제외)
         team_pit = pitchers[pitchers['teamName'] == team_name] if not pitchers.empty else pd.DataFrame()
-        pit_war = team_pit['WAR'].dropna() if not team_pit.empty and 'WAR' in team_pit.columns else []
+        if val == 'WAR' and not team_pit.empty and 'WAR' in team_pit.columns:
+            pit_vals = team_pit['WAR'].dropna().tolist()
+        else:
+            pit_vals = []
 
-        # 전체 WAR 합산
-        all_wars = list(bat_war) + list(pit_war)
-        if len(all_wars) < 3:
+        all_vals = bat_vals + pit_vals
+        if len(all_vals) < 3:
             continue
 
-        all_wars_sorted = sorted(all_wars, reverse=True)
-        total_war = sum(all_wars_sorted)
-        if total_war <= 0:
+        all_vals_sorted = sorted(all_vals, reverse=True)
+        total_val = sum(all_vals_sorted)
+        if total_val <= 0:
             continue
 
-        top1_war = all_wars_sorted[0]
-        top2_war = sum(all_wars_sorted[:2])
+        top1_val = all_vals_sorted[0]
+        top2_val = sum(all_vals_sorted[:2])
 
         carry_data.append({
             'teamName': team_name,
-            'totalWAR': round(total_war, 2),
-            'top1WAR': round(top1_war, 2),
-            'top2WAR': round(top2_war, 2),
-            'top1Ratio': round(top1_war / total_war * 100, 2),
-            'top2Ratio': round(top2_war / total_war * 100, 2),
+            f'total{val}': round(total_val, 3),
+            f'top1{val}': round(top1_val, 3),
+            f'top2{val}': round(top2_val, 3),
+            'top1Ratio': round(top1_val / total_val * 100, 2),
+            'top2Ratio': round(top2_val / total_val * 100, 2),
             'winRate': float(team_row['winRate']) if 'winRate' in team_row else 0.0,
             'ranking': int(team_row['ranking']),
         })
@@ -121,7 +127,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
     # 팀별 Top1/Top2 의존도
     team_names = [d['teamName'] for d in carry_data]
     charts.append(ChartBuilder.bar(
-        '팀별 핵심 선수 WAR 의존도(%)',
+        f'팀별 핵심 선수 {val} 의존도(%)',
         team_names,
         [
             {'label': 'Top1 의존도', 'data': [d['top1Ratio'] for d in carry_data]},
@@ -135,11 +141,11 @@ def analyze(season: int, db: DBConnector) -> tuple:
         [{'label': '팀', 'data': [{'x': d['top1Ratio'], 'y': d['winRate']} for d in carry_data]}]
     ))
 
-    # 팀 총 WAR 분포
+    # 팀 총 가치 분포
     charts.append(ChartBuilder.bar(
-        '팀별 총 WAR',
+        f'팀별 총 {val}',
         team_names,
-        [{'label': '총 WAR', 'data': [d['totalWAR'] for d in carry_data]}]
+        [{'label': f'총 {val}', 'data': [d[f'total{val}'] for d in carry_data]}]
     ))
 
     findings.insert(0, f"팀별 하드캐리 분석 ({season}시즌)")

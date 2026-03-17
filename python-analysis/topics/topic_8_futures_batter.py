@@ -22,7 +22,9 @@ def analyze(season: int, db: DBConnector) -> tuple:
     findings = []
     charts = []
 
-    if futures_bat.empty or 'WAR' not in futures_bat.columns:
+    # 가치 지표: WAR 우선, 없으면 OPS
+    val = 'WAR' if (not futures_bat.empty and 'WAR' in futures_bat.columns) else 'OPS'
+    if futures_bat.empty or val not in futures_bat.columns:
         return '{}', '[]', '퓨처스 타자 데이터 없음', '{}'
 
     # PA 필터
@@ -33,23 +35,23 @@ def analyze(season: int, db: DBConnector) -> tuple:
         return '{}', '[]', '퓨처스 타자 PA 50 이상 데이터 없음', '{}'
 
     # Top 10 유망 타자
-    top10 = futures_bat.nlargest(10, 'WAR')
-    cols = [c for c in ['playerName', 'teamName', 'WAR', 'AVG', 'OPS', 'HR', 'RBI', 'SB'] if c in top10.columns]
+    top10 = futures_bat.nlargest(10, val)
+    cols = [c for c in ['playerName', 'teamName', 'AVG', 'OPS', 'HR', 'RBI', 'SB', 'SLG'] if c in top10.columns]
     stats_dict['퓨처스_타자_Top10'] = top10[cols].to_dict('records')
 
     # 기술통계
-    for metric in ['WAR', 'AVG', 'OPS', 'HR']:
+    for metric in ['AVG', 'OPS', 'HR', 'SLG']:
         if metric in futures_bat.columns:
             stats_dict[f'퓨처스_타자_{metric}'] = StatsUtils.descriptive(
                 futures_bat[metric].dropna().values, f'퓨처스 타자 {metric}'
             )
 
-    # 정규성 검정
-    if 'WAR' in futures_bat.columns and len(futures_bat) >= 3:
-        hypothesis['퓨처스_타자_WAR_정규성'] = StatsUtils.normality_test(
-            futures_bat['WAR'].dropna().values, '퓨처스 타자 WAR'
+    # OPS 정규성 검정
+    if val in futures_bat.columns and len(futures_bat) >= 3:
+        hypothesis[f'퓨처스_타자_{val}_정규성'] = StatsUtils.normality_test(
+            futures_bat[val].dropna().values, f'퓨처스 타자 {val}'
         )
-        findings.append(f"퓨처스 타자 WAR 분포: {hypothesis['퓨처스_타자_WAR_정규성']['interpretation']}")
+        findings.append(f"퓨처스 타자 {val} 분포: {hypothesis[f'퓨처스_타자_{val}_정규성']['interpretation']}")
 
     # 1군 비교
     if not first_bat.empty:
@@ -62,11 +64,11 @@ def analyze(season: int, db: DBConnector) -> tuple:
                 )
                 findings.append(f"퓨처스 vs 1군 {metric}: {hypothesis[f'퓨처스vs1군_{metric}']['interpretation']}")
 
-    # 차트: Top 10 WAR
+    # 차트: Top 10
     charts.append(ChartBuilder.bar(
-        '퓨처스 유망 타자 Top 10 (WAR)',
+        f'퓨처스 유망 타자 Top 10 ({val})',
         [f"{r['playerName']}({r['teamName']})" for r in stats_dict['퓨처스_타자_Top10']],
-        [{'label': 'WAR', 'data': [r['WAR'] for r in stats_dict['퓨처스_타자_Top10']]}]
+        [{'label': val, 'data': [r[val] for r in stats_dict['퓨처스_타자_Top10']]}]
     ))
 
     # 차트: 1군 vs 퓨처스 평균 비교
@@ -92,7 +94,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
     # 레이더: 1위 유망주
     if stats_dict['퓨처스_타자_Top10']:
         top = stats_dict['퓨처스_타자_Top10'][0]
-        radar_labels = [k for k in ['WAR', 'AVG', 'OPS', 'HR'] if k in top]
+        radar_labels = [k for k in ['OPS', 'AVG', 'SLG', 'HR'] if k in top]
         radar_data = [top[k] for k in radar_labels]
         if radar_labels:
             charts.append(ChartBuilder.radar(

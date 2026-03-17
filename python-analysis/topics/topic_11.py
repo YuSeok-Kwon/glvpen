@@ -12,10 +12,11 @@ from datetime import date
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    batters = db.get_batters(season)
+    batters = filter_qualified_batters(db.get_batters(season))
     players = db.get_players_with_birth(season)
 
     if batters.empty or players.empty:
@@ -33,9 +34,11 @@ def analyze(season: int, db: DBConnector) -> tuple:
         lambda bd: date(season, 7, 1).year - bd.year  # 시즌 중반(7월) 기준
     )
 
-    # 타자 WAR과 나이 병합
-    if 'WAR' in batters.columns:
-        merged = batters[['playerId', 'playerName', 'teamName', 'WAR']].merge(
+    # 가치 지표: WAR 우선, 없으면 OPS
+    val = 'WAR' if 'WAR' in batters.columns else 'OPS'
+
+    if val in batters.columns:
+        merged = batters[['playerId', 'playerName', 'teamName', val]].merge(
             players[['playerId', 'age']], on='playerId', how='inner'
         ).dropna()
 
@@ -48,38 +51,38 @@ def analyze(season: int, db: DBConnector) -> tuple:
         age_stats = {}
         age_groups_for_anova = {}
         for label in age_labels:
-            group = merged[merged['age_group'] == label]['WAR'].dropna()
+            group = merged[merged['age_group'] == label][val].dropna()
             if len(group) >= 2:
                 age_stats[label] = StatsUtils.descriptive(group.values, f'{label}세')
                 age_groups_for_anova[label] = group.values
 
-        stats_dict['나이대별_WAR'] = age_stats
+        stats_dict[f'나이대별_{val}'] = age_stats
 
         # 피크 나이대 식별
         if age_stats:
             peak_group = max(age_stats.items(), key=lambda x: x[1]['mean'])
             stats_dict['피크_나이대'] = peak_group[0]
-            stats_dict['피크_평균WAR'] = peak_group[1]['mean']
-            findings.append(f"피크 나이대: {peak_group[0]}세 (평균 WAR: {peak_group[1]['mean']:.2f})")
+            stats_dict[f'피크_평균{val}'] = peak_group[1]['mean']
+            findings.append(f"피크 나이대: {peak_group[0]}세 (평균 {val}: {peak_group[1]['mean']:.3f})")
 
-        # ANOVA: 나이대별 WAR 차이
+        # ANOVA: 나이대별 차이
         if len(age_groups_for_anova) >= 3:
-            hypothesis['나이대별_WAR_ANOVA'] = StatsUtils.anova(age_groups_for_anova)
-            findings.append(f"나이대별 WAR: {hypothesis['나이대별_WAR_ANOVA']['interpretation']}")
+            hypothesis[f'나이대별_{val}_ANOVA'] = StatsUtils.anova(age_groups_for_anova)
+            findings.append(f"나이대별 {val}: {hypothesis[f'나이대별_{val}_ANOVA']['interpretation']}")
 
         # 나이대별 정규성 검정 (피크 나이대)
         if stats_dict.get('피크_나이대') and stats_dict['피크_나이대'] in age_groups_for_anova:
             peak_data = age_groups_for_anova[stats_dict['피크_나이대']]
-            hypothesis['피크나이대_WAR_정규성'] = StatsUtils.normality_test(
-                peak_data, f"{stats_dict['피크_나이대']}세 WAR"
+            hypothesis[f'피크나이대_{val}_정규성'] = StatsUtils.normality_test(
+                peak_data, f"{stats_dict['피크_나이대']}세 {val}"
             )
 
-        # 차트: 나이대별 평균 WAR
+        # 차트: 나이대별 평균
         if age_stats:
             charts.append(ChartBuilder.line(
-                '나이대별 평균 WAR (피크 커브)',
+                f'나이대별 평균 {val} (피크 커브)',
                 list(age_stats.keys()),
-                [{'label': '평균 WAR', 'data': [s['mean'] for s in age_stats.values()]}]
+                [{'label': f'평균 {val}', 'data': [s['mean'] for s in age_stats.values()]}]
             ))
 
         # 나이대별 선수 수 분포
@@ -90,10 +93,10 @@ def analyze(season: int, db: DBConnector) -> tuple:
             [{'label': '선수 수', 'data': age_counts.values.tolist()}]
         ))
 
-        # 나이별 WAR 상위 선수
-        top_by_age = merged.loc[merged.groupby('age_group')['WAR'].idxmax()]
+        # 나이별 상위 선수
+        top_by_age = merged.loc[merged.groupby('age_group', observed=True)[val].idxmax()]
         stats_dict['나이대별_최고선수'] = top_by_age[
-            ['playerName', 'teamName', 'age', 'age_group', 'WAR']
+            ['playerName', 'teamName', 'age', 'age_group', val]
         ].to_dict('records')
 
     insight = StatsUtils.format_insight('나이-성과 커브 분석', findings)

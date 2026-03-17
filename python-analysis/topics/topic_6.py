@@ -58,7 +58,7 @@ def analyze(season: int, db: DBConnector) -> tuple:
     ).reset_index()
     # 실제 파크팩터: 해당 구장 평균 득점 / 리그 평균 득점
     league_avg_score = (schedules['homeScore'].mean() + schedules['awayScore'].mean())
-    stadium_stats['park_factor'] = round(
+    stadium_stats['park_factor'] = np.round(
         (schedules.groupby('stadium')['homeScore'].mean() +
          schedules.groupby('stadium')['awayScore'].mean()).values / league_avg_score, 3
     )
@@ -100,6 +100,6 @@ def analyze(season: int, db: DBConnector) -> tuple:
     insight = StatsUtils.format_insight('홈/원정 & 파크팩터 분석', findings)
 
     return (json.dumps(stats_dict, ensure_ascii=False, default=str),
-            json.dumps(charts, ensure_ascii=False),
+            json.dumps(charts, ensure_ascii=False, default=str),
             insight,
             json.dumps(hypothesis, ensure_ascii=False, default=str))
