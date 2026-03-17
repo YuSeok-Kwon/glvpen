@@ -28,6 +28,9 @@ public interface UserRepository extends JpaRepository<User, Integer>{
 	// 로그인 ID로 유저 조회 (회원 정보 가져오기 등에서 사용)
 	public Optional<User> findByLoginId(String loginId);
 
+	// 닉네임 중복 확인 (본인 제외)
+	public int countByNicknameAndIdNot(String nickname, Integer id);
+
 	/**
 	 * 모든 유저의 ID 목록 조회
 	 * Native Query 대신 JPQL 사용으로 DB 독립성 확보

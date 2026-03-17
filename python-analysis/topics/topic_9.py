@@ -10,13 +10,14 @@ import numpy as np
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_batters_multi_season, filter_pitchers_multi_season
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
     # ABS 도입 전(season-1)과 후(season) 비교
     prev_season = season - 1
-    batters_multi = db.get_batters_multi_season([prev_season, season])
-    pitchers_multi = db.get_pitchers_multi_season([prev_season, season])
+    batters_multi = filter_batters_multi_season(db.get_batters_multi_season([prev_season, season]))
+    pitchers_multi = filter_pitchers_multi_season(db.get_pitchers_multi_season([prev_season, season]))
 
     if batters_multi.empty:
         return '{}', '[]', '데이터 없음', '{}'

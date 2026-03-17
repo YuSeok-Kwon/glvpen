@@ -13,15 +13,16 @@ import pandas as pd
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters, filter_qualified_pitchers
 
 
 TOPIC_INDEX = 17  # 특집 토픽 번호
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    # 정규시즌 데이터
-    regular_bat = db.get_batters_by_series(season, '0')
-    regular_pit = db.get_pitchers_by_series(season, '0')
+    # 정규시즌 데이터 (규정 필터 적용)
+    regular_bat = filter_qualified_batters(db.get_batters_by_series(season, '0'))
+    regular_pit = filter_qualified_pitchers(db.get_pitchers_by_series(season, '0'))
 
     # 포스트시즌 데이터 (series 코드: KBO는 다양 - '3'=와일드카드, '4'=준플, '5'=플오, '7'=한시 등)
     post_series_codes = ['3', '4', '5', '7', '9']

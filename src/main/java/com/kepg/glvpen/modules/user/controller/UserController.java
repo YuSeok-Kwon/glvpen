@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.kepg.glvpen.modules.team.domain.Team;
+import com.kepg.glvpen.modules.team.repository.TeamRepository;
 import com.kepg.glvpen.modules.user.domain.User;
 import com.kepg.glvpen.modules.user.dto.UserHomeDTO;
 import com.kepg.glvpen.modules.user.service.UserHomeService;
@@ -26,6 +28,7 @@ public class UserController {
 
     private final UserService userService;
     private final UserHomeService userHomeService;
+    private final TeamRepository teamRepository;
 
 
     @GetMapping("/login-view")
@@ -226,5 +229,183 @@ public class UserController {
 
         return "user/home";
     }
-    
+
+    // 락커룸 페이지
+    @GetMapping("/locker-room")
+    public String lockerRoomView(Model model, HttpSession session) {
+        User user = (User) session.getAttribute("loginUser");
+        if (user == null) {
+            return "redirect:/user/login-view";
+        }
+
+        // 세션 유저는 LAZY 로딩이 안 될 수 있으므로 DB에서 다시 조회
+        User freshUser = userService.findById(user.getId());
+        model.addAttribute("user", freshUser);
+        model.addAttribute("teams", teamRepository.findAll());
+
+        return "user/locker-room";
+    }
+
+    // 닉네임 변경 API
+    @PostMapping("/update-nickname")
+    @ResponseBody
+    public Map<String, String> updateNickname(
+            @RequestParam("nickname") String nickname,
+            HttpSession session) {
+
+        Map<String, String> resultMap = new HashMap<>();
+        User user = (User) session.getAttribute("loginUser");
+
+        if (user == null) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "로그인이 필요합니다.");
+            return resultMap;
+        }
+
+        if (nickname == null || nickname.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "닉네임을 입력해주세요.");
+            return resultMap;
+        }
+
+        boolean success = userService.updateNickname(user.getId(), nickname);
+        if (success) {
+            // 세션 유저 갱신
+            User updatedUser = userService.findById(user.getId());
+            session.setAttribute("loginUser", updatedUser);
+            resultMap.put("result", "success");
+            resultMap.put("message", "닉네임이 변경되었습니다.");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "이미 사용 중인 닉네임입니다.");
+        }
+        return resultMap;
+    }
+
+    // 이메일 변경 API
+    @PostMapping("/update-email")
+    @ResponseBody
+    public Map<String, String> updateEmail(
+            @RequestParam("email") String email,
+            HttpSession session) {
+
+        Map<String, String> resultMap = new HashMap<>();
+        User user = (User) session.getAttribute("loginUser");
+
+        if (user == null) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "로그인이 필요합니다.");
+            return resultMap;
+        }
+
+        if (email == null || email.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "이메일을 입력해주세요.");
+            return resultMap;
+        }
+
+        boolean success = userService.updateEmail(user.getId(), email);
+        if (success) {
+            User updatedUser = userService.findById(user.getId());
+            session.setAttribute("loginUser", updatedUser);
+            resultMap.put("result", "success");
+            resultMap.put("message", "이메일이 변경되었습니다.");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "이메일 변경에 실패했습니다.");
+        }
+        return resultMap;
+    }
+
+    // 선호팀 변경 API
+    @PostMapping("/update-favorite-team")
+    @ResponseBody
+    public Map<String, String> updateFavoriteTeam(
+            @RequestParam("teamId") Integer teamId,
+            HttpSession session) {
+
+        Map<String, String> resultMap = new HashMap<>();
+        User user = (User) session.getAttribute("loginUser");
+
+        if (user == null) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "로그인이 필요합니다.");
+            return resultMap;
+        }
+
+        boolean success = userService.updateFavoriteTeam(user.getId(), teamId);
+        if (success) {
+            User updatedUser = userService.findById(user.getId());
+            session.setAttribute("loginUser", updatedUser);
+            resultMap.put("result", "success");
+            resultMap.put("message", "선호팀이 변경되었습니다.");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "선호팀 변경에 실패했습니다.");
+        }
+        return resultMap;
+    }
+
+    // 비밀번호 변경 API
+    @PostMapping("/change-password")
+    @ResponseBody
+    public Map<String, String> changePassword(
+            @RequestParam("currentPassword") String currentPassword,
+            @RequestParam("newPassword") String newPassword,
+            HttpSession session) {
+
+        Map<String, String> resultMap = new HashMap<>();
+        User user = (User) session.getAttribute("loginUser");
+
+        if (user == null) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "로그인이 필요합니다.");
+            return resultMap;
+        }
+
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "새 비밀번호를 입력해주세요.");
+            return resultMap;
+        }
+
+        boolean success = userService.changePassword(user.getId(), currentPassword, newPassword);
+        if (success) {
+            resultMap.put("result", "success");
+            resultMap.put("message", "비밀번호가 변경되었습니다. 다시 로그인해주세요.");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "현재 비밀번호가 일치하지 않습니다.");
+        }
+        return resultMap;
+    }
+
+    // 회원 탈퇴 API
+    @PostMapping("/delete-account")
+    @ResponseBody
+    public Map<String, String> deleteAccount(
+            @RequestParam("password") String password,
+            HttpSession session) {
+
+        Map<String, String> resultMap = new HashMap<>();
+        User user = (User) session.getAttribute("loginUser");
+
+        if (user == null) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "로그인이 필요합니다.");
+            return resultMap;
+        }
+
+        boolean success = userService.deleteUser(user.getId(), password);
+        if (success) {
+            session.invalidate();
+            resultMap.put("result", "success");
+            resultMap.put("message", "회원 탈퇴가 완료되었습니다.");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "비밀번호가 일치하지 않습니다.");
+        }
+        return resultMap;
+    }
+
 }

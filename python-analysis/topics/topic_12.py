@@ -10,10 +10,11 @@ import numpy as np
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    batters = db.get_batters(season)
+    batters = filter_qualified_batters(db.get_batters(season))
     if batters.empty:
         return '{}', '[]', '데이터 없음', '{}'
 

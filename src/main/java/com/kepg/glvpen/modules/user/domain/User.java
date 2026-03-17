@@ -77,4 +77,20 @@ public class User {
     public void setFavoriteTeam(Team favoriteTeam) {
         this.favoriteTeam = favoriteTeam;
     }
+
+    /**
+     * 닉네임 변경 메소드
+     * @param nickname 새로운 닉네임
+     */
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    /**
+     * 이메일 변경 메소드
+     * @param email 새로운 이메일
+     */
+    public void setEmail(String email) {
+        this.email = email;
+    }
 }

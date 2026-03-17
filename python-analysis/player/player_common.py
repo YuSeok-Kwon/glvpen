@@ -159,76 +159,10 @@ def normalize_for_radar(values: list) -> list:
     return [round(v / max_val * 100, 1) for v in values]
 
 
-# ==================== 규정 필터 ====================
-
-# KBO 144경기 기준
-MIN_PA = 223       # 규정타석 50% (144 × 3.1 × 0.5)
-
-
-def filter_qualified_batters(df: pd.DataFrame, min_pa: int = MIN_PA) -> pd.DataFrame:
-    """규정타석 50% 충족 타자만 필터. PA 컬럼 필요."""
-    if df.empty or 'PA' not in df.columns:
-        return df
-    df = df.copy()
-    df['PA'] = pd.to_numeric(df['PA'], errors='coerce').fillna(0)
-    before = len(df)
-    filtered = df[df['PA'] >= min_pa].copy()
-    print(f"    [필터] 규정타석50%: {before}명 → {len(filtered)}명 (PA >= {min_pa})")
-    return filtered
-
-
-def filter_qualified_pitchers(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    선발투수: IP 상위 50%, 불펜투수: G 상위 50% 필터.
-    GS, IP, G 컬럼 필요.
-    """
-    if df.empty:
-        return df
-    df = df.copy()
-
-    for c in ['GS', 'IP', 'G']:
-        if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
-        else:
-            df[c] = 0
-
-    before = len(df)
-
-    # 선발(GS > 0) / 불펜(GS == 0) 분리
-    starters = df[df['GS'] > 0].copy()
-    relievers = df[df['GS'] == 0].copy()
-
-    # 선발: IP 상위 50%
-    if not starters.empty:
-        ip_median = starters['IP'].median()
-        starters = starters[starters['IP'] >= ip_median]
-
-    # 불펜: G 상위 50%
-    if not relievers.empty:
-        g_median = relievers['G'].median()
-        relievers = relievers[relievers['G'] >= g_median]
-
-    filtered = pd.concat([starters, relievers], ignore_index=True)
-    s_cnt = len(starters)
-    r_cnt = len(relievers)
-    print(f"    [필터] 투수: {before}명 → {len(filtered)}명 (선발 {s_cnt} + 불펜 {r_cnt})")
-    return filtered
-
-
-def merge_real_position(db: DBConnector, df: pd.DataFrame) -> pd.DataFrame:
-    """
-    batter_stats의 position(전부 'DH')을 player 테이블의 실제 포지션으로 교체.
-    df에 playerId 컬럼이 있어야 한다.
-    """
-    if df.empty or 'playerId' not in df.columns:
-        return df
-    pos_sql = "SELECT id AS playerId, position AS real_position FROM player"
-    pos_df = db.query(pos_sql)
-    merged = df.merge(pos_df, on='playerId', how='left')
-    # 기존 position 컬럼을 실제 포지션으로 교체
-    if 'position' in merged.columns:
-        merged['position'] = merged['real_position']
-    else:
-        merged['position'] = merged['real_position']
-    merged = merged.drop(columns=['real_position'], errors='ignore')
-    return merged
+# ==================== 규정 필터 (common/filters.py에서 re-export) ====================
+from common.filters import (
+    MIN_PA, MIN_IP_STARTER,
+    filter_qualified_batters, filter_qualified_pitchers,
+    filter_batters_multi_season, filter_pitchers_multi_season,
+    merge_real_position,
+)

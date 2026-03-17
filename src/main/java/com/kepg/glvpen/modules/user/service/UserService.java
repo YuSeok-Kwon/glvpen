@@ -144,4 +144,90 @@ public class UserService {
 	public List<Integer> findAllUserIds(){
 		return userRepository.findAllUserIds();
 	}
+
+	// 닉네임 변경
+	@Transactional
+	public boolean updateNickname(Integer userId, String newNickname) {
+		// 본인 제외 닉네임 중복 체크
+		if (userRepository.countByNicknameAndIdNot(newNickname, userId) > 0) {
+			return false;
+		}
+
+		Optional<User> optionalUser = userRepository.findById(userId);
+		if (optionalUser.isPresent()) {
+			User user = optionalUser.get();
+			user.setNickname(newNickname);
+			userRepository.save(user);
+			return true;
+		}
+		return false;
+	}
+
+	// 이메일 변경
+	@Transactional
+	public boolean updateEmail(Integer userId, String newEmail) {
+		Optional<User> optionalUser = userRepository.findById(userId);
+		if (optionalUser.isPresent()) {
+			User user = optionalUser.get();
+			user.setEmail(newEmail);
+			userRepository.save(user);
+			return true;
+		}
+		return false;
+	}
+
+	// 선호팀 변경
+	@Transactional
+	public boolean updateFavoriteTeam(Integer userId, Integer teamId) {
+		Optional<User> optionalUser = userRepository.findById(userId);
+		if (optionalUser.isPresent()) {
+			User user = optionalUser.get();
+			Team team = teamRepository.findById(teamId).orElse(null);
+			if (team == null) {
+				return false;
+			}
+			user.setFavoriteTeam(team);
+			userRepository.save(user);
+			return true;
+		}
+		return false;
+	}
+
+	// 비밀번호 변경 (현재 비밀번호 확인 후)
+	@Transactional
+	public boolean changePassword(Integer userId, String currentPassword, String newPassword) {
+		Optional<User> optionalUser = userRepository.findById(userId);
+		if (optionalUser.isPresent()) {
+			User user = optionalUser.get();
+			// 현재 비밀번호 검증
+			if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+				return false;
+			}
+			user.setPassword(passwordEncoder.encode(newPassword));
+			userRepository.save(user);
+			return true;
+		}
+		return false;
+	}
+
+	// 회원 탈퇴
+	@Transactional
+	public boolean deleteUser(Integer userId, String password) {
+		Optional<User> optionalUser = userRepository.findById(userId);
+		if (optionalUser.isPresent()) {
+			User user = optionalUser.get();
+			// 비밀번호 확인
+			if (!passwordEncoder.matches(password, user.getPassword())) {
+				return false;
+			}
+			userRepository.delete(user);
+			return true;
+		}
+		return false;
+	}
+
+	// ID로 유저 조회
+	public User findById(Integer userId) {
+		return userRepository.findById(userId).orElse(null);
+	}
 }

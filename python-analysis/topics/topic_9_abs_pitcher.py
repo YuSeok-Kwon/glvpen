@@ -13,11 +13,12 @@ import pandas as pd
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_pitchers_multi_season
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
     prev_season = season - 1
-    pitchers_multi = db.get_pitchers_multi_season([prev_season, season])
+    pitchers_multi = filter_pitchers_multi_season(db.get_pitchers_multi_season([prev_season, season]))
 
     if pitchers_multi.empty:
         return '{}', '[]', '투수 데이터 없음', '{}'
