@@ -1,4 +1,4 @@
-# BaseBall LOCK 3.0
+# glvpen 3.0
 
 > **좋아하는 것을 따라갔더니, 하고 싶은 것을 찾았다.**
 
@@ -8,13 +8,13 @@
 
 야구는 어느새 매일의 루틴이 되었고, Java 개발자를 꿈꾸며 시작한 이 프로젝트는 나를 데이터의 세계로 이끌었다. Controller를 만들고 Service 로직을 짜야 하는데, 정작 내가 몰두하고 있던 건 크롤링 파싱 구조, 다시즌 데이터 스키마 설계, SQL 쿼리 최적화, 그리고 BABIP이 비정상적인 타자의 다음 시즌 예측이었다.
 
-야구는 데이터의 스포츠다. 좋아하는 것(야구)과 흥미를 느끼는 것(데이터)이 정확히 겹치는 지점에서 BaseBall LOCK이 태어났다.
+야구는 데이터의 스포츠다. 좋아하는 것(야구)과 흥미를 느끼는 것(데이터)이 정확히 겹치는 지점에서 glvpen이 태어났다.
 
 ---
 
 ## 프로젝트 개요
 
-KBO 데이터 분석 & 시뮬레이션 플랫폼. 실제 KBO 경기 데이터를 Statiz에서 크롤링하여 데이터 분석 인사이트를 도출하고, 카드 기반 시뮬레이션을 즐길 수 있는 플랫폼이다. 다시즌(2020~2025) 데이터와 세이버메트릭스 지표를 활용한 분석 대시보드 및 AI 자동 분석 컬럼을 제공한다.
+KBO 데이터 분석 & 시뮬레이션 플랫폼. 실제 KBO 경기 데이터를 외부 사이트에서 크롤링하여 데이터 분석 인사이트를 도출하고, 카드 기반 시뮬레이션을 즐길 수 있는 플랫폼이다. 다시즌(2020~2025) 데이터와 세이버메트릭스 지표를 활용한 분석 대시보드 및 AI 자동 분석 컬럼을 제공한다.
 
 ### 프로젝트 진화
 
@@ -48,10 +48,10 @@ KBO 데이터 분석 & 시뮬레이션 플랫폼. 실제 KBO 경기 데이터를
 ## 프로젝트 구조
 
 ```
-BaseBallLOCK/
-├── src/main/java/com/kepg/BaseBallLOCK/
+glvpen/
+├── src/main/java/com/kepg/glvpen/
 │   ├── config/                         # 설정
-│   ├── crawler/                        # 데이터 크롤링 (Statiz)
+│   ├── crawler/                        # 데이터 크롤링
 │   ├── common/                         # 공통 모듈
 │   └── modules/                        # Feature-based 모듈
 │       ├── user/                       #   사용자 관리
@@ -69,11 +69,11 @@ BaseBallLOCK/
 ## 시작하기
 
 ```bash
-git clone https://github.com/your-repo/BaseBallLOCK.git
-cd BaseBallLOCK
+git clone https://github.com/your-repo/glvpen.git
+cd glvpen
 
 # DB 생성
-mysql -u root -p -e "CREATE DATABASE BaseBallLOCK;"
+mysql -u root -p -e "CREATE DATABASE glvpen;"
 
 # 보안 변수 설정 (security-variable.yml)
 # mysql.password 및 gemini.api-key 설정

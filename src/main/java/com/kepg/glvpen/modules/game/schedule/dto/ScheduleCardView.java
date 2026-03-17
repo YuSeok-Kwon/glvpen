@@ -11,7 +11,7 @@ import lombok.Getter;
 @Getter
 public class ScheduleCardView {
 	private Integer id;
-	private Integer statizId;
+	private Integer externalId;
 	private Timestamp matchDate;
     private String stadium;
     private String homeTeamName;

@@ -243,7 +243,7 @@ def generate_column_html(key: str, history_entries: list, db) -> tuple:
     parts.append('<hr style="margin:2rem 0 1rem;">')
     parts.append(
         f'<p style="color:#adb5bd;font-size:0.85rem;">'
-        f'본 분석은 BaseBall LOCK 3.0 Python 배치 분석 시스템으로 자동 생성되었습니다.<br>'
+        f'본 분석은 glvpen Python 배치 분석 시스템으로 자동 생성되었습니다.<br>'
         f'분석 일시: {datetime.now().strftime("%Y년 %m월 %d일")}</p>'
     )
 

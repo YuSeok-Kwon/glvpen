@@ -38,7 +38,7 @@ def generate_column():
     # 제목
     print("# 2026 WBC 한국 대표팀 전력 분석: 데이터로 본 태극마크의 경쟁력")
     print()
-    print("*BaseBall LOCK 3.0 데이터 분석팀 | 2026.03.05*")
+    print("*glvpen 데이터 분석팀 | 2026.03.05*")
     print()
 
     # 리드
@@ -221,7 +221,7 @@ def generate_column():
 
     print()
     print("---")
-    print("*본 분석은 BaseBall LOCK 3.0 Python 배치 분석 시스템으로 자동 생성되었습니다.*")
+    print("*본 분석은 glvpen Python 배치 분석 시스템으로 자동 생성되었습니다.*")
     print("*통계 검정: scipy (Welch t-test), 유의수준 α=0.05*")
     print()
     print("=" * 70)

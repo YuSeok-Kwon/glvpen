@@ -98,7 +98,7 @@ public class Basic2StandaloneCrawler {
         System.out.println("\n===== Phase 2: DB 저장 시작 =====");
 
         // MySQL 연결 (useSSL=false로 SSL 간섭 방지)
-        String dbUrl = "jdbc:mysql://localhost:3306/BaseBallLOCK?useSSL=false&allowPublicKeyRetrieval=true";
+        String dbUrl = "jdbc:mysql://localhost:3306/glvpen?useSSL=false&allowPublicKeyRetrieval=true";
         String dbUser = "root";
         String dbPass = "rnjs7944";
 

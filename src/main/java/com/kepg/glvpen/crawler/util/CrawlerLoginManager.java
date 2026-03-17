@@ -11,24 +11,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * STATIZ 로그인을 중앙 관리하는 컴포넌트.
+ * 크롤링 로그인을 중앙 관리하는 컴포넌트.
  * 모든 크롤러가 이 매니저를 통해 인증된 WebDriver를 받는다.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class StatizLoginManager {
+public class CrawlerLoginManager {
 
     private static final String LOGIN_URL = "https://www.statiz.co.kr/member/?m=login";
 
-    @Value("${statiz.username}")
+    @Value("${crawler.login.username}")
     private String username;
 
-    @Value("${statiz.password}")
+    @Value("${crawler.login.password}")
     private String password;
 
     /**
-     * WebDriver로 STATIZ 로그인 수행
+     * WebDriver로 외부 사이트 로그인 수행
      */
     public void login(WebDriver driver) {
         try {
@@ -43,19 +43,19 @@ public class StatizLoginManager {
             pwField.clear();
             pwField.sendKeys(password);
 
-            // loginCheck() 호출 (STATIZ 로그인 폼의 JS 함수)
+            // loginCheck() 호출 (로그인 폼의 JS 함수)
             ((JavascriptExecutor) driver).executeScript("loginCheck()");
             Thread.sleep(3000);
 
             // 로그인 성공 확인
             if (driver.getCurrentUrl().contains("/member/?m=login")) {
-                throw new RuntimeException("STATIZ 로그인 실패");
+                throw new RuntimeException("크롤러 로그인 실패");
             }
-            log.info("STATIZ 로그인 성공");
+            log.info("크롤러 로그인 성공");
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("STATIZ 로그인 중 인터럽트 발생", e);
+            throw new RuntimeException("크롤러 로그인 중 인터럽트 발생", e);
         }
     }
 

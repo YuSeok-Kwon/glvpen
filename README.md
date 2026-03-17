@@ -224,7 +224,7 @@ git clone https://github.com/your-repo/glvpen.git
 cd glvpen
 
 # DB 생성
-mysql -u root -p -e "CREATE DATABASE BaseBallLOCK;"
+mysql -u root -p -e "CREATE DATABASE glvpen;"
 
 # 보안 변수 설정 (security-variable.yml)
 # mysql.password 및 gemini.api-key 설정

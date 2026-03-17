@@ -24,9 +24,9 @@ public final class CrawlerUtils {
     // ==================== 공통 Regex 패턴 ====================
 
     /**
-     * Statiz URL에서 s_no 파라미터를 추출하는 패턴
+     * URL에서 s_no 파라미터를 추출하는 패턴
      */
-    public static final Pattern STATIZ_ID_PATTERN = Pattern.compile("s_no=(\\d+)");
+    public static final Pattern EXTERNAL_ID_PATTERN = Pattern.compile("s_no=(\\d+)");
 
     /**
      * 날짜 패턴 (MM-dd)
@@ -173,22 +173,22 @@ public final class CrawlerUtils {
     // ==================== Regex 유틸리티 ====================
 
     /**
-     * URL에서 Statiz ID를 추출합니다.
+     * URL에서 외부 ID를 추출합니다.
      *
      * @param url URL 문자열
-     * @return Statiz ID, 없으면 null
+     * @return 외부 ID, 없으면 null
      */
-    public static Integer extractStatizId(String url) {
+    public static Integer extractExternalId(String url) {
         if (url == null || !url.contains("s_no=")) {
             return null;
         }
 
-        Matcher matcher = STATIZ_ID_PATTERN.matcher(url);
+        Matcher matcher = EXTERNAL_ID_PATTERN.matcher(url);
         if (matcher.find()) {
             try {
                 return Integer.parseInt(matcher.group(1));
             } catch (NumberFormatException e) {
-                log.warn("Statiz ID 파싱 실패: {}", url);
+                log.warn("외부 ID 파싱 실패: {}", url);
             }
         }
 

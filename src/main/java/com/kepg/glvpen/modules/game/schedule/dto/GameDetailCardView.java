@@ -24,7 +24,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class GameDetailCardView {
     private Integer id;
-    private Integer statizId;
+    private Integer externalId;
     private Timestamp matchDate;
     private String stadium;
     private String status;

@@ -1,4 +1,4 @@
-# BaseBall LOCK RESTful API 설계 가이드
+# glvpen RESTful API 설계 가이드
 
 ## RESTful 원칙 적용
 

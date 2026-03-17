@@ -1,11 +1,11 @@
-# 🧱 BaseBall LOCK 프로젝트 기준: Feature-based 구조 장단점 정리
+# 🧱 glvpen 프로젝트 기준: Feature-based 구조 장단점 정리
 
-BaseBall LOCK 리팩토링에서 사용 중인 **Feature-based 구조 (도메인 중심 폴더 구조)**에 대한 장단점을  
+glvpen 리팩토링에서 사용 중인 **Feature-based 구조 (도메인 중심 폴더 구조)**에 대한 장단점을  
 현재 프로젝트 특성에 맞춰 분석한 내용입니다.
 
 ---
 
-## 📌 전제: BaseBall LOCK 프로젝트 특성
+## 📌 전제: glvpen 프로젝트 특성
 
 - 유저, 게임, 리뷰, 카드 등 **도메인(기능) 복잡도 높음**
 - RESTful API 사용
@@ -37,7 +37,7 @@ BaseBall LOCK 리팩토링에서 사용 중인 **Feature-based 구조 (도메인
 
 ---
 
-## ✅ 장점 (BaseBall LOCK 기준)
+## ✅ 장점 (glvpen 기준)
 
 | 항목 | 설명 |
 |------|------|
@@ -56,14 +56,14 @@ BaseBall LOCK 리팩토링에서 사용 중인 **Feature-based 구조 (도메인
 | 항목 | 설명 | 해결 방법 |
 |------|------|-------------|
 | **초기 설계 복잡도** | 폴더 구조 설계 시간 필요 | ✅ 현재 충분히 구조 잡는 중 |
-| **간단한 기능엔 과한 구조** | 로그인만 해도 3~4개 파일 생성 | ✅ BaseBall LOCK은 단순하지 않음 |
+| **간단한 기능엔 과한 구조** | 로그인만 해도 3~4개 파일 생성 | ✅ glvpen은 단순하지 않음 |
 | **반복 구조** | controller/service/repo 반복됨 | ✅ 모듈 템플릿으로 일관성 유지 |
 
 ---
 
 ## 🔥 결론
 
-> **BaseBall LOCK 같은 기능 중심 + 테스트 지향 + 확장 가능한 프로젝트에는 Feature-based 구조가 Best Fit이다.**
+> **glvpen 같은 기능 중심 + 테스트 지향 + 확장 가능한 프로젝트에는 Feature-based 구조가 Best Fit이다.**
 
 - 기능 추가/변경/삭제에 유연
 - 추후 마이크로서비스나 서버 분리에도 유리

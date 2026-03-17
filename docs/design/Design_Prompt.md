@@ -1,4 +1,4 @@
-# BaseBall LOCK 2.0 - Google Stitch 디자인 프롬프트
+# glvpen - Google Stitch 디자인 프롬프트
 
 > **구현 참고**: 이 문서는 디자인 시스템 명세입니다. 실제 프론트엔드는 **Thymeleaf (Layout Dialect) + Bootstrap 5 + jQuery**로 구현되어 있으며, 초기 기획에 포함된 React/useRef 관련 내용은 현재 적용되지 않습니다. 색상, 타이포그래피, 레이아웃 스펙은 그대로 유효합니다.
 
@@ -6,7 +6,7 @@
 
 ## 📋 프로젝트 개요
 
-**BaseBall LOCK 2.0**은 KBO 야구 시뮬레이션 게임 웹 애플리케이션입니다. 실제 경기 데이터를 기반으로 하는 시뮬레이션, 커스텀 타자 육성, 클래식 대전 모드를 제공하며, 야구 팬들이 몰입감 있는 경험을 할 수 있도록 설계되었습니다.
+**glvpen**은 KBO 야구 시뮬레이션 게임 웹 애플리케이션입니다. 실제 경기 데이터를 기반으로 하는 시뮬레이션, 커스텀 타자 육성, 클래식 대전 모드를 제공하며, 야구 팬들이 몰입감 있는 경험을 할 수 있도록 설계되었습니다.
 
 ### 핵심 타겟
 - KBO 야구 팬
@@ -73,7 +73,7 @@ Gradient Colors:
 ```css
 /* 로고/타이틀 전용 */
 font-family: 'Dokdo', cursive;
-- 사용처: "BaseBall LOCK" 로고
+- 사용처: "glvpen" 로고
 - 크기: 90px~100px (반응형)
 - 효과: 검은색 외곽선 (-2px~2px text-shadow)
 - 컬러: #FACC15 (노란색)
@@ -152,7 +152,7 @@ Circle: 50% (아바타, 로고)
 **레이아웃**:
 - 중앙 정렬 레이아웃 (flexbox vertical center)
 - 배경: 밝은 회색 (#F0F0F0)
-- 로고: 상단 중앙 "BaseBall LOCK" (Dokdo 폰트, 90px, 노란색 + 검은 외곽선)
+- 로고: 상단 중앙 "glvpen" (Dokdo 폰트, 90px, 노란색 + 검은 외곽선)
 
 **주요 요소**:
 ```html
@@ -1690,7 +1690,7 @@ header {
   <!-- 좌측: 로고 -->
   <div class="flex-grow-1">
     <a href="/user/home">
-      <div class="full-logo-default">BB LOCK</div>
+      <div class="full-logo-default">glvpen</div>
     </a>
   </div>
 
@@ -1736,7 +1736,7 @@ header {
 **구조**:
 ```html
 <footer class="d-flex justify-content-center align-items-center">
-  <div>Copyright 2025. BaseBall LOCK inc. all rights reserved.</div>
+  <div>Copyright 2025. glvpen inc. all rights reserved.</div>
 </footer>
 ```
 
@@ -1763,7 +1763,7 @@ footer {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BaseBall LOCK</title>
+  <title>glvpen</title>
 
   <!-- Fonts -->
   <link href="https://fonts.googleapis.com/css2?family=Dokdo&display=swap" rel="stylesheet">
@@ -1917,7 +1917,7 @@ footer {
 
 ## 🚀 Google Stitch 프롬프트 요약
 
-**프로젝트**: BaseBall LOCK 2.0 - KBO 야구 시뮬레이션 웹 애플리케이션
+**프로젝트**: glvpen - KBO 야구 시뮬레이션 웹 애플리케이션
 
 **핵심 디자인 요소**:
 1. 메인 컬러: #FACC15 (노란색) + 10개 KBO 팀 컬러
@@ -1948,4 +1948,4 @@ footer {
 
 ---
 
-이 프롬프트는 Google Stitch에서 BaseBall LOCK 2.0의 전체 UI/UX를 이해하고 디자인할 수 있도록 작성되었습니다. 각 페이지의 목적, 레이아웃, 컴포넌트, 색상, 애니메이션까지 상세히 포함되어 있으며, 실제 템플릿 파일과 CSS를 기반으로 작성되었습니다.
+이 프롬프트는 Google Stitch에서 glvpen의 전체 UI/UX를 이해하고 디자인할 수 있도록 작성되었습니다. 각 페이지의 목적, 레이아웃, 컴포넌트, 색상, 애니메이션까지 상세히 포함되어 있으며, 실제 템플릿 파일과 CSS를 기반으로 작성되었습니다.

@@ -1,16 +1,16 @@
 -- 중복 데이터 확인 및 정리 스크립트
 
 -- 1. Schedule 테이블의 중복 데이터 확인
-SELECT statizId, COUNT(*) as count
-FROM schedule 
-WHERE statizId IS NOT NULL
-GROUP BY statizId 
+SELECT externalId, COUNT(*) as count
+FROM kbo_schedule 
+WHERE externalId IS NOT NULL
+GROUP BY externalId 
 HAVING COUNT(*) > 1
 ORDER BY count DESC;
 
 -- 2. 같은 날짜, 같은 팀 매치업의 중복 확인
 SELECT DATE(matchDate) as match_date, homeTeamId, awayTeamId, COUNT(*) as count
-FROM schedule 
+FROM kbo_schedule 
 GROUP BY DATE(matchDate), homeTeamId, awayTeamId 
 HAVING COUNT(*) > 1
 ORDER BY count DESC;
@@ -34,8 +34,8 @@ ORDER BY count DESC;
 -- 
 -- Schedule 테이블 중복 제거 (같은 날짜, 같은 팀 매치업 기준)
 -- 먼저 중복된 스케줄들의 상세 정보를 확인
-SELECT s1.id, DATE(s1.matchDate) as match_date, s1.homeTeamId, s1.awayTeamId, s1.statizId
-FROM schedule s1
+SELECT s1.id, DATE(s1.matchDate) as match_date, s1.homeTeamId, s1.awayTeamId, s1.externalId
+FROM kbo_schedule s1
 INNER JOIN schedule s2 ON DATE(s1.matchDate) = DATE(s2.matchDate) 
     AND s1.homeTeamId = s2.homeTeamId 
     AND s1.awayTeamId = s2.awayTeamId
@@ -43,19 +43,19 @@ WHERE s1.id != s2.id
 ORDER BY DATE(s1.matchDate), s1.homeTeamId, s1.awayTeamId, s1.id;
 
 -- 중복 제거 실행 (더 작은 ID를 가진 것을 삭제하여 최신 데이터 유지)
-DELETE s1 FROM schedule s1
+DELETE s1 FROM kbo_schedule s1
 INNER JOIN schedule s2 
 WHERE s1.id < s2.id  -- 더 작은 ID (더 오래된 것)를 삭제
 AND DATE(s1.matchDate) = DATE(s2.matchDate) 
 AND s1.homeTeamId = s2.homeTeamId 
 AND s1.awayTeamId = s2.awayTeamId;
 
--- statizId 기준 중복 제거 (참고용)
--- DELETE s1 FROM schedule s1
+-- externalId 기준 중복 제거 (참고용)
+-- DELETE s1 FROM kbo_schedule s1
 -- INNER JOIN schedule s2 
 -- WHERE s1.id > s2.id 
--- AND s1.statizId = s2.statizId 
--- AND s1.statizId IS NOT NULL;
+-- AND s1.externalId = s2.externalId 
+-- AND s1.externalId IS NOT NULL;
 --
 -- User 테이블 중복 제거 (username 기준)
 -- 먼저 중복된 사용자들의 상세 정보를 확인
@@ -76,7 +76,7 @@ AND u1.username = u2.username;
 -- ========================================
 
 -- 1. Schedule 테이블의 모든 중복 제거
-DELETE s1 FROM schedule s1
+DELETE s1 FROM kbo_schedule s1
 INNER JOIN schedule s2 
 WHERE s1.id < s2.id
 AND DATE(s1.matchDate) = DATE(s2.matchDate) 
@@ -101,7 +101,7 @@ AND u1.email IS NOT NULL;
 -- ========================================
 
 -- 2025-07-20 날짜의 모든 스케줄 데이터 삭제
-DELETE FROM schedule 
+DELETE FROM kbo_schedule 
 WHERE DATE(matchDate) = '2025-07-20';
 
 -- 연관된 데이터도 함께 삭제 (외래키 제약이 있는 경우)
@@ -131,7 +131,7 @@ INNER JOIN schedule s ON l.scheduleId = s.id
 WHERE DATE(s.matchDate) = '2025-07-20';
 
 -- 마지막으로 Schedule 삭제
-DELETE FROM schedule 
+DELETE FROM kbo_schedule 
 WHERE DATE(matchDate) = '2025-07-20';
 
 -- ========================================
@@ -140,14 +140,14 @@ WHERE DATE(matchDate) = '2025-07-20';
 
 -- 삭제 후 2025-07-20 데이터가 남아있는지 확인
 SELECT COUNT(*) as remaining_schedules
-FROM schedule 
+FROM kbo_schedule 
 WHERE DATE(matchDate) = '2025-07-20';
 
 -- 전체 테이블 데이터 삭제 (극단적인 경우만 사용)
 -- ========================================
 
 -- 모든 스케줄 데이터 삭제 (주의!)
--- DELETE FROM schedule;
+-- DELETE FROM kbo_schedule;
 
 -- 모든 사용자 데이터 삭제 (주의!)
 -- DELETE FROM user;

@@ -81,10 +81,10 @@ public final class TeamMappingConstants {
         return TEAM_NAME_TO_ID.keySet();
     }
 
-    // ==================== 팀 ID → Statiz teId 매핑 ====================
+    // ==================== 팀 ID → 외부 사이트 팀 ID 매핑 ====================
 
     /**
-     * 팀 ID를 Statiz teId로 변환하는 맵
+     * 팀 ID를 외부 사이트 팀 ID로 변환하는 맵
      */
     private static final Map<Integer, String> TEAM_ID_TO_TE_ID = new HashMap<>();
 
@@ -102,10 +102,10 @@ public final class TeamMappingConstants {
     }
 
     /**
-     * 팀 ID로 Statiz teId를 조회합니다.
+     * 팀 ID로 외부 사이트 팀 ID를 조회합니다.
      *
      * @param teamId 팀 ID
-     * @return Statiz teId, 없으면 null
+     * @return 외부 사이트 팀 ID, 없으면 null
      */
     public static String getTeIdByTeamId(Integer teamId) {
         return TEAM_ID_TO_TE_ID.get(teamId);

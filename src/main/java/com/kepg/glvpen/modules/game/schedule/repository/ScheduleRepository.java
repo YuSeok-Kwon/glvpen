@@ -135,11 +135,11 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
         """, nativeQuery = true)
     Timestamp findMatchDateById(@Param("scheduleId") int scheduleId);
     
-    @Query(value = "SELECT id FROM kbo_schedule WHERE statizId = :statizId", nativeQuery = true)
-    Integer findIdByStatizId(@Param("statizId") int statizId);
+    @Query(value = "SELECT id FROM kbo_schedule WHERE externalId = :externalId", nativeQuery = true)
+    Integer findIdByExternalId(@Param("externalId") int externalId);
     
-    @Query(value = "SELECT * FROM kbo_schedule WHERE statizId = :statizId", nativeQuery = true)
-    Optional<Schedule> findByStatizId(@Param("statizId") int statizId);
+    @Query(value = "SELECT * FROM kbo_schedule WHERE externalId = :externalId", nativeQuery = true)
+    Optional<Schedule> findByExternalId(@Param("externalId") int externalId);
 
     // KBO gameId 기반 조회
     @Query(value = "SELECT id FROM kbo_schedule WHERE kboGameId = :kboGameId", nativeQuery = true)

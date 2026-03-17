@@ -1,5 +1,5 @@
 """
-BaseBall LOCK 3.0 - Python 배치 분석 진입점
+glvpen - Python 배치 분석 진입점
 
 정규 토픽(0~14), 특집 토픽(15~), WBC 분석(20), 연도/월 비교를 지원.
 
@@ -264,7 +264,7 @@ def run_monthly_comparisons(db: DBConnector, season: int):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='BaseBall LOCK 3.0 배치 분석')
+    parser = argparse.ArgumentParser(description='glvpen 배치 분석')
     parser.add_argument('--topic', type=int, default=-1, help='특정 주제 인덱스 (0~14)')
     parser.add_argument('--season', type=int, default=CURRENT_SEASON, help='분석 대상 시즌')
     parser.add_argument('--special', action='store_true', help='특집 분석 실행')
@@ -278,7 +278,7 @@ def main():
     start_time = datetime.now()
 
     print(f"{'='*60}")
-    print(f"  BaseBall LOCK 3.0 - Python 배치 분석")
+    print(f"  glvpen - Python 배치 분석")
     print(f"  시즌: {season}")
     print(f"  시작: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"{'='*60}")

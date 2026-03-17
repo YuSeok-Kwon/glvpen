@@ -1,6 +1,6 @@
 # KBO 데이터 종합 분석 프로젝트 계획서
 
-**프로젝트명**: BaseBall LOCK 3.0 데이터 분석 파이프라인
+**프로젝트명**: glvpen 데이터 분석 파이프라인
 **작성일**: 2026-02-28
 **데이터 범위**: 2020\~2025 시즌 (1군), 2022~2025 (퓨처스)
 **총 Entity**: 29개 (분석 대상: 약 20개)
@@ -9,7 +9,7 @@
 
 ## 프로젝트 개요
 
-BaseBall LOCK 3.0에 축적된 6시즌 분량의 KBO 데이터를 활용하여, 3가지 분석 전략을 병렬로 수행한다. 각 전략은 독립적인 노트북(ipynb)으로 구성하되, 공통 데이터 추출 레이어를 공유한다.
+glvpen에 축적된 6시즌 분량의 KBO 데이터를 활용하여, 3가지 분석 전략을 병렬로 수행한다. 각 전략은 독립적인 노트북(ipynb)으로 구성하되, 공통 데이터 추출 레이어를 공유한다.
 
 ### 비즈니스 목표 → 데이터 마이닝 목표 변환
 
@@ -871,7 +871,7 @@ kaggle datasets download -d clementmsika/kbo-player-performance-dataset-2018-202
 
 | 데이터                    | 출처                                                                        | 수집 방법                   | 관련 분석                   | 비고                               |
 | ------------------------- | --------------------------------------------------------------------------- | --------------------------- | --------------------------- | ---------------------------------- |
-| 선수 연봉                 | [Statiz](https://www.statiz.co.kr/)                                            | Selenium 크롤링             | 전략1 가치평가, 전략5 WAR/$ | 이용약관 주의, 개인 학습 목적 사용 |
+| 선수 연봉                 | 외부 KBO 데이터 사이트                                                         | Selenium 크롤링             | 전략1 가치평가, 전략5 WAR/$ | 이용약관 주의, 개인 학습 목적 사용 |
 | FanGraphs KBO 세이버지표  | [FanGraphs International](https://www.fangraphs.com/leaders/international/kbo) | 회원 가입 후 CSV export     | 전략5 세이버 검증           | WAR 등 고급 지표 비교 검증 가능    |
 | KBO 공식 선수 프로필      | [KBO 공식 사이트](https://www.koreabaseball.com/)                              | requests.post (동적 페이지) | 전략1 프로필 보강           | 기존 크롤러로 이미 수집 중         |
 | MLB Win Expectancy 테이블 | 공개 참고자료                                                               | CSV 다운로드                | 전략5-B WPA 산출            | Fangraphs/Baseball Reference 참고  |
@@ -897,7 +897,7 @@ kaggle datasets download -d clementmsika/kbo-player-performance-dataset-2018-202
 ```
 Phase 0 (즉시): Open-Meteo 날씨 수집 → 전략4 바로 착수 가능
 Phase 1 (1일):  기상청 API 신청 + Kaggle 다운로드
-Phase 2 (2~3일): Statiz 연봉 크롤러 개발
+Phase 2 (2~3일): 연봉 크롤러 개발
 Phase 3 (선택): FanGraphs 데이터 수동 수집
 ```
 
@@ -905,7 +905,7 @@ Phase 3 (선택): FanGraphs 데이터 수동 수집
 
 ## 참고: 기존 플랫폼 연동 가능성
 
-분석 결과는 BaseBall LOCK 3.0 플랫폼의 기존 기능과 연동 가능하다.
+분석 결과는 glvpen 플랫폼의 기존 기능과 연동 가능하다.
 
 | 분석 결과         | 연동 대상                  | 방법                     |
 | ----------------- | -------------------------- | ------------------------ |

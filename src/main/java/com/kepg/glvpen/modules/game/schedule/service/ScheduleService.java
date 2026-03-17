@@ -60,22 +60,22 @@ public class ScheduleService {
     // 주어진 경기 일정이 존재하면 업데이트, 없으면 새로 저장
     @Transactional
     public void saveOrUpdate(Schedule newSchedule) {
-        // statizId null 체크
-        if (newSchedule.getStatizId() == null) {
-            log.error("StatizId가 null인 경기를 저장할 수 없습니다. 날짜: {}, 홈팀ID: {}, 원정팀ID: {}",
+        // externalId null 체크
+        if (newSchedule.getExternalId() == null) {
+            log.error("ExternalId가 null인 경기를 저장할 수 없습니다. 날짜: {}, 홈팀ID: {}, 원정팀ID: {}",
                      newSchedule.getMatchDate(), newSchedule.getHomeTeamId(), newSchedule.getAwayTeamId());
             return;
         }
 
-        Integer existingId = scheduleRepository.findIdByStatizId(newSchedule.getStatizId());
+        Integer existingId = scheduleRepository.findIdByExternalId(newSchedule.getExternalId());
 
         Schedule schedule;
         if (existingId != null) {
             schedule = scheduleRepository.findById(existingId).orElse(newSchedule);
-            log.debug("기존 경기 업데이트. statizId: {}, scheduleId: {}", newSchedule.getStatizId(), existingId);
+            log.debug("기존 경기 업데이트. externalId: {}, scheduleId: {}", newSchedule.getExternalId(), existingId);
         } else {
             schedule = newSchedule;
-            log.debug("새 경기 저장. statizId: {}", newSchedule.getStatizId());
+            log.debug("새 경기 저장. externalId: {}", newSchedule.getExternalId());
 
             // 더블헤더 체크 (같은 날짜에 같은 팀의 다른 경기가 있는지)
             if (newSchedule.getMatchDate() != null) {
@@ -91,7 +91,7 @@ public class ScheduleService {
         schedule.setMatchDate(newSchedule.getMatchDate());
         schedule.setStadium(newSchedule.getStadium());
         schedule.setStatus(newSchedule.getStatus());
-        schedule.setStatizId(newSchedule.getStatizId());
+        schedule.setExternalId(newSchedule.getExternalId());
         schedule.setHomeTeamId(newSchedule.getHomeTeamId());
         schedule.setAwayTeamId(newSchedule.getAwayTeamId());
 
@@ -249,9 +249,9 @@ public class ScheduleService {
                          schedule.getId(), schedule.getAwayTeamId(), date);
             }
 
-            // statizId 누락 경고
-            if (schedule.getStatizId() == null) {
-                log.warn("StatizId가 null입니다. scheduleId: {}, 날짜: {}, 홈팀: {}, 원정팀: {}",
+            // externalId 누락 경고
+            if (schedule.getExternalId() == null) {
+                log.warn("ExternalId가 null입니다. scheduleId: {}, 날짜: {}, 홈팀: {}, 원정팀: {}",
                          schedule.getId(), date,
                          homeTeam != null ? homeTeam.getName() : "알 수 없음",
                          awayTeam != null ? awayTeam.getName() : "알 수 없음");
@@ -263,7 +263,7 @@ public class ScheduleService {
 
             ScheduleCardView view = ScheduleCardView.builder()
                     .id(schedule.getId())
-                    .statizId(schedule.getStatizId())
+                    .externalId(schedule.getExternalId())
                     .matchDate(schedule.getMatchDate())
                     .homeTeamName(homeTeam != null ? homeTeam.getName() : "알 수 없는 팀 (ID: " + schedule.getHomeTeamId() + ")")
                     .awayTeamName(awayTeam != null ? awayTeam.getName() : "알 수 없는 팀 (ID: " + schedule.getAwayTeamId() + ")")
@@ -365,7 +365,7 @@ public class ScheduleService {
 
             return ScheduleCardView.builder()
                     .id(schedule.getId())
-                    .statizId(schedule.getStatizId())
+                    .externalId(schedule.getExternalId())
                     .matchDate(schedule.getMatchDate())
                     .homeTeamName(homeTeamName)
                     .awayTeamName(awayTeamName)
@@ -388,7 +388,7 @@ public class ScheduleService {
 
         return ScheduleCardView.builder()
                 .id(s.getId())
-                .statizId(s.getStatizId())
+                .externalId(s.getExternalId())
                 .matchDate(s.getMatchDate())
                 .homeTeamName(teamService.getTeamNameById(s.getHomeTeamId()))
                 .awayTeamName(teamService.getTeamNameById(s.getAwayTeamId()))
@@ -469,7 +469,7 @@ public class ScheduleService {
 
         return GameDetailCardView.builder()
                 .id(schedule.getId())
-                .statizId(schedule.getStatizId())
+                .externalId(schedule.getExternalId())
                 .matchDate(schedule.getMatchDate())
                 .status(status)
                 .stadium(schedule.getStadium())
@@ -588,12 +588,12 @@ public class ScheduleService {
     	return scheduleRepository.findMatchDateById(scheduleId);
     }
 	
-    public Integer findIdByStatizId(int statizId) {
-        return scheduleRepository.findIdByStatizId(statizId);
+    public Integer findIdByExternalId(int externalId) {
+        return scheduleRepository.findIdByExternalId(externalId);
     }
     
-    public Optional<Schedule> findByStatizId(int statizId) {
-        return scheduleRepository.findByStatizId(statizId);
+    public Optional<Schedule> findByExternalId(int externalId) {
+        return scheduleRepository.findByExternalId(externalId);
     }
     
     /**
@@ -652,23 +652,23 @@ public class ScheduleService {
     }
 
     /**
-     * 더블헤더 검증: 같은 날짜/같은 팀의 경기가 중복 statizId를 가지고 있는지 확인
+     * 더블헤더 검증: 같은 날짜/같은 팀의 경기가 중복 externalId를 가지고 있는지 확인
      */
     public void validateDoubleHeaderIntegrity(LocalDate date, int teamId) {
         List<Schedule> games = findByMatchDateAndTeam(date, teamId);
         if (games.size() < 2) return;
 
-        Map<Integer, Integer> statizIdCount = new HashMap<>();
+        Map<Integer, Integer> externalIdCount = new HashMap<>();
         for (Schedule game : games) {
-            Integer statizId = game.getStatizId();
-            if (statizId != null) {
-                statizIdCount.put(statizId, statizIdCount.getOrDefault(statizId, 0) + 1);
+            Integer externalId = game.getExternalId();
+            if (externalId != null) {
+                externalIdCount.put(externalId, externalIdCount.getOrDefault(externalId, 0) + 1);
             }
         }
 
-        for (Map.Entry<Integer, Integer> entry : statizIdCount.entrySet()) {
+        for (Map.Entry<Integer, Integer> entry : externalIdCount.entrySet()) {
             if (entry.getValue() > 1) {
-                log.error("중복된 StatizId 발견! statizId: {}, 중복 개수: {}, 날짜: {}, 팀ID: {}",
+                log.error("중복된 ExternalId 발견! externalId: {}, 중복 개수: {}, 날짜: {}, 팀ID: {}",
                          entry.getKey(), entry.getValue(), date, teamId);
             }
         }

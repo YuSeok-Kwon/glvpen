@@ -44,7 +44,7 @@ public class Schedule {
     @Column(length = 20)
     private String status;
     
-    private Integer statizId;
+    private Integer externalId;
 
     @Column(length = 20)
     private String kboGameId;
