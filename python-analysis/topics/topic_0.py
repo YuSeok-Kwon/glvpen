@@ -15,11 +15,12 @@ import numpy as np
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters, filter_qualified_pitchers
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    batters = db.get_batters(season)
-    pitchers = db.get_pitchers(season)
+    batters = filter_qualified_batters(db.get_batters(season))
+    pitchers = filter_qualified_pitchers(db.get_pitchers(season))
 
     if batters.empty or pitchers.empty:
         return '{}', '[]', '데이터 없음', '{}'
@@ -112,6 +113,28 @@ def analyze(season: int, db: DBConnector) -> tuple:
 
     # ==================== 인사이트 텍스트 ====================
     findings = []
+
+    # 기본 지표 findings (항상 존재)
+    if '타자_AVG' in stats_dict:
+        findings.append(f"리그 평균 타율: {stats_dict['타자_AVG']['mean']:.3f}")
+    if '타자_OPS' in stats_dict:
+        findings.append(f"리그 평균 OPS: {stats_dict['타자_OPS']['mean']:.3f}")
+    if '타자_BABIP' in stats_dict:
+        findings.append(f"리그 평균 BABIP: {stats_dict['타자_BABIP']['mean']:.3f}")
+    if '투수_ERA' in stats_dict:
+        findings.append(f"리그 평균 ERA: {stats_dict['투수_ERA']['mean']:.2f}")
+    if '투수_WHIP' in stats_dict:
+        findings.append(f"리그 평균 WHIP: {stats_dict['투수_WHIP']['mean']:.2f}")
+
+    # WAR Top5 선수명
+    if 'WAR_상위5_타자' in stats_dict:
+        top_names = ', '.join([p['playerName'] for p in stats_dict['WAR_상위5_타자']])
+        findings.append(f"WAR 상위 5명 타자: {top_names}")
+    if 'WAR_상위5_투수' in stats_dict:
+        top_names = ', '.join([p['playerName'] for p in stats_dict['WAR_상위5_투수']])
+        findings.append(f"WAR 상위 5명 투수: {top_names}")
+
+    # 고급 지표 findings (존재 시 추가)
     if '타자_wRC+' in stats_dict:
         findings.append(f"리그 평균 wRC+: {stats_dict['타자_wRC+']['mean']:.1f} (표준편차: {stats_dict['타자_wRC+']['std']:.1f})")
     if '투수_FIP' in stats_dict:

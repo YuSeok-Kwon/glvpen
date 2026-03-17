@@ -11,11 +11,12 @@ import numpy as np
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters, filter_qualified_pitchers
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    batters = db.get_batters(season)
-    pitchers = db.get_pitchers(season)
+    batters = filter_qualified_batters(db.get_batters(season))
+    pitchers = filter_qualified_pitchers(db.get_pitchers(season))
 
     if batters.empty:
         return '{}', '[]', '데이터 없음', '{}'
@@ -53,9 +54,10 @@ def analyze(season: int, db: DBConnector) -> tuple:
         )
         findings.append(f"고/저 BABIP 그룹 AVG 차이: {hypothesis['고저BABIP_AVG_차이']['interpretation']}")
 
-        # 차트: BABIP 산점도 데이터
+        # 차트: BABIP 산점도 데이터 (0값 제거)
         scatter_data = [{'x': round(float(r['BABIP']), 3), 'y': round(float(r['AVG']), 3)}
-                        for _, r in babip_data.iterrows()]
+                        for _, r in babip_data.iterrows()
+                        if r['BABIP'] > 0 and r['AVG'] > 0]
         charts.append(ChartBuilder.scatter(
             'BABIP vs AVG 관계',
             [{'label': '선수', 'data': scatter_data[:50]}]  # 50명 제한

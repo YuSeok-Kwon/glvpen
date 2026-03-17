@@ -30,6 +30,12 @@ class ChartBuilder:
         for i, ds in enumerate(datasets):
             if 'backgroundColor' not in ds:
                 ds['backgroundColor'] = _resolve_color(ds.get('label', ''), i)
+        # 단일 dataset + 여러 label → per-bar 색상 배열로 교체
+        if len(datasets) == 1 and isinstance(datasets[0].get('backgroundColor'), str):
+            ds = datasets[0]
+            ds['backgroundColor'] = [
+                _resolve_color(lbl, i) for i, lbl in enumerate(labels)
+            ]
         return {
             'chartType': 'bar',
             'title': title,
@@ -113,6 +119,10 @@ class ChartBuilder:
     def scatter(title: str, datasets: List[Dict[str, Any]]) -> Dict:
         """산점도 차트"""
         for i, ds in enumerate(datasets):
+            # (0,0) 포인트 제거
+            if 'data' in ds:
+                ds['data'] = [p for p in ds['data']
+                              if p.get('x', 0) != 0 or p.get('y', 0) != 0]
             if 'backgroundColor' not in ds:
                 ds['backgroundColor'] = _resolve_color(ds.get('label', ''), i)
             ds.setdefault('pointRadius', 5)

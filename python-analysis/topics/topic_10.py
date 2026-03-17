@@ -10,10 +10,11 @@ import numpy as np
 from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
+from common.filters import filter_qualified_batters
 
 
 def analyze(season: int, db: DBConnector) -> tuple:
-    batters = db.get_batters(season)
+    batters = filter_qualified_batters(db.get_batters(season))
     if batters.empty or 'AVG' not in batters.columns:
         return '{}', '[]', '데이터 없음', '{}'
 
@@ -59,9 +60,10 @@ def analyze(season: int, db: DBConnector) -> tuple:
             [{'label': '클러치 갭', 'data': [round(r.clutch_gap, 3) for r in all_notable]}]
         ))
 
-        # Scatter: AVG vs RISP
+        # Scatter: AVG vs RISP (0값 제거)
         scatter_data = [{'x': round(float(r['AVG']), 3), 'y': round(float(r['RISP']), 3)}
-                        for _, r in data.head(50).iterrows()]
+                        for _, r in data.head(50).iterrows()
+                        if r['AVG'] > 0 and r['RISP'] > 0]
         charts.append(ChartBuilder.scatter(
             'AVG vs RISP 관계',
             [{'label': '선수', 'data': scatter_data}]
