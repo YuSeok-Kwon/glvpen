@@ -26,7 +26,7 @@ import lombok.Setter;
  */
 @Entity
 @Table(name = "analysis_result",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"topic", "subTopic", "season", "comparisonType", "anchorValue"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"topic", "sub_topic", "season", "comparison_type", "anchor_value"}))
 @Getter @Setter
 @Builder
 @AllArgsConstructor
@@ -42,7 +42,7 @@ public class AnalysisResult {
     private Integer topic;
 
     /** 서브토픽 (batter/pitcher/default) - V7 추가 */
-    @Column(nullable = false, length = 50)
+    @Column(name = "sub_topic", nullable = false, length = 50)
     @Builder.Default
     private String subTopic = "default";
 
@@ -51,41 +51,42 @@ public class AnalysisResult {
     private Integer season;
 
     /** 비교 유형 (none/yearly/monthly) - V7 추가 */
-    @Column(nullable = false, length = 20)
+    @Column(name = "comparison_type", nullable = false, length = 20)
     @Builder.Default
     private String comparisonType = "none";
 
     /** 비교 앵커 값 (2025, 06 등) - V7 추가 */
-    @Column(nullable = false, length = 20)
+    @Column(name = "anchor_value", nullable = false, length = 20)
     @Builder.Default
     private String anchorValue = "";
 
     /** 기술통계 결과 (JSON) - 평균, 표준편차, 분위수 등 */
     @Lob
-    @Column(columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "stats_json", columnDefinition = "LONGTEXT", nullable = false)
     private String statsJson;
 
     /** Chart.js 호환 차트 데이터 배열 (JSON) - 다중 차트 지원 */
     @Lob
-    @Column(columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "chart_json", columnDefinition = "LONGTEXT", nullable = false)
     private String chartJson;
 
     /** 통계적 인사이트 텍스트 - Gemini 프롬프트에 직접 삽입 */
     @Lob
-    @Column(columnDefinition = "LONGTEXT", nullable = false)
+    @Column(name = "insight_text", columnDefinition = "LONGTEXT", nullable = false)
     private String insightText;
 
     /** 가설검정 결과 (JSON) - t-test, ANOVA, 카이제곱 등 검정 결과 */
     @Lob
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(name = "hypothesis_results", columnDefinition = "LONGTEXT")
     private String hypothesisResults;
 
     /** 생성 시각 */
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
     /** 마지막 수정 시각 */
+    @Column(name = "updated_at")
     @Builder.Default
     private LocalDateTime updatedAt = LocalDateTime.now();
 }
