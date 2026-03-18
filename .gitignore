@@ -43,6 +43,7 @@ out/
 ### Python ###
 __pycache__/
 *.pyc
+.env
 
 security-variable.yml
 
