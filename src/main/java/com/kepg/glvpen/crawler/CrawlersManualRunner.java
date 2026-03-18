@@ -28,7 +28,8 @@ try {
     // ===== 크롤링 설정 =====
 
     // 크롤링 옵션 — 2020~2024 다시즌 수집 (일정/팀 수집 완료)
-    boolean crawlSchedule = false;
+    // 예: -Dcrawl.schedule=true
+    boolean crawlSchedule = Boolean.parseBoolean(System.getProperty("crawl.schedule", "false"));
     boolean crawlTeam = false;
     boolean crawlPlayer = false;
 
@@ -116,7 +117,7 @@ try {
         if (crawlSchedule) {
             log.info("\n[1단계] 다시즌 일정 크롤링: {}→{}", multiSeasonEnd, multiSeasonStart);
             for (int year = multiSeasonEnd; year >= multiSeasonStart; year--) {
-                LocalDate seasonStart = LocalDate.of(year, 3, 1);
+                LocalDate seasonStart = LocalDate.of(year, 2, 1);
                 LocalDate seasonEnd = LocalDate.of(year, 11, 30);
                 log.info("--- {}시즌 일정 크롤링: {} ~ {} ---", year, seasonStart, seasonEnd);
                 scheduleCrawler.crawlGameRange(seasonStart, seasonEnd);

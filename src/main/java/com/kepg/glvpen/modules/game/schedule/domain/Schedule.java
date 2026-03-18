@@ -48,4 +48,11 @@ public class Schedule {
 
     @Column(length = 20)
     private String kboGameId;
+
+    @Builder.Default
+    @Column(length = 10)
+    private String seriesType = "0";
+
+    @Column(length = 5)
+    private String kboSeriesCode;
 }

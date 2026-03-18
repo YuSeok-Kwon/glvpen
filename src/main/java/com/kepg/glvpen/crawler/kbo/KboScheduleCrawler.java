@@ -53,7 +53,21 @@ public class KboScheduleCrawler {
 
     private static final String SCHEDULE_API_URL =
             "https://www.koreabaseball.com/ws/Schedule.asmx/GetScheduleList";
-    private static final String SERIES_REGULAR = "0,9,6";
+    private static final String SERIES_REGULAR = "0,3,4,5,7";
+    private static final String SERIES_ALL = "0,1,3,4,5,6,7";
+
+    // 시리즈 코드 → seriesType 매핑 (KBO API 실제 코드 기준)
+    // 0: 정규시즌, 1: 시범경기
+    // 3: 와일드카드, 4: 준플레이오프, 5: 플레이오프, 6: 포스트 특별전, 7: 한국시리즈
+    private static final java.util.Map<String, String> SERIES_TYPE_MAP = java.util.Map.of(
+        "0", "0",   // 정규시즌
+        "1", "1",   // 시범경기
+        "3", "9",   // 와일드카드 → 포스트시즌
+        "4", "9",   // 준플레이오프 → 포스트시즌
+        "5", "9",   // 플레이오프 → 포스트시즌
+        "6", "9",   // 포스트 특별전 → 포스트시즌
+        "7", "9"    // 한국시리즈 → 포스트시즌
+    );
 
     // gameId 추출 패턴: gameId=20250322LTLG0
     private static final Pattern GAME_ID_PATTERN = Pattern.compile("gameId=(\\d{8}[A-Z]{4}\\d)");
@@ -107,16 +121,28 @@ public class KboScheduleCrawler {
     }
 
     /**
-     * 특정 월 크롤링 — AJAX API 직접 호출
+     * 특정 월 크롤링 — 시리즈별 분리 호출
      */
     public void crawlMonth(int year, int month) {
         log.info("[KBO 일정] {}년 {}월 크롤링 시작", year, month);
 
+        // 시리즈별로 분리 호출하여 seriesType을 정확히 매핑
+        for (String seriesCode : new String[]{"0", "1", "3", "4", "5", "6", "7"}) {
+            crawlMonthBySeries(year, month, seriesCode);
+        }
+
+        log.info("[KBO 일정] {}년 {}월 크롤링 완료", year, month);
+    }
+
+    /**
+     * 특정 월/시리즈 크롤링 — AJAX API 직접 호출
+     */
+    private void crawlMonthBySeries(int year, int month, String seriesCode) {
         try {
             String monthStr = String.format("%02d", month);
+            String seriesType = SERIES_TYPE_MAP.getOrDefault(seriesCode, "0");
 
-            String requestBody = "leId=1&srIdList="
-                    + SERIES_REGULAR.replace(",", "%2C")
+            String requestBody = "leId=1&srIdList=" + seriesCode
                     + "&seasonId=" + year
                     + "&gameMonth=" + monthStr
                     + "&teamId=";
@@ -133,31 +159,25 @@ public class KboScheduleCrawler {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() != 200) {
-                log.error("[KBO 일정] API 응답 오류: HTTP {}", response.statusCode());
                 return;
             }
 
             String body = response.body();
             if (body == null || body.isBlank()) {
-                log.info("[KBO 일정] {}년 {}월: 빈 응답", year, month);
                 return;
             }
 
-            // JSON 파싱
             JsonObject json = JsonParser.parseString(body).getAsJsonObject();
             JsonArray rows = json.getAsJsonArray("rows");
 
             if (rows == null || rows.isEmpty()) {
-                log.info("[KBO 일정] {}년 {}월: 데이터 없음", year, month);
                 return;
             }
 
-            parseJsonRows(rows, year);
-
-            log.info("[KBO 일정] {}년 {}월 크롤링 완료", year, month);
+            parseJsonRows(rows, year, seriesType, seriesCode);
 
         } catch (IOException | InterruptedException e) {
-            log.error("[KBO 일정] {}년 {}월 크롤링 실패", year, month, e);
+            log.error("[KBO 일정] {}년 {}월 시리즈={} 크롤링 실패", year, month, seriesCode, e);
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
@@ -181,6 +201,14 @@ public class KboScheduleCrawler {
      * ]
      */
     private void parseJsonRows(JsonArray rows, int year) {
+        parseJsonRows(rows, year, "0");
+    }
+
+    private void parseJsonRows(JsonArray rows, int year, String seriesType) {
+        parseJsonRows(rows, year, seriesType, null);
+    }
+
+    private void parseJsonRows(JsonArray rows, int year, String seriesType, String kboSeriesCode) {
         LocalDate currentDate = null;
         int savedCount = 0;
         int skippedCount = 0;
@@ -347,6 +375,8 @@ public class KboScheduleCrawler {
                         .stadium(fullStadium)
                         .status(status)
                         .kboGameId(kboGameId)
+                        .seriesType(seriesType)
+                        .kboSeriesCode(kboSeriesCode)
                         .build();
 
                 scheduleService.saveOrUpdateByKboGameId(schedule);

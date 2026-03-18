@@ -105,15 +105,16 @@ public class KboGameCenterCrawler {
      * 단일 경기 게임센터 크롤링
      */
     public void crawlGameCenter(String kboGameId, int season) {
-        Integer scheduleId = scheduleRepository.findIdByKboGameId(kboGameId);
-        if (scheduleId == null) {
+        Schedule schedule = scheduleRepository.findByKboGameId(kboGameId).orElse(null);
+        if (schedule == null) {
             log.warn("[게임센터] Schedule 없음: {}", kboGameId);
             return;
         }
 
-        log.info("[게임센터] 크롤링 시작: {} (scheduleId={})", kboGameId, scheduleId);
+        int scheduleId = schedule.getId();
+        String srId = resolveSrId(schedule);
 
-        String srId = extractSrId(kboGameId);
+        log.info("[게임센터] 크롤링 시작: {} (scheduleId={}, srId={})", kboGameId, scheduleId, srId);
 
         // 1. 스코어보드 + 메타데이터
         crawlScoreBoard(kboGameId, season, scheduleId, srId);
@@ -206,7 +207,7 @@ public class KboGameCenterCrawler {
                 if (keyPlayerRepository.existsByScheduleId(scheduleId)) continue;
 
                 String kboGameId = game.getKboGameId();
-                String srId = extractSrId(kboGameId);
+                String srId = resolveSrId(game);
                 total++;
 
                 try {
@@ -251,7 +252,7 @@ public class KboGameCenterCrawler {
                 }
 
                 String kboGameId = game.getKboGameId();
-                String srId = extractSrId(kboGameId);
+                String srId = resolveSrId(game);
                 total++;
 
                 try {
@@ -738,9 +739,41 @@ public class KboGameCenterCrawler {
     }
 
     /**
-     * kboGameId에서 srId 추출 (정규시즌=0)
+     * Schedule의 kboSeriesCode를 srId로 변환
+     * kboSeriesCode가 있으면 그대로 사용, 없으면 seriesType으로 유추
      */
-    private String extractSrId(String kboGameId) {
+    private String resolveSrId(Schedule schedule) {
+        // kboSeriesCode가 저장되어 있으면 그대로 사용
+        if (schedule.getKboSeriesCode() != null && !schedule.getKboSeriesCode().isBlank()) {
+            return schedule.getKboSeriesCode();
+        }
+        // 정규시즌/시범경기는 seriesType과 동일
+        String seriesType = schedule.getSeriesType();
+        if ("0".equals(seriesType) || "1".equals(seriesType)) {
+            return seriesType;
+        }
+        // 포스트시즌(seriesType="9")은 원본 코드를 알 수 없으므로 API 시도
+        return findCorrectSrIdByTrial(schedule);
+    }
+
+    /**
+     * 포스트시즌 경기의 올바른 srId를 API 시도로 찾기
+     */
+    private String findCorrectSrIdByTrial(Schedule schedule) {
+        String kboGameId = schedule.getKboGameId();
+        int season = schedule.getMatchDate().toLocalDateTime().getYear();
+        for (String candidateSrId : new String[]{"7", "5", "4", "3", "6"}) {
+            String body = "leId=1&srId=" + candidateSrId + "&seasonId=" + season + "&gameId=" + kboGameId;
+            String response = postApi(KboConstants.GAME_CENTER_BOXSCORE_URL, body);
+            if (response != null && !response.contains("\"code\"")) {
+                log.info("[게임센터] {} → srId={} 확인", kboGameId, candidateSrId);
+                // 찾은 코드를 DB에 저장
+                schedule.setKboSeriesCode(candidateSrId);
+                scheduleRepository.save(schedule);
+                return candidateSrId;
+            }
+        }
+        log.warn("[게임센터] {} 올바른 srId를 찾지 못함, 기본값 0 사용", kboGameId);
         return "0";
     }
 
