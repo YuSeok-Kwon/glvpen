@@ -27,7 +27,7 @@ public class ScheduleController {
     private final ScheduleService scheduleService;
     private final FuturesScheduleService futuresScheduleService;
 
-    private static final int MIN_SCHEDULE_YEAR = 2022;
+    private static final int MIN_SCHEDULE_YEAR = 2020;
 
     @GetMapping("/result-view")
     public String resultView(@RequestParam(required = false) Integer year,
@@ -38,15 +38,29 @@ public class ScheduleController {
     	LocalDate today = LocalDate.now();
 
 	    int currentSeason = SeasonValidator.currentSeason();
-	    int selectedYear = (year != null) ? year : SeasonValidator.fallbackSeason();
+	    int selectedYear = (year != null) ? year : SeasonValidator.currentSeason();
 	    int selectedMonth = (month != null) ? month : today.getMonthValue();
 
         Map<LocalDate, List<ScheduleCardView>> groupedSchedule;
 
+        // 포스트시즌: 월 미지정 시 실제 포스트시즌이 진행된 월로 자동 이동
+        if ("kbo_postseason".equals(league) && month == null) {
+            Integer firstMonth = scheduleService.getFirstMonthBySeriesType(selectedYear, "9");
+            if (firstMonth != null) {
+                selectedMonth = firstMonth;
+            }
+        }
+
         if ("futures".equals(league)) {
             groupedSchedule = futuresScheduleService.getGroupedScheduleByMonth(selectedYear, selectedMonth);
+        } else if ("kbo_preseason".equals(league)) {
+            groupedSchedule = scheduleService.getGroupedScheduleByMonth(selectedYear, selectedMonth, "1");
+            groupedSchedule = scheduleService.sortScheduleWithTodayFirst(groupedSchedule, today);
+        } else if ("kbo_postseason".equals(league)) {
+            groupedSchedule = scheduleService.getGroupedScheduleByMonth(selectedYear, selectedMonth, "9");
+            groupedSchedule = scheduleService.sortScheduleWithTodayFirst(groupedSchedule, today);
         } else {
-            groupedSchedule = scheduleService.getGroupedScheduleByMonth(selectedYear, selectedMonth);
+            groupedSchedule = scheduleService.getGroupedScheduleByMonth(selectedYear, selectedMonth, "0");
             groupedSchedule = scheduleService.sortScheduleWithTodayFirst(groupedSchedule, today);
         }
 

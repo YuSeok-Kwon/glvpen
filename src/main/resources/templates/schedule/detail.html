@@ -34,36 +34,32 @@
 	      <div class="d-flex">
 			<img th:src="@{/static/emblems/{logo}.svg(logo=${g.awayTeamLogo})}" class="table-team-logo mb-1 me-2">
      	    <!-- 원정팀 이름 -->
-			<span th:if="${g.awayTeamScore > g.homeTeamScore}"
+			<span th:if="${g.awayTeamScore != null and g.homeTeamScore != null and g.awayTeamScore > g.homeTeamScore}"
 			      th:text="${g.awayTeamName}" class="fw-bold me-3">두산</span>
-			<span th:unless="${g.awayTeamScore > g.homeTeamScore}"
+			<span th:unless="${g.awayTeamScore != null and g.homeTeamScore != null and g.awayTeamScore > g.homeTeamScore}"
 			      th:text="${g.awayTeamName}" class="me-3">두산</span>
-			
+
 			<!-- 원정팀 점수 -->
-			<strong th:if="${g.awayTeamScore > g.homeTeamScore}"
-			        th:text="${g.awayTeamScore}" class="fw-bold">3</strong>
-			<strong th:unless="${g.awayTeamScore > g.homeTeamScore}"
-			        th:text="${g.awayTeamScore}">3</strong>
+			<strong th:if="${g.awayTeamScore != null}" th:text="${g.awayTeamScore}">3</strong>
+			<strong th:unless="${g.awayTeamScore != null}" class="text-muted">-</strong>
 	      </div>
 	    </div>
-	    
+
 	    <div class="text-secondary fw-bold mb-1">VS</div>
-	    
+
 	    <!-- 홈팀 -->
 	    <div class="d-flex flex-column align-items-center">
 	      <div class="d-flex">
-	      	<img th:src="@{/static/emblems/{logo}.svg(logo=${g.homeTeamLogo})}" class="table-team-logo mb-1 me-2">	       
+	      	<img th:src="@{/static/emblems/{logo}.svg(logo=${g.homeTeamLogo})}" class="table-team-logo mb-1 me-2">
 			<!-- 홈팀 이름 -->
-			<span th:if="${g.homeTeamScore > g.awayTeamScore}"
+			<span th:if="${g.homeTeamScore != null and g.awayTeamScore != null and g.homeTeamScore > g.awayTeamScore}"
 			      th:text="${g.homeTeamName}" class="fw-bold me-3">SSG</span>
-			<span th:unless="${g.homeTeamScore > g.awayTeamScore}"
+			<span th:unless="${g.homeTeamScore != null and g.awayTeamScore != null and g.homeTeamScore > g.awayTeamScore}"
 			      th:text="${g.homeTeamName}" class="me-3">SSG</span>
-			
+
 			<!-- 홈팀 점수 -->
-			<strong th:if="${g.homeTeamScore > g.awayTeamScore}"
-			        th:text="${g.homeTeamScore}" class="fw-bold">6</strong>
-			<strong th:unless="${g.homeTeamScore > g.awayTeamScore}"
-			        th:text="${g.homeTeamScore}">6</strong>
+			<strong th:if="${g.homeTeamScore != null}" th:text="${g.homeTeamScore}">6</strong>
+			<strong th:unless="${g.homeTeamScore != null}" class="text-muted">-</strong>
 	      </div>
 	    </div>
 	  </div>
@@ -152,7 +148,7 @@
 			<thead class="table-light fs-6 fs-md-5">
 			  <tr style="background-color: var(--color-accent-subtle);">
 			   <th style="min-width: 120px;" class="bg-white">팀</th>
-			   <th th:each="i : ${#numbers.sequence(1, 9)}" style="min-width: 40px;" th:text="${i}">1</th>
+			   <th th:each="i : ${#numbers.sequence(1, game.awayInningScores != null and game.awayInningScores.size() > 9 ? game.awayInningScores.size() : 9)}" style="min-width: 40px;" th:text="${i}">1</th>
 			   <th style="min-width: 50px;">R</th>
 			   <th style="min-width: 50px;">H</th>
 			   <th style="min-width: 50px;">E</th>
@@ -164,21 +160,31 @@
 			     <th class="fs-6 fs-md-5 text-white"
 					 th:style="'background-color:' + ${game.awayTeamColor}"
 					 th:text="${game.awayTeamName}">기아</th>
-			   <td th:each="score : ${game.awayInningScores}" th:text="${score}" style="min-width: 40px;">0</td>
+			   <th:block th:if="${game.awayInningScores != null and !game.awayInningScores.isEmpty()}">
+			     <td th:each="score : ${game.awayInningScores}" th:text="${score}" style="min-width: 40px;">0</td>
+			   </th:block>
+			   <th:block th:unless="${game.awayInningScores != null and !game.awayInningScores.isEmpty()}">
+			     <td th:each="i : ${#numbers.sequence(1, 9)}" style="min-width: 40px;">-</td>
+			   </th:block>
 			   <td style="min-width: 50px;" th:text="${game.awayTeamScore}">3</td>
-			   <td style="min-width: 50px;" th:text="${game.awayH}">7</td>
-			   <td style="min-width: 50px;" th:text="${game.awayE}">0</td>
-			   <td style="min-width: 50px;" th:text="${game.awayB}">0</td>
+			   <td style="min-width: 50px;" th:text="${game.awayH != null ? game.awayH : '-'}">7</td>
+			   <td style="min-width: 50px;" th:text="${game.awayE != null ? game.awayE : '-'}">0</td>
+			   <td style="min-width: 50px;" th:text="${game.awayB != null ? game.awayB : '-'}">0</td>
 			 </tr>
 			 <tr style="background-color: #f3f6f9;">
 			  <th class="fs-6 fs-md-5 text-white"
     		      th:style="'background-color:' + ${game.homeTeamColor}"
     			  th:text="${game.homeTeamName + ' (홈)'}">롯데</th>
-			   <td th:each="score : ${game.homeInningScores}" th:text="${score}" style="min-width: 40px;">0</td>
+			   <th:block th:if="${game.homeInningScores != null and !game.homeInningScores.isEmpty()}">
+			     <td th:each="score : ${game.homeInningScores}" th:text="${score}" style="min-width: 40px;">0</td>
+			   </th:block>
+			   <th:block th:unless="${game.homeInningScores != null and !game.homeInningScores.isEmpty()}">
+			     <td th:each="i : ${#numbers.sequence(1, 9)}" style="min-width: 40px;">-</td>
+			   </th:block>
 			   <td style="min-width: 50px;" th:text="${game.homeTeamScore}">6</td>
-			   <td style="min-width: 50px;" th:text="${game.homeH}">9</td>
-			   <td style="min-width: 50px;" th:text="${game.homeE}">1</td>
-			   <td style="min-width: 50px;" th:text="${game.homeB}">0</td>
+			   <td style="min-width: 50px;" th:text="${game.homeH != null ? game.homeH : '-'}">9</td>
+			   <td style="min-width: 50px;" th:text="${game.homeE != null ? game.homeE : '-'}">1</td>
+			   <td style="min-width: 50px;" th:text="${game.homeB != null ? game.homeB : '-'}">0</td>
 			 </tr>
 		  </tbody>
 		</table>

@@ -132,6 +132,12 @@ public class ScheduleService {
         schedule.setKboGameId(newSchedule.getKboGameId());
         schedule.setHomeTeamId(newSchedule.getHomeTeamId());
         schedule.setAwayTeamId(newSchedule.getAwayTeamId());
+        if (newSchedule.getSeriesType() != null) {
+            schedule.setSeriesType(newSchedule.getSeriesType());
+        }
+        if (newSchedule.getKboSeriesCode() != null) {
+            schedule.setKboSeriesCode(newSchedule.getKboSeriesCode());
+        }
 
         if ("종료".equals(newSchedule.getStatus())) {
             schedule.setHomeTeamScore(newSchedule.getHomeTeamScore());
@@ -221,11 +227,26 @@ public class ScheduleService {
         return String.format("%d승 %d패 %d무", wins, losses, draws);
     }
 
+    // 특정 시즌 + 시리즈타입의 첫 경기 월 조회
+    public Integer getFirstMonthBySeriesType(int year, String seriesType) {
+        return scheduleRepository.findFirstMonthBySeriesType(year, seriesType);
+    }
+
     // 특정 월의 경기 일정을 날짜별로 그룹핑하여 반환 (스케줄 카드용)
     public Map<LocalDate, List<ScheduleCardView>> getGroupedScheduleByMonth(int year, int month) {
+        return getGroupedScheduleByMonth(year, month, null);
+    }
+
+    // 특정 월/시리즈타입의 경기 일정을 날짜별로 그룹핑하여 반환
+    public Map<LocalDate, List<ScheduleCardView>> getGroupedScheduleByMonth(int year, int month, String seriesType) {
         Timestamp start = Timestamp.valueOf(YearMonth.of(year, month).atDay(1).atStartOfDay());
         Timestamp end = Timestamp.valueOf(YearMonth.of(year, month).atEndOfMonth().atTime(23, 59, 59));
-        List<Schedule> schedules = scheduleRepository.findByMatchDateBetweenOrderByMatchDate(start, end);
+        List<Schedule> schedules;
+        if (seriesType != null) {
+            schedules = scheduleRepository.findByMatchDateBetweenAndSeriesType(start, end, seriesType);
+        } else {
+            schedules = scheduleRepository.findByMatchDateBetweenOrderByMatchDate(start, end);
+        }
 
         Map<LocalDate, List<ScheduleCardView>> grouped = new LinkedHashMap<>();
 

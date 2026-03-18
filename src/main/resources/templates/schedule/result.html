@@ -29,11 +29,17 @@
         <!-- 구분선 -->
         <span class="nav-divider"></span>
 
-        <!-- 1군/퓨처스 토글 -->
+        <!-- 리그 토글 -->
         <div class="league-toggle" role="group">
           <a th:href="@{/schedule/result-view(year=${year}, month=${month}, league='kbo')}"
              class="league-btn"
-             th:classappend="${league == 'kbo' || league == null} ? ' active' : ''">1군</a>
+             th:classappend="${league == 'kbo' || league == null} ? ' active' : ''">정규시즌</a>
+          <a th:href="@{/schedule/result-view(year=${year}, month=${month}, league='kbo_preseason')}"
+             class="league-btn"
+             th:classappend="${league == 'kbo_preseason'} ? ' active' : ''">시범경기</a>
+          <a th:href="${league == 'kbo_postseason'} ? @{/schedule/result-view(year=${year}, month=${month}, league='kbo_postseason')} : @{/schedule/result-view(year=${year}, league='kbo_postseason')}"
+             class="league-btn"
+             th:classappend="${league == 'kbo_postseason'} ? ' active' : ''">포스트시즌</a>
           <a th:href="@{/schedule/result-view(year=${year}, month=${month}, league='futures')}"
              class="league-btn"
              th:classappend="${league == 'futures'} ? ' active' : ''">퓨처스</a>

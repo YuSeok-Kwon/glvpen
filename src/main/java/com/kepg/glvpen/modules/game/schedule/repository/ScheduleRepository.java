@@ -54,6 +54,17 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
     // 특정 날짜 범위의 모든 일정 조회 (시간 순 정렬)
     List<Schedule> findByMatchDateBetweenOrderByMatchDate(Timestamp start, Timestamp end);
 
+    // 특정 날짜 범위 + seriesType 필터 일정 조회
+    @Query(value = """
+        SELECT * FROM kbo_schedule
+        WHERE matchDate BETWEEN :start AND :end
+          AND seriesType = :seriesType
+        ORDER BY matchDate
+        """, nativeQuery = true)
+    List<Schedule> findByMatchDateBetweenAndSeriesType(@Param("start") Timestamp start,
+                                                       @Param("end") Timestamp end,
+                                                       @Param("seriesType") String seriesType);
+
     // 경기 날짜와 양 팀 기준으로 scheduleId 조회
     @Query(value = """
     	    SELECT id FROM kbo_schedule
@@ -147,6 +158,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
 
     @Query(value = "SELECT * FROM kbo_schedule WHERE kboGameId = :kboGameId", nativeQuery = true)
     Optional<Schedule> findByKboGameId(@Param("kboGameId") String kboGameId);
+
+    // 특정 시즌 + 시리즈타입의 가장 빠른 경기 월 조회
+    @Query(value = "SELECT MIN(MONTH(matchDate)) FROM kbo_schedule WHERE YEAR(matchDate) = :year AND seriesType = :seriesType", nativeQuery = true)
+    Integer findFirstMonthBySeriesType(@Param("year") int year, @Param("seriesType") String seriesType);
 
     // 특정 시즌의 종료된 경기 중 kboGameId가 있는 경기 목록 조회
     @Query(value = """
