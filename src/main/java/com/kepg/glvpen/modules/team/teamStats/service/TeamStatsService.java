@@ -76,7 +76,7 @@ public class TeamStatsService {
 
         Double value = projection.getValue();
         double rawValue = (value != null) ? value : 0.0;
-        
+
         return TopStatTeamDTO.builder()
                 .category(projection.getCategory())
                 .teamId(projection.getTeamId())
@@ -91,33 +91,23 @@ public class TeamStatsService {
     private TeamStatRankingDTO convertToTeamStatRankingDTO(TeamStatRankingInterface projection) {
         if (projection == null) return null;
 
-        Double betterWar = projection.getBetterWar() != null ? projection.getBetterWar() : 0.0;
-        Double pitcherWar = projection.getPitcherWar() != null ? projection.getPitcherWar() : 0.0;
-        double totalWar = betterWar + pitcherWar;
-
         return TeamStatRankingDTO.builder()
                 .teamId(projection.getTeamId())
                 .teamName(projection.getTeamName())
                 .logoName(projection.getLogoName())
-                .totalWar(totalWar)
                 .ops(projection.getOps())
                 .avg(projection.getAvg())
                 .hr(projection.getHr())
+                .rbi(projection.getRbi())
                 .sb(projection.getSb())
-                .betterWar(projection.getBetterWar())
-                .pitcherWar(projection.getPitcherWar())
-                .so(projection.getSo())
-                .w(projection.getW())
                 .h(projection.getH())
-                .sv(projection.getSv())
                 .era(projection.getEra())
                 .whip(projection.getWhip())
+                .w(projection.getW())
+                .sv(projection.getSv())
+                .so(projection.getSo())
+                .hld(projection.getHld())
                 .bb(projection.getBb())
-                .battingWaa(projection.getBattingWaa())
-                .baserunningWaa(projection.getBaserunningWaa())
-                .defenseWaa(projection.getDefenseWaa())
-                .startingWaa(projection.getStartingWaa())
-                .bullpenWaa(projection.getBullpenWaa())
                 .build();
     }
 
@@ -129,15 +119,15 @@ public class TeamStatsService {
 
         return switch (category) {
             case "OPS", "AVG" -> threeDecimal.format(value);
-            case "HR", "SB", "SO", "BB", "H", "SV", "W" -> integerFormat.format(value);
-            case "BetterWAR", "PitcherWAR", "ERA", "WHIP", "타격", "주루", "수비", "선발", "불펜" -> twoDecimal.format(value);
+            case "HR", "SB", "SO", "BB", "H", "SV", "W", "RBI", "HLD" -> integerFormat.format(value);
+            case "ERA", "WHIP" -> twoDecimal.format(value);
             default -> twoDecimal.format(value);
         };
     }
 
     // 타자 스탯 Top 팀 조회
     public List<TopStatTeamDTO> getTopBatterStats(int season) {
-        List<String> batterOrder = Arrays.asList("BetterWAR", "AVG", "OPS", "HR", "SB");
+        List<String> batterOrder = Arrays.asList("OPS", "AVG", "HR", "RBI", "SB");
         List<TopStatTeamDTO> result = new ArrayList<>();
 
         for (String category : batterOrder) {
@@ -151,13 +141,13 @@ public class TeamStatsService {
 
     // 투수 스탯 Top 팀 조회
     public List<TopStatTeamDTO> getTopPitcherStats(int season) {
-        List<String> pitcherOrder = Arrays.asList("PitcherWAR", "ERA", "WHIP", "SO", "BB");
+        List<String> pitcherOrder = Arrays.asList("ERA", "WHIP", "W", "SV", "SO");
         List<TopStatTeamDTO> result = new ArrayList<>();
 
         for (String category : pitcherOrder) {
             TopStatTeamInterface record;
-            if (Arrays.asList("ERA", "WHIP", "BB").contains(category)) {
-                record = teamStatsRepository.findTopByCategoryAndSeasonMin(season, category); // ERA, WHIP, BB는 낮을수록 좋음
+            if (Arrays.asList("ERA", "WHIP").contains(category)) {
+                record = teamStatsRepository.findTopByCategoryAndSeasonMin(season, category);
             } else {
                 record = teamStatsRepository.findTopByCategoryAndSeasonMax(season, category);
             }
@@ -168,20 +158,6 @@ public class TeamStatsService {
         return result;
     }
 
-    // WAA 스탯 Top 팀 조회
-    public List<TopStatTeamDTO> getTopWaaStats(int season) {
-        List<String> waaOrder = Arrays.asList("타격", "선발", "불펜", "수비", "주루");
-        List<TopStatTeamDTO> result = new ArrayList<>();
-
-        for (String category : waaOrder) {
-            TopStatTeamInterface record = teamStatsRepository.findTopByCategoryAndSeasonMax(season, category);
-            if (record != null) {
-                result.add(convertToTopStatTeamDTO(record));
-            }
-        }
-        return result;
-    }
-    
     // 종합 정보 조회
     public List<TeamStatRankingDTO> getTeamRankingsSortedByStat(int season, String sort, String direction) {
         List<TeamStatRankingInterface> rawList = teamStatsRepository.findAllTeamStats(season);
@@ -223,7 +199,7 @@ public class TeamStatsService {
             if (valA == null && valB == null) return 0;
             if (valA == null) return 1;
             if (valB == null) return -1;
-            return Double.compare(valB, valA); // 내림차순이므로 valB, valA 순서
+            return Double.compare(valB, valA);
         };
         Collections.sort(list, comparator);
     }
@@ -231,25 +207,19 @@ public class TeamStatsService {
     // 카테고리에 따른 스탯 값 가져오기
     private Double getValueByCategory(TeamStatRankingDTO dto, String category) {
         return switch (category) {
-            case "TotalWAR" -> dto.getTotalWar();
             case "OPS" -> dto.getOps();
             case "AVG" -> dto.getAvg();
             case "HR" -> dto.getHr();
+            case "RBI" -> dto.getRbi();
             case "SB" -> dto.getSb();
-            case "BetterWAR" -> dto.getBetterWar();
-            case "PitcherWAR" -> dto.getPitcherWar();
-            case "SO" -> dto.getSo();
-            case "W" -> dto.getW();
             case "H" -> dto.getH();
-            case "SV" -> dto.getSv();
             case "ERA" -> dto.getEra();
             case "WHIP" -> dto.getWhip();
+            case "W" -> dto.getW();
+            case "SV" -> dto.getSv();
+            case "SO" -> dto.getSo();
+            case "HLD" -> dto.getHld();
             case "BB" -> dto.getBb();
-            case "타격" -> dto.getBattingWaa();
-            case "주루" -> dto.getBaserunningWaa();
-            case "수비" -> dto.getDefenseWaa();
-            case "선발" -> dto.getStartingWaa();
-            case "불펜" -> dto.getBullpenWaa();
             default -> null;
         };
     }

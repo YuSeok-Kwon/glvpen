@@ -2,7 +2,9 @@ package com.kepg.glvpen.modules.user.dto;
 
 import java.util.List;
 
+import com.kepg.glvpen.modules.analysis.domain.AnalysisColumn;
 import com.kepg.glvpen.modules.game.schedule.domain.Schedule;
+import com.kepg.glvpen.modules.game.schedule.dto.ScheduleCardView;
 import com.kepg.glvpen.modules.player.dto.TopBatterCardView;
 import com.kepg.glvpen.modules.player.dto.TopPitcherCardView;
 import com.kepg.glvpen.modules.team.domain.Team;
@@ -47,4 +49,10 @@ public class UserHomeDTO {
 
     // 팀 순위
     private List<TeamRankingCardView> rankingList;
+
+    // 오늘 전체 KBO 경기 일정
+    private List<ScheduleCardView> todayAllGames;
+
+    // 최근 분석 컬럼
+    private List<AnalysisColumn> recentColumns;
 }

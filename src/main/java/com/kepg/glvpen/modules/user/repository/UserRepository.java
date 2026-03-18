@@ -37,4 +37,10 @@ public interface UserRepository extends JpaRepository<User, Integer>{
 	 */
 	@Query("SELECT u.id FROM User u")
 	List<Integer> findAllUserIds();
+
+	/**
+	 * 유저 조회 시 선호팀을 함께 로딩 (OSIV 비활성 환경 대응)
+	 */
+	@Query("SELECT u FROM User u LEFT JOIN FETCH u.favoriteTeam WHERE u.id = :id")
+	Optional<User> findByIdWithFavoriteTeam(@org.springframework.data.repository.query.Param("id") Integer id);
 }

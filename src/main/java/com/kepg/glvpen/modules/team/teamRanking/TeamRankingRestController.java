@@ -25,7 +25,7 @@ public class TeamRankingRestController {
     @GetMapping("/teamranking-view-json")
     public Map<String, Object> teamRankingViewJson(
             @RequestParam(name = "season", required = false) Integer season,
-            @RequestParam(name = "sort", required = false, defaultValue = "TotalWAR") String sort,
+            @RequestParam(name = "sort", required = false, defaultValue = "OPS") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction) {
 
         int validSeason = SeasonValidator.validateOrDefault(season, SeasonValidator.currentSeason());
@@ -34,7 +34,6 @@ public class TeamRankingRestController {
         result.put("rankingList", gameService.getTeamRankingCardViews(validSeason));
         result.put("topBatterStats", teamStatsService.getTopBatterStats(validSeason));
         result.put("topPitcherStats", teamStatsService.getTopPitcherStats(validSeason));
-        result.put("topWaaStats", teamStatsService.getTopWaaStats(validSeason));
         result.put("statRankingList", teamStatsService.getTeamRankingsSortedByStat(validSeason, sort, direction));
         result.put("currentSort", sort.trim().toUpperCase());
         result.put("sortDirection", direction);

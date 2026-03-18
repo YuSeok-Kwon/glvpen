@@ -230,4 +230,9 @@ public class UserService {
 	public User findById(Integer userId) {
 		return userRepository.findById(userId).orElse(null);
 	}
+
+	// ID로 유저 조회 (선호팀 포함 - OSIV 비활성 환경 대응)
+	public User findByIdWithFavoriteTeam(Integer userId) {
+		return userRepository.findByIdWithFavoriteTeam(userId).orElse(null);
+	}
 }

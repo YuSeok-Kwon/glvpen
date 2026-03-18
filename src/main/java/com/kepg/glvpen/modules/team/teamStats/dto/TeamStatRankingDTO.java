@@ -10,23 +10,20 @@ public class TeamStatRankingDTO {
     private String teamName;
     private String logoName;
 
-    private Double totalWar;
+    // 타자
     private Double ops;
     private Double avg;
     private Double hr;
+    private Double rbi;
     private Double sb;
-    private Double betterWar;
-    private Double pitcherWar;
-    private Double so;
-    private Double w;
     private Double h;
-    private Double sv;
+
+    // 투수
     private Double era;
     private Double whip;
+    private Double w;
+    private Double sv;
+    private Double so;
+    private Double hld;
     private Double bb;
-    private Double battingWaa;
-    private Double baserunningWaa;
-    private Double defenseWaa;
-    private Double startingWaa;
-    private Double bullpenWaa;
 }

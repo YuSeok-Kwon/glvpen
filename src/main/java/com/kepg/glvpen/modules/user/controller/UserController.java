@@ -226,6 +226,8 @@ public class UserController {
         model.addAttribute("topHitter", homeData.getTopHitter());
         model.addAttribute("topPitcher", homeData.getTopPitcher());
         model.addAttribute("rankingList", homeData.getRankingList());
+        model.addAttribute("todayAllGames", homeData.getTodayAllGames());
+        model.addAttribute("recentColumns", homeData.getRecentColumns());
 
         return "user/home";
     }
@@ -238,8 +240,8 @@ public class UserController {
             return "redirect:/user/login-view";
         }
 
-        // 세션 유저는 LAZY 로딩이 안 될 수 있으므로 DB에서 다시 조회
-        User freshUser = userService.findById(user.getId());
+        // 세션 유저는 LAZY 로딩이 안 될 수 있으므로 DB에서 선호팀 포함 조회
+        User freshUser = userService.findByIdWithFavoriteTeam(user.getId());
         model.addAttribute("user", freshUser);
         model.addAttribute("teams", teamRepository.findAll());
 

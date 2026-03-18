@@ -122,7 +122,7 @@
 		        <div class="text-secondary fw-semibold mb-1 text-nowrap">타자</div>
 		        <div class="fs-4 fw-bold mb-1 text-nowrap-custom" th:text="${topHitter.name}">타자이름</div>
 		        <div class="text-primary fw-bold mb-1 text-nowrap">
-		          WAR : <span th:text="${topHitter.war}">0.0</span>
+		          wOBA : <span th:text="${topHitter.woba}">0.0</span>
 		        </div>
 		        <div class="text-muted small text-nowrap-custom">
 		          <span th:text="${topHitter.avg}">.000</span> /
@@ -136,13 +136,14 @@
 		        <div class="text-secondary fw-semibold mb-1 text-nowrap">투수</div>
 		        <div class="fs-4 fw-bold mb-1 text-nowrap-custom" th:text="${topPitcher.name}">투수이름</div>
 		        <div class="text-primary fw-bold mb-1 text-nowrap">
-		          WAR : <span th:text="${topPitcher.war}">0.0</span>
+		          ERA : <span th:text="${topPitcher.era}">0.00</span>
 		        </div>
 		        <div class="text-muted small text-nowrap-custom">
 		          WHIP <span th:text="${topPitcher.whip}">0.00</span> /
 		          <span th:text="${topPitcher.bestStatValue}">0</span>
 		          <span th:text="${topPitcher.bestStatLabel}">W</span> /
-		          ERA <span th:text="${topPitcher.era}">0.00</span>
+		          FIP <span th:if="${topPitcher.fip != null and topPitcher.fip > 0}" th:text="${topPitcher.fip}">0.00</span>
+		          <span th:if="${topPitcher.fip == null or topPitcher.fip <= 0}">-</span>
 		        </div>
 		      </div>
 		
@@ -150,6 +151,77 @@
 		  </div>
 		</div>
         
+      </div>
+
+    </div>
+
+    <!-- 오늘 전체 KBO 경기 + 최근 분석 컬럼 -->
+    <div class="row justify-content-center gap-3 mt-3"
+         style="margin-left: 0 !important; margin-right: 0 !important;">
+
+      <!-- 오늘 전체 KBO 경기 일정 -->
+      <div class="col-12 col-lg-6 col-xl-5 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-3" style="padding-left: 10px; padding-right: 10px;">
+            <h5 class="card-title text-center fw-bold fs-5 mb-3">오늘의 KBO 전체 경기</h5>
+            <div th:if="${todayAllGames != null and !todayAllGames.isEmpty()}">
+              <div th:each="game : ${todayAllGames}" class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center gap-2" style="flex: 1;">
+                  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                  <span class="small fw-bold" th:text="${game.awayTeamName}">원정팀</span>
+                </div>
+                <div class="text-center" style="flex: 1;">
+                  <span th:if="${game.status == '종료'}" class="fw-bold">
+                    <span th:text="${game.awayTeamScore}">0</span>
+                    <span class="text-muted mx-1">:</span>
+                    <span th:text="${game.homeTeamScore}">0</span>
+                  </span>
+                  <span th:if="${game.status != '종료'}" class="text-muted small" th:text="${game.matchTime}">14:00</span>
+                </div>
+                <div class="d-flex align-items-center gap-2 justify-content-end" style="flex: 1;">
+                  <span class="small fw-bold" th:text="${game.homeTeamName}">홈팀</span>
+                  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                </div>
+              </div>
+            </div>
+            <div th:if="${todayAllGames == null or todayAllGames.isEmpty()}" class="text-center text-muted py-4">
+              오늘은 예정된 경기가 없습니다.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 최근 분석 컬럼 -->
+      <div class="col-12 col-lg-6 col-xl-5 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+          <div class="card-body py-3" style="padding-left: 15px; padding-right: 15px;">
+            <h5 class="card-title text-center fw-bold fs-5 mb-3">최근 분석 컬럼</h5>
+            <div th:if="${recentColumns != null and !recentColumns.isEmpty()}">
+              <a th:each="col : ${recentColumns}"
+                 th:href="@{'/analysis/columns/' + ${col.id}}"
+                 class="d-block text-decoration-none text-dark py-2 border-bottom"
+                 style="transition: background 0.15s;">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div style="flex: 1; min-width: 0;">
+                    <div class="fw-bold small text-truncate" th:text="${col.title}">컬럼 제목</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">
+                      <span class="badge bg-secondary me-1" th:text="${col.category == 'player' ? '선수' : (col.category == 'team' ? '팀' : (col.category == 'game' ? '경기' : '트렌드'))}">카테고리</span>
+                      <span th:text="${#temporals.format(col.publishDate, 'MM.dd')}">01.01</span>
+                      <span th:if="${col.autoGenerated}" class="badge bg-info ms-1">AI</span>
+                    </div>
+                  </div>
+                  <span class="text-muted small ms-2" th:text="'조회 ' + ${col.viewCount}">조회 0</span>
+                </div>
+              </a>
+            </div>
+            <div th:if="${recentColumns == null or recentColumns.isEmpty()}" class="text-center text-muted py-4">
+              아직 분석 컬럼이 없습니다.
+            </div>
+            <div class="text-center mt-3">
+              <a href="/analysis" class="btn btn-sm btn-outline-secondary">전체 보기</a>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>

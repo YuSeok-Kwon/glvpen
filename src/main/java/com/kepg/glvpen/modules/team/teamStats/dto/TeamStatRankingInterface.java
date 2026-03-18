@@ -8,19 +8,14 @@ public interface TeamStatRankingInterface {
     Double getOps();
     Double getAvg();
     Double getHr();
+    Double getRbi();
     Double getSb();
-    Double getBetterWar();
-    Double getPitcherWar();
+    Double getH();
     Double getSo();
     Double getW();
-    Double getH();
     Double getSv();
+    Double getHld();
     Double getEra();
     Double getWhip();
     Double getBb();
-    Double getBattingWaa();
-    Double getBaserunningWaa();
-    Double getDefenseWaa();
-    Double getStartingWaa();
-    Double getBullpenWaa();
 }
