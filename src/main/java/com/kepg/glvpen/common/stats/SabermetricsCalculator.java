@@ -134,6 +134,16 @@ public class SabermetricsCalculator {
     // ==================== 투수 추가 지표 ====================
 
     /**
+     * FIP (Fielding Independent Pitching)
+     * = ((13 × HR + 3 × (BB + HBP) - 2 × SO) / IP) + cFIP
+     * cFIP ≈ 3.2 (KBO 리그 상수)
+     */
+    public static double calcFIP(double hr, double bb, double hbp, double so, double ip) {
+        if (ip <= 0) return 0.0;
+        return ((13 * hr + 3 * (bb + hbp) - 2 * so) / ip) + 3.2;
+    }
+
+    /**
      * LOB% (잔루율 근사) — 높을수록 위기 관리 우수
      * ≈ (H + BB + HBP - R) / (H + BB + HBP - 1.4 * HR)
      */

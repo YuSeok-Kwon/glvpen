@@ -93,7 +93,7 @@ public class BatterStatsService {
 	    batterStatsRepository.save(entity);
 	}
     
-    // 팀별 WAR 1위 타자 조회 (AVG, OPS, HR 포함)
+    // 팀별 wOBA 1위 타자 조회 (AVG, OPS, HR 포함)
     public TopBatterCardView getTopHitter(int teamId, int season) {
         List<Object[]> result = playerService.getTopHitterByTeamAndSeason(teamId, season);
         if (result.isEmpty()) {
@@ -104,12 +104,12 @@ public class BatterStatsService {
 
         String name = (String) row[0];
         String position = (String) row[1];
-        double war = 0.0;
+        double woba = 0.0;
         int ranking = 0;
         int playerId = 0;
 
         if (row[2] != null) {
-            war = Double.parseDouble(row[2].toString());
+            woba = Double.parseDouble(row[2].toString());
         }
 
         if (row[3] != null) {
@@ -144,33 +144,32 @@ public class BatterStatsService {
         return TopBatterCardView.builder()
                 .name(name)
                 .position(position)
-                .war(war)
-                .warRank(ranking)
+                .woba(woba)
+                .wobaRank(ranking)
                 .avg(avg)
                 .hr(hr)
                 .ops(ops)
                 .build();
     }
         
-    // 시즌별 포지션 WAR 1위 타자 목록 조회
+    // 시즌별 포지션 wOBA 1위 타자 목록 조회
     public List<BatterTopDTO> getTopBattersByPosition(int season) {
         List<Object[]> projections = batterStatsRepository.findTopBattersByPosition(season);
         List<BatterTopDTO> result = new ArrayList<>();
 
         for (Object[] row : projections) {
-            String position = (String) row[0];  // 포지션
-            String playerName = (String) row[1];  // 선수 이름
-            String teamName = (String) row[2];  // 팀 이름
-            String logoName = (String) row[3];  // 로고 이름
-            Double war = (Double) row[4];  // WAR
+            String position = (String) row[0];
+            String playerName = (String) row[1];
+            String teamName = (String) row[2];
+            String logoName = (String) row[3];
+            Double woba = (Double) row[4];
 
-            // DTO 객체 빌드
             BatterTopDTO dto = BatterTopDTO.builder()
                     .position(position)
                     .playerName(playerName)
                     .teamName(teamName)
                     .logoName(logoName)
-                    .war(war)
+                    .woba(woba != null ? woba : 0.0)
                     .build();
 
             result.add(dto);
@@ -193,12 +192,12 @@ public class BatterStatsService {
         	String playerName = (String) row[1];
         	String teamName = (String) row[2];
         	String logoName = (String) row[3];
-        	Double war = getDoubleOrDefault(row[4], 0.0);
+        	Double woba = getDoubleOrNull(row[4]);
         	Double avg = getDoubleOrDefault(row[5], 0.0);
         	Double ops = getDoubleOrDefault(row[6], 0.0);
         	Double hr = getDoubleOrDefault(row[7], 0.0);
         	Double sb = getDoubleOrDefault(row[8], 0.0);
-        	Double wrcPlus = getDoubleOrDefault(row[9], 0.0);
+        	Double wrcPlus = getDoubleOrNull(row[9]);
         	Double g = getDoubleOrDefault(row[10], 0.0);
         	Double pa = getDoubleOrDefault(row[11], 0.0);
         	Double h = getDoubleOrDefault(row[12], 0.0);
@@ -210,10 +209,10 @@ public class BatterStatsService {
         	Double obp = getDoubleOrDefault(row[18], 0.0);
         	Double slg = getDoubleOrDefault(row[19], 0.0);
         	// row[20] = teamId (스킵)
-        	Double babip = getDoubleOrDefault(row[21], 0.0);
-        	Double iso = getDoubleOrDefault(row[22], 0.0);
-        	Double kRate = getDoubleOrDefault(row[23], 0.0);
-        	Double bbRate = getDoubleOrDefault(row[24], 0.0);
+        	Double babip = getDoubleOrNull(row[21]);
+        	Double iso = getDoubleOrNull(row[22]);
+        	Double kRate = getDoubleOrNull(row[23]);
+        	Double bbRate = getDoubleOrNull(row[24]);
         	Double ab = getDoubleOrDefault(row[25], 0.0);
         	Double r = getDoubleOrDefault(row[26], 0.0);
         	Double tb = getDoubleOrDefault(row[27], 0.0);
@@ -233,7 +232,7 @@ public class BatterStatsService {
                     .teamName(teamName)
                     .logoName(logoName)
                     .position(position)
-                    .war(war)
+                    .woba(woba)
                     .h(h)
                     .twoB(twoB)
                     .threeB(threeB)
@@ -272,8 +271,13 @@ public class BatterStatsService {
         return result;
     }
 
-    // 규정 타석 충족한 타자만 필터링하여 랭킹 조회 및 정렬
+    // 규정 타석 충족한 타자만 필터링하여 랭킹 조회 및 정렬 (100% 기준)
     public List<BatterRankingDTO> getQualifiedBatters(int season, String sort, String direction) {
+        return getQualifiedBatters(season, sort, direction, 100);
+    }
+
+    // 규정 타석 충족한 타자만 필터링하여 랭킹 조회 및 정렬 (레벨 지정: 100/75/50)
+    public List<BatterRankingDTO> getQualifiedBatters(int season, String sort, String direction, int qualifiedLevel) {
         BatterSortType sortType = BatterSortType.fromString(sort);
         SortDirection sortDirection = SortDirection.fromString(direction);
 
@@ -292,9 +296,10 @@ public class BatterStatsService {
             	    int teamId = (int) getDoubleOrDefault(row[20], 0.0);
             	    double pa = getDoubleOrDefault(row[11], 0.0);
 
-            	    // 규정 타석 계산
+            	    // 규정 타석 계산 (레벨 비율 적용)
             	    int teamGames = teamGamesMap.getOrDefault(teamId, 0);
-            	    int requiredPA = getQualifiedPA(season, teamGames);
+            	    int fullPA = getQualifiedPA(season, teamGames);
+            	    int requiredPA = (int) Math.floor(fullPA * qualifiedLevel / 100.0);
 
             	    if (pa >= requiredPA) {
             	        BatterRankingDTO dto = BatterRankingDTO.builder()
@@ -302,12 +307,12 @@ public class BatterStatsService {
             	            .playerName((String) row[1])
             	            .teamName((String) row[2])
             	            .logoName((String) row[3])
-            	            .war(getDoubleOrDefault(row[4], 0.0))
+            	            .woba(getDoubleOrNull(row[4]))
             	            .avg(getDoubleOrDefault(row[5], 0.0))
             	            .ops(getDoubleOrDefault(row[6], 0.0))
             	            .hr(getDoubleOrDefault(row[7], 0.0))
             	            .sb(getDoubleOrDefault(row[8], 0.0))
-            	            .wrcPlus(getDoubleOrDefault(row[9], 0.0))
+            	            .wrcPlus(getDoubleOrNull(row[9]))
             	            .g(getDoubleOrDefault(row[10], 0.0))
             	            .pa(pa)
             	            .h(getDoubleOrDefault(row[12], 0.0))
@@ -318,10 +323,10 @@ public class BatterStatsService {
             	            .threeB(getDoubleOrDefault(row[17], 0.0))
             	            .obp(getDoubleOrDefault(row[18], 0.0))
             	            .slg(getDoubleOrDefault(row[19], 0.0))
-            	            .babip(getDoubleOrDefault(row[21], 0.0))
-            	            .iso(getDoubleOrDefault(row[22], 0.0))
-            	            .kRate(getDoubleOrDefault(row[23], 0.0))
-            	            .bbRate(getDoubleOrDefault(row[24], 0.0))
+            	            .babip(getDoubleOrNull(row[21]))
+            	            .iso(getDoubleOrNull(row[22]))
+            	            .kRate(getDoubleOrNull(row[23]))
+            	            .bbRate(getDoubleOrNull(row[24]))
             	            .ab(getDoubleOrDefault(row[25], 0.0))
             	            .r(getDoubleOrDefault(row[26], 0.0))
             	            .tb(getDoubleOrDefault(row[27], 0.0))
@@ -348,7 +353,7 @@ public class BatterStatsService {
     // 정렬 기준별 값 추출 (WAR, AVG, OPS 등)
     private double getSortValue(BatterRankingDTO dto, BatterSortType sortType) {
         return switch (sortType) {
-            case WAR -> dto.getWar() != null ? dto.getWar() : 0.0;
+            case WOBA -> dto.getWoba() != null ? dto.getWoba() : 0.0;
             case AVG -> dto.getAvg() != null ? dto.getAvg() : 0.0;
             case OPS -> dto.getOps() != null ? dto.getOps() : 0.0;
             case HR -> dto.getHr() != null ? dto.getHr() : 0.0;
@@ -412,5 +417,10 @@ public class BatterStatsService {
     // 헬퍼 메서드: 배열 요소를 Double로 변환 (null 안전)
     private double getDoubleOrDefault(Object value, double defaultValue) {
         return value != null ? ((Number) value).doubleValue() : defaultValue;
+    }
+
+    // 헬퍼 메서드: 배열 요소를 Double로 변환 (null이면 null 반환 — 세이버 지표용)
+    private Double getDoubleOrNull(Object value) {
+        return value != null ? ((Number) value).doubleValue() : null;
     }
 }

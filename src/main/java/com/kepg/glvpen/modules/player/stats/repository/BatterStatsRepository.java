@@ -41,23 +41,23 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
     Optional<String> findStatValueByPlayerIdCategoryAndSeason(
             @Param("playerId") int playerId, @Param("category") String category, @Param("season") int season);
 
-    // 포지션별 WAR 1위 타자 조회 (윈도우 함수 사용)
+    // 포지션별 wOBA 1위 타자 조회 (윈도우 함수 사용)
     @Query(value = """
             SELECT
-                position, playerName, teamName, logoName, war
+                position, playerName, teamName, logoName, woba
             FROM (
                 SELECT
                     bs.position AS position,
                     p.name AS playerName,
                     t.name AS teamName,
                     t.logoName AS logoName,
-                    COALESCE(bs.value, 0) AS war,
+                    COALESCE(bs.value, 0) AS woba,
                     ROW_NUMBER() OVER (PARTITION BY bs.position ORDER BY COALESCE(bs.value, 0) DESC) AS row_num
                 FROM player_batter_stats bs
                 JOIN player p ON bs.playerId = p.id
                 JOIN team t ON p.teamId = t.id
                 WHERE bs.season = :season
-                  AND bs.category = 'WAR'
+                  AND bs.category = 'wOBA'
                   AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
             ) AS ranked
             WHERE ranked.row_num = 1
@@ -72,7 +72,7 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
                 p.name AS playerName,
                 t.name AS teamName,
                 t.logoName AS logoName,
-                MAX(CASE WHEN b.category = 'WAR' THEN b.value ELSE NULL END) AS war,
+                MAX(CASE WHEN b.category = 'wOBA' THEN b.value ELSE NULL END) AS woba,
                 MAX(CASE WHEN b.category = 'AVG' THEN b.value ELSE NULL END) AS avg,
                 MAX(CASE WHEN b.category = 'OPS' THEN b.value ELSE NULL END) AS ops,
                 MAX(CASE WHEN b.category = 'HR' THEN b.value ELSE NULL END) AS hr,
@@ -122,11 +122,11 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
             """, nativeQuery = true)
     List<Object[]> findStatsRawByPlayerIdAndSeason(@Param("playerId") Integer playerId, @Param("season") int season);
 
-    // 선수 포지션 조회 - WAR 기준 포지션 1개
+    // 선수 포지션 조회 - AVG 기준 포지션 1개
     @Query(value = """
             SELECT position
             FROM player_batter_stats
-            WHERE playerId = :playerId AND season = :season AND category = 'WAR'
+            WHERE playerId = :playerId AND season = :season AND category = 'AVG'
               AND series = '0' AND situationType = '' AND situationValue = ''
             LIMIT 1
             """, nativeQuery = true)
@@ -174,7 +174,7 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
             FROM player_batter_stats bs
             JOIN player p ON bs.playerId = p.id
             JOIN team t ON p.teamId = t.id
-            WHERE bs.playerId = :playerId AND bs.season = :season AND bs.category = 'WAR'
+            WHERE bs.playerId = :playerId AND bs.season = :season AND bs.category = 'AVG'
               AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
             LIMIT 1
             """, nativeQuery = true)
@@ -183,7 +183,7 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
     // 분석용 타자 전체 조회 (G >= 30 필터, playerId 포함)
     // SB는 player_runner_stats에만 존재하므로 LEFT JOIN
     // 컬럼 인덱스: 0:playerId, 1:playerName, 2:teamName, 3:logoName, 4:teamId,
-    //   5:war, 6:avg, 7:ops, 8:hr, 9:sb(runner_stats), 10:kRate, 11:bbRate, 12:iso,
+    //   5:woba, 6:avg, 7:ops, 8:hr, 9:sb(runner_stats), 10:kRate, 11:bbRate, 12:iso,
     //   13:g, 14:pa, 15:risp, 16:phBa, 17:rbi, 18:wrcPlus, 19:obp, 20:slg
     @Query(value = """
             SELECT
@@ -192,7 +192,7 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
                 t.name AS teamName,
                 t.logoName AS logoName,
                 t.id AS teamId,
-                MAX(CASE WHEN b.category = 'WAR' THEN b.value END) AS war,
+                MAX(CASE WHEN b.category = 'wOBA' THEN b.value END) AS woba,
                 MAX(CASE WHEN b.category = 'AVG' THEN b.value END) AS avg,
                 MAX(CASE WHEN b.category = 'OPS' THEN b.value END) AS ops,
                 MAX(CASE WHEN b.category = 'HR' THEN b.value END) AS hr,
@@ -230,7 +230,7 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
             FROM player_batter_stats b
             WHERE b.season = :season
               AND b.series = '0' AND b.situationType = '' AND b.situationValue = ''
-              AND b.category IN ('AVG', 'OPS', 'HR', 'WAR', 'SB', 'RBI', 'OBP', 'SLG', 'BB%', 'K%', 'ISO', 'wRC+', 'BABIP', 'PA')
+              AND b.category IN ('AVG', 'OPS', 'HR', 'wOBA', 'SB', 'RBI', 'OBP', 'SLG', 'BB%', 'K%', 'ISO', 'wRC+', 'BABIP', 'PA')
             GROUP BY b.category
             """, nativeQuery = true)
     List<Object[]> findLeagueAvgBySeason(@Param("season") int season);

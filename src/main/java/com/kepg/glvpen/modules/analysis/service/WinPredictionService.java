@@ -36,7 +36,7 @@ public class WinPredictionService {
     private volatile double[] featureStds;
     private final Object trainLock = new Object();
 
-    // Features: deltaERA(반전), deltaOPS, deltaBatterWAR, deltaPitcherWAR, homeAdvantage
+    // Features: deltaERA(반전), deltaOPS, deltaHR, deltaWHIP(반전), homeAdvantage
     private static final int NUM_FEATURES = 5;
     private static final double LEARNING_RATE = 0.01;
     private static final int EPOCHS = 1000;
@@ -69,11 +69,11 @@ public class WinPredictionService {
         } else {
             double deltaEra = safeVal(awayStat.getEra()) - safeVal(homeStat.getEra()); // 반전: 홈이 낮으면 양수
             double deltaOps = safeVal(homeStat.getOps()) - safeVal(awayStat.getOps());
-            double deltaBatterWar = safeVal(homeStat.getBetterWar()) - safeVal(awayStat.getBetterWar());
-            double deltaPitcherWar = safeVal(homeStat.getPitcherWar()) - safeVal(awayStat.getPitcherWar());
+            double deltaHr = safeVal(homeStat.getHr()) - safeVal(awayStat.getHr());
+            double deltaWhip = safeVal(awayStat.getWhip()) - safeVal(homeStat.getWhip()); // 반전: 홈이 낮으면 양수
             double homeAdv = 1.0;
 
-            double[] features = {deltaEra, deltaOps, deltaBatterWar, deltaPitcherWar, homeAdv};
+            double[] features = {deltaEra, deltaOps, deltaHr, deltaWhip, homeAdv};
 
             // Z-score 정규화 (학습 때와 동일 스케일)
             double[] normalized = new double[NUM_FEATURES];
@@ -86,8 +86,8 @@ public class WinPredictionService {
 
             deltas.put("ERA차", round(deltaEra));
             deltas.put("OPS차", round(deltaOps));
-            deltas.put("타자WAR차", round(deltaBatterWar));
-            deltas.put("투수WAR차", round(deltaPitcherWar));
+            deltas.put("HR차", round(deltaHr));
+            deltas.put("WHIP차", round(deltaWhip));
         }
 
         return WinPredictionDTO.builder()
@@ -133,11 +133,11 @@ public class WinPredictionService {
 
                     double deltaEra = safeVal(awayStat.getEra()) - safeVal(homeStat.getEra());
                     double deltaOps = safeVal(homeStat.getOps()) - safeVal(awayStat.getOps());
-                    double deltaBatterWar = safeVal(homeStat.getBetterWar()) - safeVal(awayStat.getBetterWar());
-                    double deltaPitcherWar = safeVal(homeStat.getPitcherWar()) - safeVal(awayStat.getPitcherWar());
+                    double deltaHr = safeVal(homeStat.getHr()) - safeVal(awayStat.getHr());
+                    double deltaWhip = safeVal(awayStat.getWhip()) - safeVal(homeStat.getWhip());
                     double homeAdv = 1.0;
 
-                    featureList.add(new double[]{deltaEra, deltaOps, deltaBatterWar, deltaPitcherWar, homeAdv});
+                    featureList.add(new double[]{deltaEra, deltaOps, deltaHr, deltaWhip, homeAdv});
                     labelList.add(game.getHomeTeamScore() > game.getAwayTeamScore() ? 1 : 0);
                 }
             }

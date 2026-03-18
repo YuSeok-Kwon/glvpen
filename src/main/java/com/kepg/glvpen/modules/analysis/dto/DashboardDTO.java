@@ -20,8 +20,8 @@ public class DashboardDTO {
     private double leagueAvgEra;
     private double leagueAvgOps;
 
-    // 포지션별 WAR 평균
-    private Map<String, Double> positionWarAvg;
+    // 포지션별 wOBA 평균
+    private Map<String, Double> positionWobaAvg;
 
     // 팀별 승률 (시즌 추이용)
     private Map<String, List<Double>> teamWinRateTrend;

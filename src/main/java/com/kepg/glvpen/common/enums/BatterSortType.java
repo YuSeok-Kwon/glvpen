@@ -4,7 +4,7 @@ package com.kepg.glvpen.common.enums;
  * 타자 정렬 기준 Enum
  */
 public enum BatterSortType {
-    WAR("WAR"),
+    WOBA("wOBA"),
     AVG("타율"),
     OPS("OPS"),
     HR("홈런"),
@@ -60,11 +60,11 @@ public enum BatterSortType {
     /**
      * 문자열을 BatterSortType으로 변환
      * @param value 변환할 문자열
-     * @return BatterSortType (기본값: WAR)
+     * @return BatterSortType (기본값: OPS)
      */
     public static BatterSortType fromString(String value) {
         if (value == null) {
-            return WAR;
+            return OPS;
         }
 
         String normalized = value.trim().toUpperCase();
@@ -75,6 +75,6 @@ public enum BatterSortType {
             }
         }
 
-        return WAR;
+        return OPS;
     }
 }

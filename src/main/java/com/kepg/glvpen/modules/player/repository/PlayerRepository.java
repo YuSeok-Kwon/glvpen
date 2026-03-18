@@ -12,12 +12,12 @@ import com.kepg.glvpen.modules.player.domain.Player;
 
 public interface PlayerRepository extends JpaRepository<Player, Integer> {
 
-    // 팀별 최고 WAR 타자 조회 (포지션이 투수가 아닌 경우)
+    // 팀별 최고 wOBA 타자 조회 (포지션이 투수가 아닌 경우)
     @Query(value = """
-            SELECT p.name, s.position, s.value AS war, s.ranking, p.id
+            SELECT p.name, s.position, s.value AS woba, s.ranking, p.id
             FROM player_batter_stats s
             JOIN player p ON s.playerId = p.id
-            WHERE s.category = 'WAR'
+            WHERE s.category = 'wOBA'
               AND s.season = :season
               AND p.teamId = :teamId
               AND s.position != 'P'
@@ -27,17 +27,17 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
             """, nativeQuery = true)
     List<Object[]> findTopHitterByTeamIdAndSeason(@Param("teamId") int teamId, @Param("season") int season);
 
-    // 팀별 최고 WAR 투수 조회 (포지션이 투수인 경우)
+    // 팀별 최고 ERA 투수 조회 (ERA 낮을수록 좋음, FIP 데이터 없을 때 fallback)
     @Query(value = """
-            SELECT p.name, s.position, s.value AS war, s.ranking, p.id
+            SELECT p.name, s.position, s.value AS era, s.ranking, p.id
             FROM player_pitcher_stats s
             JOIN player p ON s.playerId = p.id
-            WHERE s.category = 'WAR'
+            WHERE s.category = 'ERA'
               AND s.season = :season
               AND p.teamId = :teamId
-              AND s.position = 'P'
               AND s.series = '0' AND s.situationType = '' AND s.situationValue = ''
-            ORDER BY s.value DESC
+              AND s.value > 0
+            ORDER BY s.value ASC
             LIMIT 1
             """, nativeQuery = true)
     List<Object[]> findTopPitcherByTeamIdAndSeason(@Param("teamId") int teamId, @Param("season") int season);
@@ -66,14 +66,14 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
     // 프로필 전체 미수집 선수 (kboPlayerId가 null인 선수)
     List<Player> findByKboPlayerIdIsNull();
 
-    // 포지션별 최고 WAR 타자 리스트 조회 (페이징 포함)
+    // 포지션별 최고 wOBA 타자 리스트 조회 (페이징 포함)
     @Query(value = """
             SELECT p.*
             FROM player p
             JOIN player_batter_stats b ON p.id = b.playerId
             WHERE b.position = :position
               AND b.season = :season
-              AND b.category = 'WAR'
+              AND b.category = 'wOBA'
               AND b.series = '0' AND b.situationType = '' AND b.situationValue = ''
             ORDER BY b.value DESC
             """, nativeQuery = true)
@@ -82,47 +82,47 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
             @Param("season") int season,
             Pageable pageable);
 
-    // 포지션별 최고 WAR 투수 리스트 조회 (페이징 포함)
+    // 포지션별 최고 FIP 투수 리스트 조회 (페이징 포함, FIP 낮을수록 좋음)
     @Query(value = """
             SELECT p.*
             FROM player p
             JOIN player_pitcher_stats ps ON p.id = ps.playerId
             WHERE ps.position = :position
               AND ps.season = :season
-              AND ps.category = 'WAR'
+              AND ps.category = 'FIP'
               AND ps.series = '0' AND ps.situationType = '' AND ps.situationValue = ''
-            ORDER BY ps.value DESC
+            ORDER BY ps.value ASC
             """, nativeQuery = true)
     List<Player> findTopPitchersByPositionAndSeason(
             @Param("position") String position,
             @Param("season") int season,
             Pageable pageable);
 
-    // 해당 시즌에 WAR 기록이 있는 타자 수 조회
+    // 해당 시즌에 G 기록이 있는 타자 수 조회
     @Query(value = """
             SELECT COUNT(DISTINCT playerId)
             FROM player_batter_stats
             WHERE season = :season
-              AND category = 'WAR'
+              AND category = 'G'
               AND series = '0' AND situationType = '' AND situationValue = ''
             """, nativeQuery = true)
     int countBattersInSeason(@Param("season") int season);
 
-    // 해당 시즌에 WAR 기록이 있는 투수 수 조회
+    // 해당 시즌에 G 기록이 있는 투수 수 조회
     @Query(value = """
             SELECT COUNT(DISTINCT playerId)
             FROM player_pitcher_stats
             WHERE season = :season
-              AND category = 'WAR'
+              AND category = 'G'
               AND series = '0' AND situationType = '' AND situationValue = ''
             """, nativeQuery = true)
     int countPitchersInSeason(@Param("season") int season);
 
-    // 데뷔 연도 기준 신인 타자 TOP 20 (WAR 내림차순)
+    // 데뷔 연도 기준 신인 타자 TOP 20 (wOBA 내림차순)
     @Query(value = """
             SELECT
                 p.id, p.name, p.debutYear, t.name AS teamName, t.logoName,
-                MAX(CASE WHEN bs.category = 'WAR' THEN bs.value END) AS war,
+                MAX(CASE WHEN bs.category = 'wOBA' THEN bs.value END) AS woba,
                 MAX(CASE WHEN bs.category = 'AVG' THEN bs.value END) AS avg,
                 MAX(CASE WHEN bs.category = 'HR' THEN bs.value END) AS hr,
                 MAX(CASE WHEN bs.category = 'OPS' THEN bs.value END) AS ops
@@ -133,17 +133,17 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
                 AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
             WHERE p.debutYear = :debutYear AND p.position != 'P'
             GROUP BY p.id, p.name, p.debutYear, t.name, t.logoName
-            HAVING war IS NOT NULL
-            ORDER BY war DESC
+            HAVING woba IS NOT NULL
+            ORDER BY woba DESC
             LIMIT 20
             """, nativeQuery = true)
     List<Object[]> findRookieBattersByDebutYear(@Param("debutYear") int debutYear);
 
-    // 데뷔 연도 기준 신인 투수 TOP 20 (WAR 내림차순)
+    // 데뷔 연도 기준 신인 투수 TOP 20 (FIP 오름차순 — 낮을수록 좋음)
     @Query(value = """
             SELECT
                 p.id, p.name, p.debutYear, t.name AS teamName, t.logoName,
-                MAX(CASE WHEN ps.category = 'WAR' THEN ps.value END) AS war,
+                MAX(CASE WHEN ps.category = 'FIP' THEN ps.value END) AS fip,
                 MAX(CASE WHEN ps.category = 'ERA' THEN ps.value END) AS era,
                 MAX(CASE WHEN ps.category = 'W' THEN ps.value END) AS wins,
                 MAX(CASE WHEN ps.category = 'SO' THEN ps.value END) AS so
@@ -154,8 +154,8 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
                 AND ps.series = '0' AND ps.situationType = '' AND ps.situationValue = ''
             WHERE p.debutYear = :debutYear AND p.position = 'P'
             GROUP BY p.id, p.name, p.debutYear, t.name, t.logoName
-            HAVING war IS NOT NULL
-            ORDER BY war DESC
+            HAVING fip IS NOT NULL
+            ORDER BY fip ASC
             LIMIT 20
             """, nativeQuery = true)
     List<Object[]> findRookiePitchersByDebutYear(@Param("debutYear") int debutYear);
@@ -172,7 +172,7 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
                 COUNT(DISTINCT p.id) AS playerCount
             FROM player p
             JOIN player_batter_stats bs ON bs.playerId = p.id
-                AND bs.category = 'WAR'
+                AND bs.category = 'G'
                 AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
             WHERE bs.season BETWEEN :startYear AND :endYear
               AND p.school IS NOT NULL AND p.school != ''
@@ -195,7 +195,7 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
                     COUNT(DISTINCT p.id) AS cnt
                 FROM player p
                 JOIN player_batter_stats bs ON bs.playerId = p.id
-                    AND bs.category = 'WAR'
+                    AND bs.category = 'G'
                     AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
                 WHERE bs.season BETWEEN :startYear AND :endYear
                   AND p.school IS NOT NULL AND p.school != ''
@@ -210,7 +210,7 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
                     COUNT(DISTINCT p.id) AS cnt
                 FROM player p
                 JOIN player_pitcher_stats ps ON ps.playerId = p.id
-                    AND ps.category = 'WAR'
+                    AND ps.category = 'G'
                     AND ps.series = '0' AND ps.situationType = '' AND ps.situationValue = ''
                 WHERE ps.season BETWEEN :startYear AND :endYear
                   AND p.school IS NOT NULL AND p.school != ''

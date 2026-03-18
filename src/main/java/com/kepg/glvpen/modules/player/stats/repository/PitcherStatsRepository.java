@@ -68,7 +68,7 @@ public interface PitcherStatsRepository extends JpaRepository<PitcherStats, Inte
                 JOIN player p ON bs.playerId = p.id
                 JOIN team t ON p.teamId = t.id
                 WHERE bs.season = :season
-                  AND bs.category IN ('ERA', 'WHIP', 'G', 'IP', 'W', 'HLD', 'SV', 'SO', 'WAR')
+                  AND bs.category IN ('ERA', 'WHIP', 'G', 'IP', 'W', 'HLD', 'SV', 'SO')
                   AND (bs.category != 'ERA' OR bs.value > 0)
                   AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
             ) AS ranked
@@ -94,7 +94,6 @@ public interface PitcherStatsRepository extends JpaRepository<PitcherStats, Inte
                 MAX(CASE WHEN b.category = 'H' THEN b.value ELSE NULL END) AS hitsAllowed,
                 MAX(CASE WHEN b.category = 'HR' THEN b.value ELSE NULL END) AS homeRunsAllowed,
                 MAX(CASE WHEN b.category = 'IP' THEN b.value ELSE NULL END) AS inningsPitched,
-                MAX(CASE WHEN b.category = 'WAR' THEN b.value ELSE NULL END) AS war,
                 t.id AS teamId,
                 MAX(CASE WHEN b.category = 'FIP' THEN b.value ELSE NULL END) AS fip,
                 MAX(CASE WHEN b.category = 'xFIP' THEN b.value ELSE NULL END) AS xfip,
@@ -179,7 +178,7 @@ public interface PitcherStatsRepository extends JpaRepository<PitcherStats, Inte
             FROM player_pitcher_stats p
             WHERE p.season = :season
               AND p.series = '0' AND p.situationType = '' AND p.situationValue = ''
-              AND p.category IN ('ERA', 'WHIP', 'WAR', 'FIP', 'xFIP', 'K/9', 'BB/9', 'W', 'SV', 'HLD', 'IP', 'SO')
+              AND p.category IN ('ERA', 'WHIP', 'FIP', 'xFIP', 'K/9', 'BB/9', 'W', 'SV', 'HLD', 'IP', 'SO')
             GROUP BY p.category
             """, nativeQuery = true)
     List<Object[]> findLeagueAvgBySeason(@Param("season") int season);

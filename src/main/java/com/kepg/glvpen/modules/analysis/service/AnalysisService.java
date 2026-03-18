@@ -48,8 +48,8 @@ public class AnalysisService {
         List<Integer> batterIds = batterStatsRepository.findDistinctPlayerIdsBySeason(season);
         List<Integer> pitcherIds = pitcherStatsRepository.findDistinctPlayerIdsBySeason(season);
 
-        // 포지션별 WAR 평균
-        Map<String, Double> positionWarAvg = calculatePositionWarAvg(season);
+        // 포지션별 wOBA 평균
+        Map<String, Double> positionWobaAvg = calculatePositionWobaAvg(season);
 
         // 최근 컬럼
         var recentColumns = columnRepository.findTop5ByOrderByPublishDateDesc().stream()
@@ -67,7 +67,7 @@ public class AnalysisService {
                 .totalBatters(batterIds.size())
                 .totalPitchers(pitcherIds.size())
                 .totalTeams(10)
-                .positionWarAvg(positionWarAvg)
+                .positionWobaAvg(positionWobaAvg)
                 .recentColumns(recentColumns)
                 .build();
     }
@@ -97,44 +97,48 @@ public class AnalysisService {
      * 팀 전력 밸런스 분석 (레이더 차트용)
      */
     public TeamAnalysisDTO getTeamBalance(int teamId, int season) {
-        // 팀의 타자/투수 WAR 합산
+        // 팀의 타자 wOBA 평균 / 투수 FIP 평균
         List<Object[]> batters = batterStatsRepository.findAllBatters(season);
         List<Object[]> pitchers = pitcherStatsRepository.findAllPitchers(season);
 
-        double totalBatterWar = 0, totalPitcherWar = 0;
+        double totalBatterWoba = 0, totalPitcherFip = 0;
         double totalSb = 0, totalHr = 0;
-        int batterCount = 0;
+        int batterCount = 0, pitcherCount = 0;
 
-        // 타자 인덱스: row[20] = teamId (findAllBatters 쿼리 기준, 컬럼 확장 후 고정값)
+        // 타자 인덱스: row[20] = teamId (findAllBatters 쿼리 기준)
         for (Object[] row : batters) {
             Integer tid = ((Number) row[20]).intValue();
             if (tid == teamId) {
-                Double war = row[4] != null ? ((Number) row[4]).doubleValue() : 0;
+                Double woba = row[4] != null ? ((Number) row[4]).doubleValue() : 0;
                 Double sb = row[8] != null ? ((Number) row[8]).doubleValue() : 0;
                 Double hr = row[7] != null ? ((Number) row[7]).doubleValue() : 0;
-                totalBatterWar += war;
+                totalBatterWoba += woba;
                 totalSb += sb;
                 totalHr += hr;
                 batterCount++;
             }
         }
 
-        // 투수 인덱스: row[15] = teamId (findAllPitchers 쿼리 기준, 컬럼 확장 후 고정값)
+        // 투수 인덱스: row[14] = teamId (findAllPitchers 쿼리 기준, WAR 제거 후)
         for (Object[] row : pitchers) {
-            Integer tid = ((Number) row[15]).intValue();
+            Integer tid = ((Number) row[14]).intValue();
             if (tid == teamId) {
-                Double war = row[14] != null ? ((Number) row[14]).doubleValue() : 0;
-                totalPitcherWar += war;
+                Double fip = row[15] != null ? ((Number) row[15]).doubleValue() : 0;
+                totalPitcherFip += fip;
+                pitcherCount++;
             }
         }
+
+        double avgBatterWoba = batterCount > 0 ? totalBatterWoba / batterCount : 0;
+        double avgPitcherFip = pitcherCount > 0 ? totalPitcherFip / pitcherCount : 0;
 
         return TeamAnalysisDTO.builder()
                 .teamId(teamId)
                 .season(season)
-                .battingWar(totalBatterWar)
-                .pitchingWar(totalPitcherWar)
-                .totalBatterWar(totalBatterWar)
-                .totalPitcherWar(totalPitcherWar)
+                .battingWar(avgBatterWoba)
+                .pitchingWar(avgPitcherFip)
+                .totalBatterWar(avgBatterWoba)
+                .totalPitcherWar(avgPitcherFip)
                 .speedScore(totalSb)
                 .powerScore(totalHr > 0 ? totalHr / Math.max(batterCount, 1) : 0)
                 .build();
@@ -152,21 +156,21 @@ public class AnalysisService {
     }
 
     /**
-     * WAR 분포 차트 데이터
+     * wOBA 분포 차트 데이터
      */
     public ChartDataDTO getWarDistribution(int season) {
-        Map<String, Double> posWarAvg = calculatePositionWarAvg(season);
+        Map<String, Double> posWobaAvg = calculatePositionWobaAvg(season);
 
-        List<String> labels = new ArrayList<>(posWarAvg.keySet());
-        List<Double> values = new ArrayList<>(posWarAvg.values());
+        List<String> labels = new ArrayList<>(posWobaAvg.keySet());
+        List<Double> values = new ArrayList<>(posWobaAvg.values());
 
         return ChartDataDTO.builder()
                 .chartType("bar")
-                .title("포지션별 WAR 분포 (" + season + ")")
+                .title("포지션별 wOBA 분포 (" + season + ")")
                 .labels(labels)
                 .datasets(List.of(
                         ChartDataDTO.DatasetDTO.builder()
-                                .label("WAR 평균")
+                                .label("wOBA 평균")
                                 .data(values)
                                 .backgroundColor("rgba(54, 162, 235, 0.6)")
                                 .borderColor("rgba(54, 162, 235, 1)")
@@ -308,23 +312,23 @@ public class AnalysisService {
         List<Object[]> batters = playerRepository.findRookieBattersByDebutYear(debutYear);
         List<Object[]> pitchers = playerRepository.findRookiePitchersByDebutYear(debutYear);
 
-        // 차트용: 신인 타자 WAR TOP 10
+        // 차트용: 신인 타자 wOBA TOP 10
         List<String> labels = new ArrayList<>();
-        List<Double> warData = new ArrayList<>();
+        List<Double> wobaData = new ArrayList<>();
         int limit = Math.min(batters.size(), 10);
         for (int i = 0; i < limit; i++) {
             Object[] row = batters.get(i);
             labels.add((String) row[1]); // name
-            warData.add(row[5] != null ? ((Number) row[5]).doubleValue() : 0.0); // war
+            wobaData.add(row[5] != null ? ((Number) row[5]).doubleValue() : 0.0); // woba
         }
 
         ChartDataDTO chart = ChartDataDTO.builder()
                 .chartType("bar")
-                .title(debutYear + " 신인 타자 WAR TOP " + limit)
+                .title(debutYear + " 신인 타자 wOBA TOP " + limit)
                 .labels(labels)
                 .datasets(List.of(
                         ChartDataDTO.DatasetDTO.builder()
-                                .label("WAR").data(warData)
+                                .label("wOBA").data(wobaData)
                                 .backgroundColor("rgba(153, 102, 255, 0.6)")
                                 .borderColor("rgba(153, 102, 255, 1)")
                                 .build()
@@ -340,7 +344,7 @@ public class AnalysisService {
             m.put("debutYear", ((Number) row[2]).intValue());
             m.put("teamName", row[3]);
             m.put("logoName", row[4]);
-            m.put("war", row[5] != null ? ((Number) row[5]).doubleValue() : 0.0);
+            m.put("woba", row[5] != null ? ((Number) row[5]).doubleValue() : 0.0);
             m.put("avg", row[6] != null ? ((Number) row[6]).doubleValue() : 0.0);
             m.put("hr", row[7] != null ? ((Number) row[7]).doubleValue() : 0.0);
             m.put("ops", row[8] != null ? ((Number) row[8]).doubleValue() : 0.0);
@@ -355,7 +359,7 @@ public class AnalysisService {
             m.put("debutYear", ((Number) row[2]).intValue());
             m.put("teamName", row[3]);
             m.put("logoName", row[4]);
-            m.put("war", row[5] != null ? ((Number) row[5]).doubleValue() : 0.0);
+            m.put("fip", row[5] != null ? ((Number) row[5]).doubleValue() : 0.0);
             m.put("era", row[6] != null ? ((Number) row[6]).doubleValue() : 0.0);
             m.put("wins", row[7] != null ? ((Number) row[7]).doubleValue() : 0.0);
             m.put("so", row[8] != null ? ((Number) row[8]).doubleValue() : 0.0);
@@ -467,13 +471,13 @@ public class AnalysisService {
 
     // ====== 내부 메서드 ======
 
-    private Map<String, Double> calculatePositionWarAvg(int season) {
+    private Map<String, Double> calculatePositionWobaAvg(int season) {
         List<Object[]> topByPosition = batterStatsRepository.findTopBattersByPosition(season);
         Map<String, Double> posMap = new LinkedHashMap<>();
         for (Object[] row : topByPosition) {
             String pos = (String) row[0];
-            Double war = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
-            posMap.put(pos, war);
+            Double woba = row[4] != null ? ((Number) row[4]).doubleValue() : 0.0;
+            posMap.put(pos, woba);
         }
         return posMap;
     }

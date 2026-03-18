@@ -62,7 +62,7 @@ public class AnalysisController {
 
     @GetMapping("/player/{id}")
     public String playerAnalysis(@PathVariable int id,
-                                  @RequestParam(defaultValue = "WAR") String category,
+                                  @RequestParam(defaultValue = "OPS") String category,
                                   @RequestParam(defaultValue = "2020") int startYear,
                                   @RequestParam(required = false) Integer endYear,
                                   Model model) {

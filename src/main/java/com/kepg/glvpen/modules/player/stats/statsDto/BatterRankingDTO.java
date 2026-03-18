@@ -19,7 +19,7 @@ public class BatterRankingDTO {
     private String position;
     private Double g;          // 경기 수
     private Double pa;         // 타석
-    private Double war;     // WAR
+    private Double woba;    // wOBA
     private Double h;          // 안타
     private Double twoB;	// 2루타
     private Double threeB;  // 3루타

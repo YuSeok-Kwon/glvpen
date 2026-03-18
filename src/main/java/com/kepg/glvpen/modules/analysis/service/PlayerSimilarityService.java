@@ -20,8 +20,8 @@ public class PlayerSimilarityService {
 
     private final BatterStatsRepository batterStatsRepository;
 
-    // 유사도 비교에 사용할 지표 (인덱스 매핑)
-    private static final String[] COMPARE_LABELS = {"WAR", "AVG", "OPS", "HR", "SB", "K%", "BB%", "ISO"};
+    // 유사도 비교에 사용할 지표 (인덱스 매핑 - findAllBattersForAnalysis 기준)
+    private static final String[] COMPARE_LABELS = {"wOBA", "AVG", "OPS", "HR", "SB", "K%", "BB%", "ISO"};
     private static final int[] COMPARE_INDICES = {5, 6, 7, 8, 9, 10, 11, 12};
 
     /**

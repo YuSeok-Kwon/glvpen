@@ -35,8 +35,8 @@ public class MarcelProjectionService {
     private static final double RATE_AGING_PER_YEAR = 0.006;
     private static final double COUNT_AGING_PER_YEAR = 0.003;
 
-    private static final String[] BATTER_CATEGORIES = {"AVG", "OPS", "HR", "WAR", "SB", "RBI", "OBP", "SLG", "BB%", "K%"};
-    private static final String[] PITCHER_CATEGORIES = {"ERA", "WHIP", "WAR", "FIP", "K/9", "BB/9", "W", "SO"};
+    private static final String[] BATTER_CATEGORIES = {"AVG", "OPS", "HR", "wOBA", "SB", "RBI", "OBP", "SLG", "BB%", "K%"};
+    private static final String[] PITCHER_CATEGORIES = {"ERA", "WHIP", "FIP", "K/9", "BB/9", "W", "SO"};
 
     /**
      * 타자 성적 예측
@@ -258,7 +258,7 @@ public class MarcelProjectionService {
     }
 
     /**
-     * 전체 타자 WAR 예측 랭킹
+     * 전체 타자 wOBA 예측 랭킹
      */
     public List<MarcelProjectionDTO.ProjectionRanking> projectAllBatters(int targetSeason, int limit) {
         List<Integer> playerIds = batterStatsRepository.findDistinctPlayerIdsBySeason(targetSeason - 1);
@@ -268,15 +268,15 @@ public class MarcelProjectionService {
             MarcelProjectionDTO proj = projectBatter(pid, targetSeason);
             if (proj == null) continue;
 
-            Double projWar = proj.getProjections().stream()
-                    .filter(p -> "WAR".equals(p.getCategory()))
+            Double projWoba = proj.getProjections().stream()
+                    .filter(p -> "wOBA".equals(p.getCategory()))
                     .map(MarcelProjectionDTO.ProjectionDetail::getProjected)
                     .findFirst().orElse(null);
 
-            if (projWar == null) continue;
+            if (projWoba == null) continue;
 
-            Double lastWar = proj.getProjections().stream()
-                    .filter(p -> "WAR".equals(p.getCategory()))
+            Double lastWoba = proj.getProjections().stream()
+                    .filter(p -> "wOBA".equals(p.getCategory()))
                     .map(MarcelProjectionDTO.ProjectionDetail::getLastSeason)
                     .findFirst().orElse(null);
 
@@ -285,8 +285,8 @@ public class MarcelProjectionService {
                     .playerName(proj.getPlayerName())
                     .teamName(proj.getTeamName())
                     .logoName(proj.getLogoName())
-                    .projectedWar(projWar)
-                    .lastSeasonWar(lastWar)
+                    .projectedWar(projWoba)
+                    .lastSeasonWar(lastWoba)
                     .confidence(proj.getConfidence())
                     .build());
         }

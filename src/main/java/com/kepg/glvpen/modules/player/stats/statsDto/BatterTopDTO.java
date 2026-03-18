@@ -17,7 +17,7 @@ public class BatterTopDTO {
     private String playerName;
     private String teamName;
     private String logoName;
-    private double war;  
+    private double woba;
     private Double formattedValue;
 
 }

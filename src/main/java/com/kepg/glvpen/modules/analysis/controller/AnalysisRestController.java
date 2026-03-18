@@ -44,7 +44,7 @@ public class AnalysisRestController {
     @GetMapping("/player/{id}/trend")
     public ResponseEntity<PlayerAnalysisDTO> getPlayerTrend(
             @PathVariable int id,
-            @RequestParam(defaultValue = "WAR") String category,
+            @RequestParam(defaultValue = "OPS") String category,
             @RequestParam(defaultValue = "2020") int startYear,
             @RequestParam(required = false) Integer endYear) {
         int validEndYear = SeasonValidator.validateOrDefault(endYear, SeasonValidator.currentSeason());

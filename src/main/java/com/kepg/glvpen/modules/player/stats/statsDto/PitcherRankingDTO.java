@@ -24,7 +24,7 @@ public class PitcherRankingDTO {
     private Double loses;
     private Double saves;      // saves 
     private Double holds;      // holds 
-    private Double war;         // WAR 
+    // WAR 필드 제거 — FIP 필드(아래)로 대체 
     private Double so;         // strikeouts 
     private Double bb;         // walks 
     private Double h;          // hits 

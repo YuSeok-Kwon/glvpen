@@ -10,8 +10,8 @@ import lombok.Setter;
 public class TopPitcherCardView {
     private String name;
     private String position;
-    private double war;
-    private int warRank;
+    private double fip;
+    private int fipRank;
     private Double era;
     private Double whip;
     private String bestStatLabel;  // W, SV, HOLD 중 최고

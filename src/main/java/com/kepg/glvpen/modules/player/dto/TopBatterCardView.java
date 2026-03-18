@@ -10,8 +10,8 @@ import lombok.Setter;
 public class TopBatterCardView {
     private String name;
     private String position;
-    private double war;
-    private int warRank;
+    private double woba;
+    private int wobaRank;
     private Double avg;
     private Integer hr;
     private Double ops;

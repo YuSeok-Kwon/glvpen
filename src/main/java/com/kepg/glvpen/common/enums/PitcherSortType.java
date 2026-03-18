@@ -15,7 +15,6 @@ public enum PitcherSortType {
     BB("볼넷"),
     H("피안타"),
     HR("피홈런"),
-    WAR("WAR"),
     FIP("FIP"),
     XFIP("xFIP"),
     K9("K/9", "K9"),

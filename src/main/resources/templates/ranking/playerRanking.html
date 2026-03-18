@@ -10,7 +10,7 @@
                 <select class="form-select season-select" name="season" style="width:120px;" onchange="changeSeason(this)">
                 </select>
             </form>
-            <input type="hidden" id="current-sort" value="WAR">
+            <input type="hidden" id="current-sort" value="OPS">
             <input type="hidden" id="current-direction" value="DESC">
         </div>
 
@@ -18,7 +18,7 @@
         <div class="row gy-4 mx-5 mb-5">
             <div class="col-lg-6">
                 <div class="card border-point shadow-sm p-3">
-                    <h5 class="text-center fs-2 fw-bold mb-3">포지션별 타자 WAR Top</h5>
+                    <h5 class="text-center fs-2 fw-bold mb-3">포지션별 타자 wOBA Top</h5>
                     <ul id="top-batter-list" class="list-group border-0"></ul>
                 </div>
             </div>
@@ -279,7 +279,7 @@
 	        html += '<img src="' + getLogoPath(batter.logoName) + '" style="width:28px;height:28px;">';
 	        html += '<span class="ms-1 fs-5">' + batter.teamName + '</span>';
 	        html += '<span class="ms-2 fs-5">' + batter.playerName + '</span>';
-	        html += '<strong class="ms-1 fs-5">' + formatDecimal(batter.war, 2) + '</strong>';
+	        html += '<strong class="ms-1 fs-5">' + formatDecimal(batter.woba, 3) + '</strong>';
 	        html += '</span></li>';
 	    });
 	    $('#top-batter-list').html(html);
@@ -351,7 +351,7 @@
 	    html += '<th>순위</th>';
 	    html += '<th>선수명</th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'position\')">포지션' + (currentSort === 'POSITION' ? directionArrow : '') + '</a></th>';
-	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'WAR\')">WAR' + (currentSort === 'WAR' ? directionArrow : '') + '</a></th>';
+	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'WOBA\')">wOBA' + (currentSort === 'WOBA' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'G\')">경기' + (currentSort === 'G' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'PA\')">타석' + (currentSort === 'PA' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'AB\')">타수' + (currentSort === 'AB' ? directionArrow : '') + '</a></th>';
@@ -390,7 +390,7 @@
 	        html += '<td>' + actualRank + '</td>';
 	        html += '<td class="d-flex align-items-center gap-2"><img src="' + getLogoPath(batter.logoName) + '" style="width:28px;height:28px;">' + batter.playerName + '</td>';
 	        html += '<td>' + (batter.position || '-') + '</td>';
-	        html += '<td>' + formatDecimal(batter.war, 2) + '</td>';
+	        html += '<td>' + formatDecimal(batter.woba, 3) + '</td>';
 	        html += '<td>' + formatInteger(batter.g) + '</td>';
 	        html += '<td>' + formatInteger(batter.pa) + '</td>';
 	        html += '<td>' + formatInteger(batter.ab) + '</td>';
@@ -477,7 +477,6 @@
 
 	    html += '<th>순위</th>';
 	    html += '<th>선수명</th>';
-	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'WAR\')">WAR' + (currentSort === 'WAR' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'ERA\')">ERA' + (currentSort === 'ERA' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'G\')">경기' + (currentSort === 'G' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'W\')">승' + (currentSort === 'W' ? directionArrow : '') + '</a></th>';
@@ -519,7 +518,6 @@
 	        html += '<tr>';
 	        html += '<td>' + actualRank + '</td>';
 	        html += '<td class="d-flex align-items-center gap-2"><img src="' + getLogoPath(pitcher.logoName) + '" style="width:28px;height:28px;">' + pitcher.playerName + '</td>';
-	        html += '<td>' + formatDecimal(pitcher.war, 2) + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.era, 2) + '</td>';
 	        html += '<td>' + formatInteger(pitcher.g) + '</td>';
 	        html += '<td>' + formatInteger(pitcher.wins) + '</td>';
@@ -764,7 +762,7 @@
 	function getFormatClassForCategory(category) {
 	    if (!category) return 'format-decimal-2';
 	    var upper = category.toUpperCase();
-	    if (['ERA', 'WHIP', 'WAR', 'BetterWAR', 'PitcherWAR'].includes(upper)) return 'format-decimal-2';
+	    if (['ERA', 'WHIP', 'FIP'].includes(upper)) return 'format-decimal-2';
 	    if (['OPS', 'AVG'].includes(upper)) return 'format-decimal-3';
 	    if (upper === 'IP') return 'format-decimal-1';
 	    if (['W', 'L', 'SV', 'HLD', 'SO', 'BB', 'H', 'HR', 'G', 'SB', 'RBI', '2B', '3B'].includes(upper)) return 'format-integer';

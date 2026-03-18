@@ -34,19 +34,20 @@ public class PlayerStatsRestController {
     @GetMapping("/playerranking-view-json")
     public Map<String, Object> playerRankingViewJson(
             @RequestParam(name = "season", required = false) Integer season,
-            @RequestParam(name = "sort", required = false, defaultValue = "WAR") String sort,
+            @RequestParam(name = "sort", required = false, defaultValue = "OPS") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
             @RequestParam(name = "type", required = false) String type,
-            @RequestParam(name = "qualified", required = false, defaultValue = "false") boolean qualified) {
+            @RequestParam(name = "qualified", required = false, defaultValue = "false") boolean qualified,
+            @RequestParam(name = "qualifiedLevel", required = false, defaultValue = "100") int qualifiedLevel) {
 
         int validSeason = SeasonValidator.validateOrDefault(season, SeasonValidator.currentSeason());
 
         List<BatterRankingDTO> batters = qualified
-            ? batterStatsService.getQualifiedBatters(validSeason, sort, direction)
+            ? batterStatsService.getQualifiedBatters(validSeason, sort, direction, qualifiedLevel)
             : batterStatsService.getPlayerRankingsSorted(validSeason, sort, direction);
 
         List<PitcherRankingDTO> pitchers = qualified
-            ? pitcherStatsService.getQualifiedPitchers(validSeason, sort, direction)
+            ? pitcherStatsService.getQualifiedPitchers(validSeason, sort, direction, qualifiedLevel)
             : pitcherStatsService.getPitcherRankingsSorted(validSeason, sort, direction);
 
         List<DefenseRankingDTO> defense = defenseStatsService.getDefenseRankingsSorted(validSeason, sort, direction);

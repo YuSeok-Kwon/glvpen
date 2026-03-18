@@ -23,7 +23,7 @@ public class PlayerStatsController {
     @GetMapping("/rankings")
     public String playerRankingView(
             @RequestParam(name = "season", required = false) Integer season,
-            @RequestParam(name = "sort", required = false, defaultValue = "WAR") String sort,
+            @RequestParam(name = "sort", required = false, defaultValue = "OPS") String sort,
             @RequestParam(name = "direction", required = false, defaultValue = "DESC") String direction,
             Model model) {
 

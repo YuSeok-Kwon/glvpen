@@ -61,17 +61,17 @@ public class ColumnDataCalculator {
     private final FuturesPitcherStatsRepository futuresPitcherStatsRepository;
 
     // ==================== findAllBatters 인덱스 ====================
-    // 0:position, 1:playerName, 2:teamName, 3:logoName, 4:war, 5:avg, 6:ops,
+    // 0:position, 1:playerName, 2:teamName, 3:logoName, 4:woba, 5:avg, 6:ops,
     // 7:hr, 8:sb, 9:wrcPlus, 10:g, 11:pa, 12:h, 13:rbi, 14:bb, 15:so,
     // 16:2B, 17:3B, 18:obp, 19:slg, 20:teamId, 21:babip, 22:iso, 23:kRate, 24:bbRate,
     // 25:ab, 26:r, 27:tb, 28:sac, 29:sf, 30:ibb, 31:hbp, 32:gdp, 33:mh, 34:risp, 35:phBa
 
-    // ==================== findAllPitchers 인덱스 ====================
+    // ==================== findAllPitchers 인덱스 (WAR 제거됨) ====================
     // 0:playerName, 1:teamName, 2:logoName, 3:era, 4:whip, 5:wins, 6:losses,
     // 7:saves, 8:holds, 9:strikeouts, 10:walks, 11:hitsAllowed, 12:homeRunsAllowed,
-    // 13:inningsPitched, 14:war, 15:teamId, 16:fip, 17:xfip, 18:k9, 19:bb9,
-    // 20:g, 21:wpct, 22:hbp, 23:r, 24:er, 25:cg, 26:sho, 27:qs, 28:bsv,
-    // 29:tbf, 30:np, 31:avg, 32:2B, 33:3B, 34:sac, 35:sf, 36:ibb, 37:wp, 38:bk
+    // 13:inningsPitched, 14:teamId, 15:fip, 16:xfip, 17:k9, 18:bb9,
+    // 19:g, 20:wpct, 21:hbp, 22:r, 23:er, 24:cg, 25:sho, 26:qs, 27:bsv,
+    // 28:tbf, 29:np, 30:avg, 31:2B, 32:3B, 33:sac, 34:sf, 35:ibb, 36:wp, 37:bk
 
     // ==================== 주제 0: 세이버메트릭스 트렌드 ====================
     public String calcSabermetricsTrend(int season) {
@@ -99,10 +99,10 @@ public class ColumnDataCalculator {
             sb.append("OPS: ").append(fmt3(avgOps)).append("\n\n");
 
             // 리그 평균 투수 지표
-            double avgFip = avg(pitchers, 16);
-            double avgXfip = avg(pitchers, 17);
-            double avgK9 = avg(pitchers, 18);
-            double avgBb9 = avg(pitchers, 19);
+            double avgFip = avg(pitchers, 15);
+            double avgXfip = avg(pitchers, 16);
+            double avgK9 = avg(pitchers, 17);
+            double avgBb9 = avg(pitchers, 18);
             double avgEra = avg(pitchers, 3);
 
             sb.append("[투수 리그 평균]\n");
@@ -112,24 +112,24 @@ public class ColumnDataCalculator {
             sb.append("BB/9: ").append(fmt(avgBb9)).append(", ");
             sb.append("ERA: ").append(fmt(avgEra)).append("\n\n");
 
-            // WAR 상위 5명 타자
-            sb.append("[타자 WAR 상위 5명]\n");
+            // wOBA 상위 5명 타자
+            sb.append("[타자 wOBA 상위 5명]\n");
             batters.stream()
                     .sorted((a, b) -> Double.compare(dbl(b[4]), dbl(a[4])))
                     .limit(5)
                     .forEach(b -> sb.append("- ").append(b[1]).append(" (").append(b[2])
-                            .append(") WAR: ").append(b[4])
+                            .append(") wOBA: ").append(b[4])
                             .append(", wRC+: ").append(b[9])
                             .append(", OPS: ").append(b[6]).append("\n"));
 
-            // WAR 상위 5명 투수
-            sb.append("\n[투수 WAR 상위 5명]\n");
+            // FIP 상위 5명 투수 (낮을수록 좋음)
+            sb.append("\n[투수 FIP 상위 5명]\n");
             pitchers.stream()
-                    .sorted((a, b) -> Double.compare(dbl(b[14]), dbl(a[14])))
+                    .filter(p -> dbl(p[13]) >= 30) // IP 30 이상
+                    .sorted((a, b) -> Double.compare(dbl(a[15]), dbl(b[15])))
                     .limit(5)
                     .forEach(p -> sb.append("- ").append(p[0]).append(" (").append(p[1])
-                            .append(") WAR: ").append(p[14])
-                            .append(", FIP: ").append(p[16])
+                            .append(") FIP: ").append(p[15])
                             .append(", ERA: ").append(p[3]).append("\n"));
 
         } catch (Exception e) {
@@ -139,7 +139,7 @@ public class ColumnDataCalculator {
         return sb.toString();
     }
 
-    // ==================== 주제 1: WAR 스포트라이트 ====================
+    // ==================== 주제 1: 주요 지표 스포트라이트 ====================
     public String calcWarSpotlight(int season) {
         StringBuilder sb = new StringBuilder();
         try {
@@ -148,38 +148,39 @@ public class ColumnDataCalculator {
             List<Object[]> prevBatters = safeLoadBatters(season - 1);
             List<Object[]> prevPitchers = safeLoadPitchers(season - 1);
 
-            sb.append("[타자 WAR 상위 10명 - ").append(season).append("시즌]\n");
+            sb.append("[타자 wOBA 상위 10명 - ").append(season).append("시즌]\n");
             sb.append(String.format("%-4s %-8s %-6s %-4s %-6s %-6s %-7s %-8s\n",
-                    "순위", "선수명", "팀", "포지션", "WAR", "OPS", "wRC+", "전년WAR"));
+                    "순위", "선수명", "팀", "포지션", "wOBA", "OPS", "wRC+", "전년wOBA"));
 
-            Map<String, Double> prevBatterWar = buildNameWarMap(prevBatters, 1, 4);
+            Map<String, Double> prevBatterWoba = buildNameValueMap(prevBatters, 1, 4);
             List<Object[]> topBatters = batters.stream()
                     .sorted((a, b) -> Double.compare(dbl(b[4]), dbl(a[4])))
                     .limit(10).toList();
             for (int i = 0; i < topBatters.size(); i++) {
                 Object[] b = topBatters.get(i);
                 String name = str(b[1]);
-                double prevWar = prevBatterWar.getOrDefault(name, 0.0);
+                double prevWoba = prevBatterWoba.getOrDefault(name, 0.0);
                 sb.append(String.format("%-4d %-8s %-6s %-4s %-6s %-6s %-7s %-8s\n",
                         i + 1, name, b[2], b[0], b[4], b[6], b[9],
-                        prevWar == 0.0 ? "-" : fmt(prevWar)));
+                        prevWoba == 0.0 ? "-" : fmt3(prevWoba)));
             }
 
-            sb.append("\n[투수 WAR 상위 10명 - ").append(season).append("시즌]\n");
+            sb.append("\n[투수 FIP 상위 10명 - ").append(season).append("시즌]\n");
             sb.append(String.format("%-4s %-8s %-6s %-6s %-6s %-6s %-8s\n",
-                    "순위", "선수명", "팀", "WAR", "ERA", "FIP", "전년WAR"));
+                    "순위", "선수명", "팀", "FIP", "ERA", "K/9", "전년FIP"));
 
-            Map<String, Double> prevPitcherWar = buildNameWarMap(prevPitchers, 0, 14);
+            Map<String, Double> prevPitcherFip = buildNameValueMap(prevPitchers, 0, 15);
             List<Object[]> topPitchers = pitchers.stream()
-                    .sorted((a, b) -> Double.compare(dbl(b[14]), dbl(a[14])))
+                    .filter(p -> dbl(p[13]) >= 30) // IP 30 이상
+                    .sorted((a, b) -> Double.compare(dbl(a[15]), dbl(b[15])))
                     .limit(10).toList();
             for (int i = 0; i < topPitchers.size(); i++) {
                 Object[] p = topPitchers.get(i);
                 String name = str(p[0]);
-                double prevWar = prevPitcherWar.getOrDefault(name, 0.0);
+                double prevFip = prevPitcherFip.getOrDefault(name, 0.0);
                 sb.append(String.format("%-4d %-8s %-6s %-6s %-6s %-6s %-8s\n",
-                        i + 1, name, p[1], p[14], p[3], p[16],
-                        prevWar == 0.0 ? "-" : fmt(prevWar)));
+                        i + 1, name, p[1], p[15], p[3], p[17],
+                        prevFip == 0.0 ? "-" : fmt(prevFip)));
             }
         } catch (Exception e) {
             log.warn("calcWarSpotlight 실패: {}", e.getMessage());
@@ -202,7 +203,7 @@ public class ColumnDataCalculator {
                 prevMap.put(str(b[1]), new double[]{dbl(b[4]), dbl(b[9]), dbl(b[22])});
             }
 
-            // WAR 상승폭 기준 상위 5명
+            // wOBA 상승폭 기준 상위 5명
             List<Object[]> candidates = batters.stream()
                     .filter(b -> prevMap.containsKey(str(b[1])))
                     .sorted((a, b) -> {
@@ -212,16 +213,16 @@ public class ColumnDataCalculator {
                     })
                     .limit(5).toList();
 
-            sb.append("[브레이크아웃 후보 - WAR 상승폭 상위 5명]\n");
+            sb.append("[브레이크아웃 후보 - wOBA 상승폭 상위 5명]\n");
             sb.append(String.format("%-8s %-6s %-18s %-20s %-18s\n",
-                    "선수명", "팀", "WAR(전년→올해)", "wRC+(전년→올해)", "ISO(전년→올해)"));
+                    "선수명", "팀", "wOBA(전년→올해)", "wRC+(전년→올해)", "ISO(전년→올해)"));
 
             for (Object[] b : candidates) {
                 String name = str(b[1]);
                 double[] prev = prevMap.get(name);
                 sb.append(String.format("%-8s %-6s %-18s %-20s %-18s\n",
                         name, b[2],
-                        fmt(prev[0]) + "→" + b[4] + " (+" + fmt(dbl(b[4]) - prev[0]) + ")",
+                        fmt3(prev[0]) + "→" + b[4] + " (+" + fmt3(dbl(b[4]) - prev[0]) + ")",
                         fmt(prev[1]) + "→" + b[9] + " (+" + fmt(dbl(b[9]) - prev[1]) + ")",
                         fmt3(prev[2]) + "→" + b[22] + " (+" + fmt3(dbl(b[22]) - prev[2]) + ")"));
             }
@@ -270,26 +271,26 @@ public class ColumnDataCalculator {
             pitchers.stream()
                     .filter(p -> dbl(p[13]) >= 30) // IP 30 이상
                     .sorted((a, b) -> Double.compare(
-                            dbl(b[16]) - dbl(b[3]),
-                            dbl(a[16]) - dbl(a[3])))
+                            dbl(b[15]) - dbl(b[3]),
+                            dbl(a[15]) - dbl(a[3])))
                     .limit(5)
                     .forEach(p -> sb.append("- ").append(p[0]).append(" (").append(p[1])
                             .append(") ERA: ").append(p[3])
-                            .append(", FIP: ").append(p[16])
-                            .append(", 갭: +").append(fmt(dbl(p[16]) - dbl(p[3]))).append("\n"));
+                            .append(", FIP: ").append(p[15])
+                            .append(", 갭: +").append(fmt(dbl(p[15]) - dbl(p[3]))).append("\n"));
 
             // 과소평가 (ERA가 FIP보다 높은)
             sb.append("\n[과소평가 투수 (ERA > FIP, 갭 큰 순 5명)]\n");
             pitchers.stream()
                     .filter(p -> dbl(p[13]) >= 30)
                     .sorted((a, b) -> Double.compare(
-                            dbl(a[16]) - dbl(a[3]),
-                            dbl(b[16]) - dbl(b[3])))
+                            dbl(a[15]) - dbl(a[3]),
+                            dbl(b[15]) - dbl(b[3])))
                     .limit(5)
                     .forEach(p -> sb.append("- ").append(p[0]).append(" (").append(p[1])
                             .append(") ERA: ").append(p[3])
-                            .append(", FIP: ").append(p[16])
-                            .append(", 갭: ").append(fmt(dbl(p[16]) - dbl(p[3]))).append("\n"));
+                            .append(", FIP: ").append(p[15])
+                            .append(", 갭: ").append(fmt(dbl(p[15]) - dbl(p[3]))).append("\n"));
 
         } catch (Exception e) {
             log.warn("calcLuckAdjusted 실패: {}", e.getMessage());
@@ -633,10 +634,10 @@ public class ColumnDataCalculator {
             double prevKRate = prevBatters.isEmpty() ? 0 : avg(prevBatters, 23);
             double prevBbRate = prevBatters.isEmpty() ? 0 : avg(prevBatters, 24);
 
-            double curK9 = avg(pitchers, 18);
-            double curBb9 = avg(pitchers, 19);
-            double prevK9 = prevPitchers.isEmpty() ? 0 : avg(prevPitchers, 18);
-            double prevBb9 = prevPitchers.isEmpty() ? 0 : avg(prevPitchers, 19);
+            double curK9 = avg(pitchers, 17);
+            double curBb9 = avg(pitchers, 18);
+            double prevK9 = prevPitchers.isEmpty() ? 0 : avg(prevPitchers, 17);
+            double prevBb9 = prevPitchers.isEmpty() ? 0 : avg(prevPitchers, 18);
 
             sb.append("[리그 평균 변화 (전년→올해)]\n");
             sb.append("타자 K%: ").append(fmt(prevKRate)).append("% → ").append(fmt(curKRate))
@@ -672,21 +673,21 @@ public class ColumnDataCalculator {
             // K/9 변화가 큰 투수 5명
             if (!prevPitchers.isEmpty()) {
                 Map<String, Double> prevK9Map = new HashMap<>();
-                prevPitchers.forEach(p -> prevK9Map.put(str(p[0]), dbl(p[18])));
+                prevPitchers.forEach(p -> prevK9Map.put(str(p[0]), dbl(p[17])));
 
                 sb.append("\n[K/9 변화 큰 투수 상위 5명]\n");
                 pitchers.stream()
                         .filter(p -> prevK9Map.containsKey(str(p[0])))
                         .sorted((a, b) -> Double.compare(
-                                Math.abs(dbl(b[18]) - prevK9Map.get(str(b[0]))),
-                                Math.abs(dbl(a[18]) - prevK9Map.get(str(a[0])))))
+                                Math.abs(dbl(b[17]) - prevK9Map.get(str(b[0]))),
+                                Math.abs(dbl(a[17]) - prevK9Map.get(str(a[0])))))
                         .limit(5)
                         .forEach(p -> {
                             String name = str(p[0]);
                             double prev = prevK9Map.get(name);
                             sb.append("- ").append(name).append(" (").append(p[1])
-                                    .append(") K/9: ").append(fmt(prev)).append(" → ").append(p[18])
-                                    .append(" (").append(signedFmt(dbl(p[18]) - prev)).append(")\n");
+                                    .append(") K/9: ").append(fmt(prev)).append(" → ").append(p[17])
+                                    .append(" (").append(signedFmt(dbl(p[17]) - prev)).append(")\n");
                         });
             }
 
@@ -747,8 +748,8 @@ public class ColumnDataCalculator {
             // 나이 구간: 20-23, 24-26, 27-29, 30-32, 33+
             String[] ageLabels = {"20-23세", "24-26세", "27-29세", "30-32세", "33세+"};
 
-            // 타자 나이-WAR
-            Map<String, List<Double>> batterAgeWar = initAgeMap(ageLabels);
+            // 타자 나이-wOBA
+            Map<String, List<Double>> batterAgeWoba = initAgeMap(ageLabels);
             for (Object[] b : batters) {
                 String name = str(b[1]);
                 int teamId = intVal(b[20]);
@@ -756,50 +757,50 @@ public class ColumnDataCalculator {
                 if (p == null || p.getBirthDate() == null) continue;
                 int age = Period.between(p.getBirthDate(), today).getYears();
                 String bucket = ageBucket(age, ageLabels);
-                if (bucket != null) batterAgeWar.get(bucket).add(dbl(b[4]));
+                if (bucket != null) batterAgeWoba.get(bucket).add(dbl(b[4]));
             }
 
-            // 투수 나이-WAR
-            Map<String, List<Double>> pitcherAgeWar = initAgeMap(ageLabels);
+            // 투수 나이-FIP
+            Map<String, List<Double>> pitcherAgeFip = initAgeMap(ageLabels);
             for (Object[] p : pitchers) {
                 String name = str(p[0]);
-                int teamId = intVal(p[15]);
+                int teamId = intVal(p[14]);
                 Player player = findPlayerByNameAndTeam(playerMap, name, teamId);
                 if (player == null || player.getBirthDate() == null) continue;
                 int age = Period.between(player.getBirthDate(), today).getYears();
                 String bucket = ageBucket(age, ageLabels);
-                if (bucket != null) pitcherAgeWar.get(bucket).add(dbl(p[14]));
+                if (bucket != null) pitcherAgeFip.get(bucket).add(dbl(p[15]));
             }
 
-            sb.append("[타자 나이 구간별 평균 WAR - ").append(season).append("시즌]\n");
+            sb.append("[타자 나이 구간별 평균 wOBA - ").append(season).append("시즌]\n");
             String batterPeak = "";
-            double batterPeakWar = -99;
+            double batterPeakWoba = -99;
             for (String label : ageLabels) {
-                List<Double> wars = batterAgeWar.get(label);
-                double avgWar = wars.isEmpty() ? 0 : wars.stream().mapToDouble(d -> d).average().orElse(0);
-                sb.append("- ").append(label).append(": 평균 WAR ").append(fmt(avgWar))
-                        .append(" (").append(wars.size()).append("명)\n");
-                if (avgWar > batterPeakWar) {
-                    batterPeakWar = avgWar;
+                List<Double> values = batterAgeWoba.get(label);
+                double avgWoba = values.isEmpty() ? 0 : values.stream().mapToDouble(d -> d).average().orElse(0);
+                sb.append("- ").append(label).append(": 평균 wOBA ").append(fmt3(avgWoba))
+                        .append(" (").append(values.size()).append("명)\n");
+                if (avgWoba > batterPeakWoba) {
+                    batterPeakWoba = avgWoba;
                     batterPeak = label;
                 }
             }
-            sb.append("→ 타자 피크 구간: ").append(batterPeak).append(" (평균 WAR ").append(fmt(batterPeakWar)).append(")\n\n");
+            sb.append("→ 타자 피크 구간: ").append(batterPeak).append(" (평균 wOBA ").append(fmt3(batterPeakWoba)).append(")\n\n");
 
-            sb.append("[투수 나이 구간별 평균 WAR - ").append(season).append("시즌]\n");
+            sb.append("[투수 나이 구간별 평균 FIP - ").append(season).append("시즌]\n");
             String pitcherPeak = "";
-            double pitcherPeakWar = -99;
+            double pitcherPeakFip = 99;
             for (String label : ageLabels) {
-                List<Double> wars = pitcherAgeWar.get(label);
-                double avgWar = wars.isEmpty() ? 0 : wars.stream().mapToDouble(d -> d).average().orElse(0);
-                sb.append("- ").append(label).append(": 평균 WAR ").append(fmt(avgWar))
-                        .append(" (").append(wars.size()).append("명)\n");
-                if (avgWar > pitcherPeakWar) {
-                    pitcherPeakWar = avgWar;
+                List<Double> values = pitcherAgeFip.get(label);
+                double avgFip = values.isEmpty() ? 0 : values.stream().mapToDouble(d -> d).average().orElse(0);
+                sb.append("- ").append(label).append(": 평균 FIP ").append(fmt(avgFip))
+                        .append(" (").append(values.size()).append("명)\n");
+                if (!values.isEmpty() && avgFip < pitcherPeakFip) {
+                    pitcherPeakFip = avgFip;
                     pitcherPeak = label;
                 }
             }
-            sb.append("→ 투수 피크 구간: ").append(pitcherPeak).append(" (평균 WAR ").append(fmt(pitcherPeakWar)).append(")\n");
+            sb.append("→ 투수 피크 구간: ").append(pitcherPeak).append(" (평균 FIP ").append(fmt(pitcherPeakFip)).append(")\n");
 
         } catch (Exception e) {
             log.warn("calcAgeCurve 실패: {}", e.getMessage());
@@ -821,7 +822,7 @@ public class ColumnDataCalculator {
                     "LF", "외야", "CF", "외야", "RF", "외야", "DH", "DH"
             );
 
-            // 팀별 포지션 그룹별 wRC+, OPS, WAR 집계
+            // 팀별 포지션 그룹별 wRC+, OPS, wOBA 집계
             Map<Integer, Map<String, List<double[]>>> teamPosData = new HashMap<>();
 
             for (Object[] b : batters) {
@@ -830,7 +831,7 @@ public class ColumnDataCalculator {
                 int teamId = intVal(b[20]);
                 teamPosData.computeIfAbsent(teamId, k -> new HashMap<>())
                         .computeIfAbsent(group, k -> new ArrayList<>())
-                        .add(new double[]{dbl(b[9]), dbl(b[6]), dbl(b[4])}); // wRC+, OPS, WAR
+                        .add(new double[]{dbl(b[9]), dbl(b[6]), dbl(b[4])}); // wRC+, OPS, wOBA
             }
 
             // 리그 전체 포지션 그룹별 평균
@@ -843,15 +844,15 @@ public class ColumnDataCalculator {
             }
 
             sb.append("[리그 포지션 그룹별 평균 - ").append(season).append("시즌]\n");
-            sb.append(String.format("%-6s %-8s %-8s %-8s %-6s\n", "그룹", "wRC+", "OPS", "WAR", "인원"));
+            sb.append(String.format("%-6s %-8s %-8s %-8s %-6s\n", "그룹", "wRC+", "OPS", "wOBA", "인원"));
             for (String group : List.of("포수", "내야", "외야", "DH")) {
                 List<double[]> data = leaguePosData.getOrDefault(group, List.of());
                 if (data.isEmpty()) continue;
                 double avgWrc = data.stream().mapToDouble(d -> d[0]).average().orElse(0);
                 double avgOps = data.stream().mapToDouble(d -> d[1]).average().orElse(0);
-                double avgWar = data.stream().mapToDouble(d -> d[2]).average().orElse(0);
+                double avgWoba = data.stream().mapToDouble(d -> d[2]).average().orElse(0);
                 sb.append(String.format("%-6s %-8s %-8s %-8s %-6d\n",
-                        group, fmt(avgWrc), fmt3(avgOps), fmt(avgWar), data.size()));
+                        group, fmt(avgWrc), fmt3(avgOps), fmt3(avgWoba), data.size()));
             }
 
             // 팀별 포지션 그룹 생산성
@@ -965,17 +966,17 @@ public class ColumnDataCalculator {
             List<Object[]> batters = batterStatsRepository.findAllBatters(season);
             if (batters.isEmpty()) return "[타자 데이터 없음]";
 
-            // 포지션별 WAR, wRC+, OPS 집계
+            // 포지션별 wOBA, wRC+, OPS 집계
             Map<String, List<double[]>> posStats = new LinkedHashMap<>();
             for (Object[] b : batters) {
                 String pos = str(b[0]);
                 if (pos == null || pos.isEmpty()) continue;
                 posStats.computeIfAbsent(pos, k -> new ArrayList<>())
-                        .add(new double[]{dbl(b[4]), dbl(b[9]), dbl(b[6])}); // WAR, wRC+, OPS
+                        .add(new double[]{dbl(b[4]), dbl(b[9]), dbl(b[6])}); // wOBA, wRC+, OPS
             }
 
             sb.append("[포지션별 평균 지표 - ").append(season).append("시즌]\n");
-            sb.append(String.format("%-5s %-8s %-8s %-8s %-6s\n", "포지션", "WAR", "wRC+", "OPS", "인원"));
+            sb.append(String.format("%-5s %-8s %-8s %-8s %-6s\n", "포지션", "wOBA", "wRC+", "OPS", "인원"));
 
             posStats.entrySet().stream()
                     .sorted((a, b) -> Double.compare(
@@ -983,25 +984,25 @@ public class ColumnDataCalculator {
                             a.getValue().stream().mapToDouble(d -> d[0]).average().orElse(0)))
                     .forEach(e -> {
                         List<double[]> data = e.getValue();
-                        double avgWar = data.stream().mapToDouble(d -> d[0]).average().orElse(0);
+                        double avgWoba = data.stream().mapToDouble(d -> d[0]).average().orElse(0);
                         double avgWrc = data.stream().mapToDouble(d -> d[1]).average().orElse(0);
                         double avgOps = data.stream().mapToDouble(d -> d[2]).average().orElse(0);
                         sb.append(String.format("%-5s %-8s %-8s %-8s %-6d\n",
-                                e.getKey(), fmt(avgWar), fmt(avgWrc), fmt3(avgOps), data.size()));
+                                e.getKey(), fmt3(avgWoba), fmt(avgWrc), fmt3(avgOps), data.size()));
                     });
 
             // 포지션별 대체 수준 (하위 20% 평균)
-            sb.append("\n[포지션별 대체 수준 (하위 20% 평균 WAR)]\n");
+            sb.append("\n[포지션별 대체 수준 (하위 20% 평균 wOBA)]\n");
             posStats.forEach((pos, data) -> {
                 if (data.size() < 5) return;
-                List<Double> wars = data.stream().mapToDouble(d -> d[0]).sorted().boxed().toList();
-                int cutoff = Math.max(1, wars.size() / 5);
-                double replacementWar = wars.subList(0, cutoff).stream().mapToDouble(d -> d).average().orElse(0);
-                sb.append("- ").append(pos).append(": 대체 수준 WAR ").append(fmt(replacementWar)).append("\n");
+                List<Double> wobas = data.stream().mapToDouble(d -> d[0]).sorted().boxed().toList();
+                int cutoff = Math.max(1, wobas.size() / 5);
+                double replacementWoba = wobas.subList(0, cutoff).stream().mapToDouble(d -> d).average().orElse(0);
+                sb.append("- ").append(pos).append(": 대체 수준 wOBA ").append(fmt3(replacementWoba)).append("\n");
             });
 
             // 포지션별 상위 3명
-            sb.append("\n[포지션별 WAR 상위 3명]\n");
+            sb.append("\n[포지션별 wOBA 상위 3명]\n");
             posStats.forEach((pos, data) -> {
                 sb.append("[").append(pos).append("]\n");
                 // 원본 batters에서 해당 포지션 상위 3명
@@ -1010,7 +1011,7 @@ public class ColumnDataCalculator {
                         .sorted((a, b) -> Double.compare(dbl(b[4]), dbl(a[4])))
                         .limit(3)
                         .forEach(b -> sb.append("  - ").append(b[1]).append(" (").append(b[2])
-                                .append(") WAR: ").append(b[4])
+                                .append(") wOBA: ").append(b[4])
                                 .append(", wRC+: ").append(b[9]).append("\n"));
             });
 
@@ -1082,7 +1083,7 @@ public class ColumnDataCalculator {
         return val >= 0 ? "+" + fmt3(val) : fmt3(val);
     }
 
-    private Map<String, Double> buildNameWarMap(List<Object[]> rows, int nameIdx, int warIdx) {
+    private Map<String, Double> buildNameValueMap(List<Object[]> rows, int nameIdx, int warIdx) {
         Map<String, Double> map = new HashMap<>();
         for (Object[] r : rows) {
             map.put(str(r[nameIdx]), dbl(r[warIdx]));

@@ -6,6 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.kepg.glvpen.common.stats.SabermetricsCalculator;
+import com.kepg.glvpen.modules.player.domain.Player;
+import com.kepg.glvpen.modules.player.repository.PlayerRepository;
 import com.kepg.glvpen.modules.player.stats.domain.BatterStats;
 import com.kepg.glvpen.modules.player.stats.domain.PitcherStats;
 import com.kepg.glvpen.modules.player.stats.repository.BatterStatsRepository;
@@ -28,6 +30,7 @@ public class SabermetricsBatchService {
     private final PitcherStatsRepository pitcherStatsRepository;
     private final BatterStatsService batterStatsService;
     private final PitcherStatsService pitcherStatsService;
+    private final PlayerRepository playerRepository;
 
     /**
      * 시즌별 타자 세이버메트릭스 지표 일괄 계산
@@ -57,10 +60,14 @@ public class SabermetricsBatchService {
                 double doubles = getStatValue(stats, "2B");
                 double triples = getStatValue(stats, "3B");
 
-                String position = stats.stream()
-                        .map(BatterStats::getPosition)
-                        .filter(p -> p != null && !p.isBlank())
-                        .findFirst().orElse("DH");
+                // Player 엔티티에서 포지션 가져오기 (우선)
+                Player player = playerRepository.findById(playerId).orElse(null);
+                String position = (player != null && player.getPosition() != null && !player.getPosition().isBlank())
+                        ? mapPosition(player.getPosition())
+                        : stats.stream()
+                            .map(BatterStats::getPosition)
+                            .filter(p -> p != null && !p.isBlank() && !"DH".equals(p))
+                            .findFirst().orElse("DH");
 
                 // ===== 기본 산출 지표 (KBO BasicOld 전환 대응) =====
                 // TB (Total Bases) — BasicOld에서 직접 제공하지 않으므로 계산
@@ -161,6 +168,12 @@ public class SabermetricsBatchService {
                 double hr9 = SabermetricsCalculator.calcHR9(hr, ip);
                 savePitcherStat(playerId, season, position, "HR/9", round(hr9, 2));
 
+                // FIP (Fielding Independent Pitching)
+                double fip = SabermetricsCalculator.calcFIP(hr, bb, hbp, so, ip);
+                if (ip > 0) {
+                    savePitcherStat(playerId, season, position, "FIP", round(fip, 2));
+                }
+
                 // LOB% (잔루율 — 높을수록 위기 관리 우수)
                 double lobPct = SabermetricsCalculator.calcLOBPercent(h, bb, hbp, r, hr);
                 if (lobPct > 0) {
@@ -177,10 +190,57 @@ public class SabermetricsBatchService {
     }
 
     /**
-     * 전 시즌 배치 실행
+     * 포지션 데이터 보강: Player.position → BatterStats/PitcherStats.position 매핑
+     */
+    @Transactional
+    public void enrichPositions(int season) {
+        log.info("=== 포지션 보강 시작: 시즌 {} ===", season);
+
+        // 타자 포지션 보강
+        List<Integer> batterIds = batterStatsRepository.findDistinctPlayerIdsBySeason(season);
+        int batterCount = 0;
+        for (Integer playerId : batterIds) {
+            Player player = playerRepository.findById(playerId).orElse(null);
+            if (player != null && player.getPosition() != null && !player.getPosition().isBlank()) {
+                String pos = mapPosition(player.getPosition());
+                List<BatterStats> stats = batterStatsRepository.findByPlayerIdAndSeason(playerId, season);
+                for (BatterStats stat : stats) {
+                    if ("DH".equals(stat.getPosition()) || stat.getPosition() == null || stat.getPosition().isBlank()) {
+                        stat.setPosition(pos);
+                        batterStatsRepository.save(stat);
+                    }
+                }
+                batterCount++;
+            }
+        }
+
+        // 투수 포지션 보강
+        List<Integer> pitcherIds = pitcherStatsRepository.findDistinctPlayerIdsBySeason(season);
+        int pitcherCount = 0;
+        for (Integer playerId : pitcherIds) {
+            Player player = playerRepository.findById(playerId).orElse(null);
+            if (player != null && player.getPosition() != null && !player.getPosition().isBlank()) {
+                String pos = mapPosition(player.getPosition());
+                List<PitcherStats> stats = pitcherStatsRepository.findByPlayerIdAndSeason(playerId, season);
+                for (PitcherStats stat : stats) {
+                    if (stat.getPosition() == null || stat.getPosition().isBlank()) {
+                        stat.setPosition(pos);
+                        pitcherStatsRepository.save(stat);
+                    }
+                }
+                pitcherCount++;
+            }
+        }
+
+        log.info("=== 포지션 보강 완료: 타자 {}명, 투수 {}명 처리 ===", batterCount, pitcherCount);
+    }
+
+    /**
+     * 전 시즌 배치 실행 (세이버메트릭스 + 포지션 보강)
      */
     public void calculateAllSabermetrics(int startYear, int endYear) {
         for (int year = startYear; year <= endYear; year++) {
+            enrichPositions(year);
             calculateBatterSabermetrics(year);
             calculatePitcherSabermetrics(year);
         }
@@ -224,6 +284,20 @@ public class SabermetricsBatchService {
                 .ranking(null)
                 .build();
         pitcherStatsService.savePitcherStats(dto);
+    }
+
+    /**
+     * 한국어 포지션명을 영문 약자로 변환
+     */
+    private String mapPosition(String koreanPos) {
+        if (koreanPos == null) return "DH";
+        return switch (koreanPos) {
+            case "내야수" -> "IF";
+            case "외야수" -> "OF";
+            case "포수" -> "C";
+            case "투수" -> "P";
+            default -> "DH";
+        };
     }
 
     private double round(double value, int places) {

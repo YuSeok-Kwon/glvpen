@@ -40,7 +40,7 @@ public class PitcherStatsService {
 	// Magic Number 상수화
 	private static final double STAT_NOT_AVAILABLE = -1.0;
 	private static final int STAT_NOT_AVAILABLE_INT = -1;
-	private static final int PITCHER_STATS_COLUMN_COUNT = 39;
+	private static final int PITCHER_STATS_COLUMN_COUNT = 38;
 	private static final int STANDARD_QUALIFIED_IP = 144;
 
 	// Logger 추가
@@ -94,7 +94,7 @@ public class PitcherStatsService {
 	    pitcherStatsRepository.save(entity);
 	}
 	
-	// 팀별 WAR 1위 투수 조회 (ERA, WHIP, W/SV/HLD 중 최고값 포함)
+	// 팀별 ERA 최우수 투수 조회 (WHIP, W/SV/HLD 중 최고값 포함)
 	@Transactional(readOnly = true)
 	public TopPitcherCardView getTopPitcher(int teamId, int season) {
 	    List<Object[]> result = playerService.getTopPitcherByTeamAndSeason(teamId, season);
@@ -106,12 +106,12 @@ public class PitcherStatsService {
 
 	    String name = (String) row[0];
 	    String position = (String) row[1];
-	    double war = 0.0;
+	    double era = 0.0;
 	    int ranking = 0;
 	    int playerId = 0;
 
 	    if (row[2] != null) {
-	        war = Double.parseDouble(row[2].toString());
+	        era = Double.parseDouble(row[2].toString());
 	    }
 
 	    if (row[3] != null) {
@@ -122,12 +122,12 @@ public class PitcherStatsService {
 	        playerId = Integer.parseInt(row[4].toString());
 	    }
 
-	    // Optional 체이닝 패턴으로 개선
-	    double era = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "ERA", season)
+	    double whip = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "WHIP", season)
 	            .map(Double::parseDouble)
 	            .orElse(STAT_NOT_AVAILABLE);
 
-	    double whip = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "WHIP", season)
+	    // FIP 데이터 있으면 가져오기
+	    double fip = pitcherStatsRepository.findStatValueByPlayerIdCategoryAndSeason(playerId, "FIP", season)
 	            .map(Double::parseDouble)
 	            .orElse(STAT_NOT_AVAILABLE);
 
@@ -151,8 +151,8 @@ public class PitcherStatsService {
 	    return TopPitcherCardView.builder()
 	            .name(name)
 	            .position(position)
-	            .war(war)
-	            .warRank(ranking)
+	            .fip(fip)
+	            .fipRank(ranking)
 	            .era(era)
 	            .whip(whip)
 	            .bestStatLabel(bestStatLabel)
@@ -209,31 +209,30 @@ public class PitcherStatsService {
 	                Double hitsAllowed = getDoubleOrDefault(row[11], 0.0);
 	                Double homeRunsAllowed = getDoubleOrDefault(row[12], 0.0);
 	                Double inningsPitched = getDoubleOrDefault(row[13], 0.0);
-	                Double war = getDoubleOrDefault(row[14], 0.0);
-	                // row[15] = teamId (스킵)
-	                Double fip = getDoubleOrDefault(row[16], 0.0);
-	                Double xfip = getDoubleOrDefault(row[17], 0.0);
-	                Double k9 = getDoubleOrDefault(row[18], 0.0);
-	                Double bb9 = getDoubleOrDefault(row[19], 0.0);
-	                Double g = getDoubleOrDefault(row[20], 0.0);
-	                Double wpct = getDoubleOrDefault(row[21], 0.0);
-	                Double hbp = getDoubleOrDefault(row[22], 0.0);
-	                Double r = getDoubleOrDefault(row[23], 0.0);
-	                Double er = getDoubleOrDefault(row[24], 0.0);
-	                Double cg = getDoubleOrDefault(row[25], 0.0);
-	                Double sho = getDoubleOrDefault(row[26], 0.0);
-	                Double qs = getDoubleOrDefault(row[27], 0.0);
-	                Double bsv = getDoubleOrDefault(row[28], 0.0);
-	                Double tbf = getDoubleOrDefault(row[29], 0.0);
-	                Double np = getDoubleOrDefault(row[30], 0.0);
-	                Double avg = getDoubleOrDefault(row[31], 0.0);
-	                Double twoB = getDoubleOrDefault(row[32], 0.0);
-	                Double threeB = getDoubleOrDefault(row[33], 0.0);
-	                Double sac = getDoubleOrDefault(row[34], 0.0);
-	                Double sf = getDoubleOrDefault(row[35], 0.0);
-	                Double ibb = getDoubleOrDefault(row[36], 0.0);
-	                Double wp = getDoubleOrDefault(row[37], 0.0);
-	                Double bk = getDoubleOrDefault(row[38], 0.0);
+	                // row[14] = teamId (스킵)
+	                Double fip = getDoubleOrNull(row[15]);
+	                Double xfip = getDoubleOrNull(row[16]);
+	                Double k9 = getDoubleOrNull(row[17]);
+	                Double bb9 = getDoubleOrNull(row[18]);
+	                Double g = getDoubleOrDefault(row[19], 0.0);
+	                Double wpct = getDoubleOrDefault(row[20], 0.0);
+	                Double hbp = getDoubleOrDefault(row[21], 0.0);
+	                Double r = getDoubleOrDefault(row[22], 0.0);
+	                Double er = getDoubleOrDefault(row[23], 0.0);
+	                Double cg = getDoubleOrDefault(row[24], 0.0);
+	                Double sho = getDoubleOrDefault(row[25], 0.0);
+	                Double qs = getDoubleOrDefault(row[26], 0.0);
+	                Double bsv = getDoubleOrDefault(row[27], 0.0);
+	                Double tbf = getDoubleOrDefault(row[28], 0.0);
+	                Double np = getDoubleOrDefault(row[29], 0.0);
+	                Double avg = getDoubleOrDefault(row[30], 0.0);
+	                Double twoB = getDoubleOrDefault(row[31], 0.0);
+	                Double threeB = getDoubleOrDefault(row[32], 0.0);
+	                Double sac = getDoubleOrDefault(row[33], 0.0);
+	                Double sf = getDoubleOrDefault(row[34], 0.0);
+	                Double ibb = getDoubleOrDefault(row[35], 0.0);
+	                Double wp = getDoubleOrDefault(row[36], 0.0);
+	                Double bk = getDoubleOrDefault(row[37], 0.0);
 
 	                PitcherRankingDTO dto = PitcherRankingDTO.builder()
 	                        .playerName(playerName)
@@ -250,7 +249,6 @@ public class PitcherStatsService {
 	                        .bb(walks)
 	                        .h(hitsAllowed)
 	                        .hr(homeRunsAllowed)
-	                        .war(war)
 	                        .fip(fip)
 	                        .xfip(xfip)
 	                        .k9(k9)
@@ -284,10 +282,16 @@ public class PitcherStatsService {
 
 	    return result;
 	}
-	
-	// 규정 이닝을 충족한 투수 랭킹 리스트 조회 및 정렬
+
+	// 규정 이닝을 충족한 투수 랭킹 리스트 조회 및 정렬 (100% 기준)
 	@Transactional(readOnly = true)
 	public List<PitcherRankingDTO> getQualifiedPitchers(int season, String sort, String direction) {
+	    return getQualifiedPitchers(season, sort, direction, 100);
+	}
+
+	// 규정 이닝을 충족한 투수 랭킹 리스트 조회 및 정렬 (레벨 지정: 100/75/50)
+	@Transactional(readOnly = true)
+	public List<PitcherRankingDTO> getQualifiedPitchers(int season, String sort, String direction, int qualifiedLevel) {
 	    PitcherSortType sortType = PitcherSortType.fromString(sort);
 	    SortDirection sortDirection = SortDirection.fromString(direction);
 
@@ -317,12 +321,12 @@ public class PitcherStatsService {
 	                Double hitsAllowed = getDoubleOrDefault(row[11], 0.0);
 	                Double homeRunsAllowed = getDoubleOrDefault(row[12], 0.0);
 	                Double inningsPitched = getDoubleOrDefault(row[13], 0.0);
-	                Double war = getDoubleOrDefault(row[14], 0.0);
-	                int teamId = (int) getDoubleOrDefault(row[15], 0.0);
+	                int teamId = (int) getDoubleOrDefault(row[14], 0.0);
 
-	                // 규정이닝 계산
+	                // 규정이닝 계산 (레벨 비율 적용)
 	                int teamGames = teamGamesMap.getOrDefault(teamId, 0);
-	                int requiredIP = getQualifiedInnings(season, teamGames);
+	                int fullIP = getQualifiedInnings(season, teamGames);
+	                int requiredIP = (int) Math.floor(fullIP * qualifiedLevel / 100.0);
 
 	                boolean isQualified = inningsPitched >= requiredIP;
 
@@ -342,30 +346,29 @@ public class PitcherStatsService {
 	                            .bb(walks)
 	                            .h(hitsAllowed)
 	                            .hr(homeRunsAllowed)
-	                            .war(war)
-	                            .fip(getDoubleOrDefault(row[16], 0.0))
-	                            .xfip(getDoubleOrDefault(row[17], 0.0))
-	                            .k9(getDoubleOrDefault(row[18], 0.0))
-	                            .bb9(getDoubleOrDefault(row[19], 0.0))
-	                            .g(getDoubleOrDefault(row[20], 0.0))
-	                            .wpct(getDoubleOrDefault(row[21], 0.0))
-	                            .hbp(getDoubleOrDefault(row[22], 0.0))
-	                            .r(getDoubleOrDefault(row[23], 0.0))
-	                            .er(getDoubleOrDefault(row[24], 0.0))
-	                            .cg(getDoubleOrDefault(row[25], 0.0))
-	                            .sho(getDoubleOrDefault(row[26], 0.0))
-	                            .qs(getDoubleOrDefault(row[27], 0.0))
-	                            .bsv(getDoubleOrDefault(row[28], 0.0))
-	                            .tbf(getDoubleOrDefault(row[29], 0.0))
-	                            .np(getDoubleOrDefault(row[30], 0.0))
-	                            .avg(getDoubleOrDefault(row[31], 0.0))
-	                            .twoB(getDoubleOrDefault(row[32], 0.0))
-	                            .threeB(getDoubleOrDefault(row[33], 0.0))
-	                            .sac(getDoubleOrDefault(row[34], 0.0))
-	                            .sf(getDoubleOrDefault(row[35], 0.0))
-	                            .ibb(getDoubleOrDefault(row[36], 0.0))
-	                            .wp(getDoubleOrDefault(row[37], 0.0))
-	                            .bk(getDoubleOrDefault(row[38], 0.0))
+	                            .fip(getDoubleOrNull(row[15]))
+	                            .xfip(getDoubleOrNull(row[16]))
+	                            .k9(getDoubleOrNull(row[17]))
+	                            .bb9(getDoubleOrNull(row[18]))
+	                            .g(getDoubleOrDefault(row[19], 0.0))
+	                            .wpct(getDoubleOrDefault(row[20], 0.0))
+	                            .hbp(getDoubleOrDefault(row[21], 0.0))
+	                            .r(getDoubleOrDefault(row[22], 0.0))
+	                            .er(getDoubleOrDefault(row[23], 0.0))
+	                            .cg(getDoubleOrDefault(row[24], 0.0))
+	                            .sho(getDoubleOrDefault(row[25], 0.0))
+	                            .qs(getDoubleOrDefault(row[26], 0.0))
+	                            .bsv(getDoubleOrDefault(row[27], 0.0))
+	                            .tbf(getDoubleOrDefault(row[28], 0.0))
+	                            .np(getDoubleOrDefault(row[29], 0.0))
+	                            .avg(getDoubleOrDefault(row[30], 0.0))
+	                            .twoB(getDoubleOrDefault(row[31], 0.0))
+	                            .threeB(getDoubleOrDefault(row[32], 0.0))
+	                            .sac(getDoubleOrDefault(row[33], 0.0))
+	                            .sf(getDoubleOrDefault(row[34], 0.0))
+	                            .ibb(getDoubleOrDefault(row[35], 0.0))
+	                            .wp(getDoubleOrDefault(row[36], 0.0))
+	                            .bk(getDoubleOrDefault(row[37], 0.0))
 	                            .build();
 	                    result.add(dto);
 	                }
@@ -392,7 +395,6 @@ public class PitcherStatsService {
 	        case BB -> dto.getBb() != null ? dto.getBb() : Double.MIN_VALUE;
 	        case H -> dto.getH() != null ? dto.getH() : Double.MIN_VALUE;
 	        case HR -> dto.getHr() != null ? dto.getHr() : Double.MIN_VALUE;
-	        case WAR -> dto.getWar() != null ? dto.getWar() : Double.MIN_VALUE;
 	        case FIP -> dto.getFip() != null ? dto.getFip() : Double.MAX_VALUE;
 	        case XFIP -> dto.getXfip() != null ? dto.getXfip() : Double.MAX_VALUE;
 	        case K9 -> dto.getK9() != null ? dto.getK9() : Double.MIN_VALUE;
@@ -450,6 +452,11 @@ public class PitcherStatsService {
 	// 헬퍼 메서드: 배열 요소를 Double로 변환 (null 안전)
 	private double getDoubleOrDefault(Object value, double defaultValue) {
 	    return value != null ? ((Number) value).doubleValue() : defaultValue;
+	}
+
+	// 헬퍼 메서드: 배열 요소를 Double로 변환 (null이면 null 반환 — 세이버 지표용)
+	private Double getDoubleOrNull(Object value) {
+	    return value != null ? ((Number) value).doubleValue() : null;
 	}
 }
 
