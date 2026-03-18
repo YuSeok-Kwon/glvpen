@@ -199,17 +199,17 @@
   });
 
   $('#start-game').click(function () {
-    window.location.href = '/game/play-view?difficulty=' + encodeURIComponent(selectedDifficulty);
+    window.location.href = '/simulations/play-view?difficulty=' + encodeURIComponent(selectedDifficulty);
   });
 
   function loadLineups() {
 	  $.ajax({
-	    url: '/game/user/lineup',
+	    url: '/api/games/user/lineup',
 	    method: 'GET',
 	    data: { userId: userId },
 	    success: function (userLineup) {
 	      $.ajax({
-	        url: '/game/ready?difficulty=' + encodeURIComponent(selectedDifficulty),
+	        url: '/api/games/ready?difficulty=' + encodeURIComponent(selectedDifficulty),
 	        method: 'POST',
 	        contentType: 'application/json',
 	        data: JSON.stringify(userLineup),
@@ -419,11 +419,6 @@
 	    ' / 지구력 ' + avg.stamina + '</p>';
 	}
 	
-	// 시작 버튼 클릭 시
-	$('#start-game').click(function () {
-	    const difficulty = $('#difficulty-select').val();
-	    const params = new URLSearchParams({ difficulty });
-	    window.location.href = '/game/play-view?' + params.toString();
-	});
+	// 시작 버튼 클릭 시 (중복 핸들러 제거 — 상단에서 처리)
 </script>
 </th:block>

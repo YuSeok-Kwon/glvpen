@@ -13,7 +13,7 @@
       <h2 class="mb-4">카드 뽑기</h2>
       <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
         <select id="positionSelect" class="form-select" style="width: 150px">
-          <option value="ALL" disabled selected>전체 포지션</option>
+          <option value="ALL" selected>전체 포지션</option>
           <option value="P">투수</option>
           <option value="1B">1루수</option>
           <option value="2B">2루수</option>
@@ -225,7 +225,7 @@
 
         button.onclick = function () {
           $.ajax({
-            url: '/game/save',
+            url: '/api/game/save',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
@@ -262,9 +262,14 @@
           }
 
           $.ajax({
-            url: '/game/draw?position=' + position,
+            url: '/api/game/draw?position=' + position,
             method: 'GET',
-            success: function (cards) {
+            success: function (response) {
+              var cards = response.cards || [];
+              if (cards.length === 0) {
+                drawButton.disabled = false;
+                return;
+              }
               for (var i = 0; i < cards.length; i++) {
                 (function (index) {
                   const card = cards[index];
@@ -284,6 +289,10 @@
                 })(i);
               }
             },
+            error: function() {
+              drawButton.disabled = false;
+              alert('카드 뽑기에 실패했습니다.');
+            }
           });
         });
       });

@@ -53,10 +53,16 @@ public class SimulationGameController {
 	    int userId = getUserIdOrDefault(user);
 
 	    List<PlayerCardOverallDTO> userLineup = userLineupService.getSavedLineup(userId);
+	    if (userLineup == null || userLineup.isEmpty()) {
+	        return "redirect:/game/lineup-view";
+	    }
 
 	    @SuppressWarnings("unchecked")
-	    List<PlayerCardOverallDTO> botLineup = (List<PlayerCardOverallDTO>) session.getAttribute("botLineup");    
-	    
+	    List<PlayerCardOverallDTO> botLineup = (List<PlayerCardOverallDTO>) session.getAttribute("botLineup");
+	    if (botLineup == null || botLineup.isEmpty()) {
+	        return "redirect:/simulations/ready-view";
+	    }
+
 	    int scheduleId = simulationGameService.createSimulationSchedule(userId, difficulty);
 	    SimulationResultDTO result = simulationService.playSimulationGame(userLineup, botLineup, difficulty);
 	    GameResultDTO summary = gameResultService.generateGameSummary(scheduleId, userId, result, userLineup, botLineup);
