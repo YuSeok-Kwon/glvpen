@@ -1,0 +1,29 @@
+[Unit]
+Description=glvpen - KBO 데이터 분석 플랫폼
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/glvpen
+EnvironmentFile=/opt/glvpen/.env
+ExecStart=/usr/bin/java -Xms512m -Xmx1280m -jar /opt/glvpen/app.jar --spring.profiles.active=prod
+ExecStop=/bin/kill -TERM $MAINPID
+Restart=always
+RestartSec=10
+SuccessExitStatus=143
+
+# 로그 디렉토리
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=glvpen
+
+# 보안 설정
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/glvpen
+
+[Install]
+WantedBy=multi-user.target

@@ -63,3 +63,7 @@ MISSING_TEMPLATES.md
 test_endpoints.sh
 runtime_errors.txt
 
+### 배포 ###
+deploy/.env
+glvpen_dump.sql
+
