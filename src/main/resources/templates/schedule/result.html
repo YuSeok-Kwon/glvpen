@@ -69,7 +69,7 @@
           <div th:each="game : ${entry.value}" class="mb-3 border-bottom pb-2"
                th:classappend="${game.status != '종료' or (game.hasDetail != null and !game.hasDetail)} ? 'text-muted opacity-50' : ''"
                th:style="${league != 'futures' and game.status == '종료' and game.hasDetail} ? 'cursor: pointer;' : ''"
-               th:onclick="${league != 'futures' and game.status == '종료' and game.hasDetail} ? |location.href='@{/schedule/detail-view(matchId=${game.id})}'| : ''">
+               th:onclick="${league != 'futures' and game.status == '종료' and game.hasDetail} ? |location.href='@{/schedule/detail-view(matchId=${game.id}, league=${league})}'| : ''">
 
             <!-- 경기 시간 & 경기장 & 더블헤더 표시 -->
             <div class="d-flex justify-content-center align-items-center gap-2 text-muted fs-6 ps-3 mt-2">

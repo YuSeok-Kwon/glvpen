@@ -160,10 +160,16 @@ public class PitcherStatsService {
 	            .build();
 	}
 
-	// 기록별(ERA, IP, WHIP, WAR 등) 1위 투수 조회
+	// 기록별 1위 투수 조회 (규정이닝 50% 이상 투수만 대상)
 	@Transactional(readOnly = true)
 	public List<PitcherTopDTO> getTopPitchers(int season) {
-	    List<Object[]> ObjectLists = pitcherStatsRepository.findTopPitchersAsTuple(season);
+	    // 규정이닝 50% 기준 계산
+	    Map<Integer, Integer> teamGamesMap = scheduleService.getTeamGamesPlayedBySeason(season);
+	    int maxGames = teamGamesMap.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+	    int fullIP = getQualifiedInnings(season, maxGames);
+	    double minIp = fullIP * 0.5;
+
+	    List<Object[]> ObjectLists = pitcherStatsRepository.findTopPitchersAsTuple(season, minIp);
 	    List<PitcherTopDTO> result = new ArrayList<>();
 
 	    for (Object[] list : ObjectLists) {

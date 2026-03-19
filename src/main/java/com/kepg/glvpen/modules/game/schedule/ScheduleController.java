@@ -85,16 +85,18 @@ public class ScheduleController {
     }
 
     @GetMapping("/detail-view")
-    public String gameDetail(@RequestParam int matchId, Model model) {
+    public String gameDetail(@RequestParam int matchId,
+                              @RequestParam(required = false, defaultValue = "kbo") String league,
+                              Model model) {
         GameDetailCardView detail;
         try {
             detail = scheduleService.getGameDetail(matchId);
         } catch (Exception e) {
-            return "redirect:/schedule/result-view";
+            return "redirect:/schedule/result-view?league=" + league;
         }
 
         if (detail == null) {
-            return "redirect:/schedule/result-view";
+            return "redirect:/schedule/result-view?league=" + league;
         }
 
         LocalDate date = detail.getMatchDate().toLocalDateTime().toLocalDate();
@@ -107,6 +109,7 @@ public class ScheduleController {
         model.addAttribute("nextMatchId", nextMatchId);
         model.addAttribute("game", detail);
         model.addAttribute("otherGames", allGames);
+        model.addAttribute("league", league);
         return "schedule/detail";
     }
     

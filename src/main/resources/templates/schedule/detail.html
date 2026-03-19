@@ -9,13 +9,13 @@
     <!-- 날짜 및 네비게이션 -->
 	<div class="text-center mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 gap-md-3">
 	  <a th:if="${prevMatchId != null}"
-	     th:href="@{/schedule/detail-view(matchId=${prevMatchId})}"
+	     th:href="@{/schedule/detail-view(matchId=${prevMatchId}, league=${league != null ? league : 'kbo'})}"
 	     class="btn btn-outline-secondary order-1 order-md-0">
 	    &laquo; 이전
 	  </a>
       <div class="fs-4 fs-md-3 fw-bold order-0 order-md-1" th:text="${#dates.format(game.matchDate, 'yy년 M월 d일 H:mm')}">25년 4월 1일 18:30</div>
 	  <a th:if="${nextMatchId != null}"
-	     th:href="@{/schedule/detail-view(matchId=${nextMatchId})}"
+	     th:href="@{/schedule/detail-view(matchId=${nextMatchId}, league=${league != null ? league : 'kbo'})}"
 	     class="btn btn-outline-secondary order-2">
 	    다음 &raquo;
 	  </a>
@@ -25,7 +25,7 @@
 	<div class="d-flex flex-wrap justify-content-center align-items-center gap-2 gap-md-3 mb-4">
 	  <div class="border rounded px-2 px-md-3 py-2 text-center bg-white"
 	       th:each="g : ${otherGames}"
-	       th:onclick="|location.href='@{/schedule/detail-view(matchId=${g.id})}'|"
+	       th:onclick="|location.href='@{/schedule/detail-view(matchId=${g.id}, league=${league != null ? league : 'kbo'})}'|"
 	       style="cursor: pointer; min-width: 180px; max-width: 220px; flex: 1 1 180px;"
 	       th:classappend="${g.id == game.id} ? 'border-dark border-2' : ''">
 	    

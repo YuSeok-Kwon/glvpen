@@ -45,7 +45,7 @@ public interface PitcherStatsRepository extends JpaRepository<PitcherStats, Inte
     Optional<String> findStatValueByPlayerIdCategoryAndSeason(
             @Param("playerId") int playerId, @Param("category") String category, @Param("season") int season);
 
-    // 시즌별 각 카테고리별 1위 투수 조회 (ROW_NUMBER 윈도우 함수 사용)
+    // 시즌별 각 카테고리별 1위 투수 조회 (ROW_NUMBER 윈도우 함수 사용, 규정이닝 50% 이상 필터)
     @Query(value = """
             SELECT ranked.position, ranked.playerName, ranked.teamName,
                    ranked.logoName, ranked.record_value, ranked.category
@@ -58,9 +58,9 @@ public interface PitcherStatsRepository extends JpaRepository<PitcherStats, Inte
                     COALESCE(bs.value, 0) AS record_value,
                     bs.category,
                     ROW_NUMBER() OVER (
-                        PARTITION BY bs.position, bs.category
+                        PARTITION BY bs.category
                         ORDER BY CASE
-                            WHEN bs.category IN ('ERA', 'WHIP') THEN bs.value
+                            WHEN bs.category IN ('ERA', 'WHIP', 'FIP') THEN bs.value
                             ELSE -bs.value
                         END
                     ) AS row_num
@@ -68,14 +68,23 @@ public interface PitcherStatsRepository extends JpaRepository<PitcherStats, Inte
                 JOIN player p ON bs.playerId = p.id
                 JOIN team t ON p.teamId = t.id
                 WHERE bs.season = :season
-                  AND bs.category IN ('ERA', 'WHIP', 'G', 'IP', 'W', 'HLD', 'SV', 'SO')
+                  AND bs.category IN ('ERA', 'WHIP', 'G', 'IP', 'W', 'HLD', 'SV', 'SO', 'FIP')
                   AND (bs.category != 'ERA' OR bs.value > 0)
+                  AND (bs.category != 'FIP' OR bs.value > 0)
                   AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
+                  AND EXISTS (
+                      SELECT 1 FROM player_pitcher_stats ip_stat
+                      WHERE ip_stat.playerId = bs.playerId
+                        AND ip_stat.season = bs.season
+                        AND ip_stat.category = 'IP'
+                        AND ip_stat.series = '0' AND ip_stat.situationType = '' AND ip_stat.situationValue = ''
+                        AND ip_stat.value >= :minIp
+                  )
             ) AS ranked
             WHERE ranked.row_num = 1
-            ORDER BY ranked.position, ranked.category
+            ORDER BY ranked.category
             """, nativeQuery = true)
-    List<Object[]> findTopPitchersAsTuple(@Param("season") int season);
+    List<Object[]> findTopPitchersAsTuple(@Param("season") int season, @Param("minIp") double minIp);
 
     // 시즌 전체 투수 스탯 요약
     @Query(value = """

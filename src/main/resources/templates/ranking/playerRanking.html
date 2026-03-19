@@ -55,10 +55,10 @@
                 </select>
             </form>
             <select id="qualifiedFilter" class="form-select" style="width: auto;" onchange="filterByQualified()">
-                <option value="0">전체 선수</option>
                 <option value="100">규정 선수</option>
                 <option value="75">규정 75%</option>
                 <option value="50">규정 50%</option>
+                <option value="0">전체 선수</option>
             </select>
 
             <!-- 선수 검색 -->
@@ -102,7 +102,7 @@
 	  });
 	})();
 
-	let qualifiedLevel = 0;
+	let qualifiedLevel = 100;
 	let currentTab = 'batter';
 	let currentBatterData = [];
 	let currentPitcherData = [];
@@ -140,12 +140,8 @@
 	            $('#positionChoiceBox').addClass('d-none');
 	        }
 
-	        // 규정 선수 필터: 타자/투수 탭만 표시
-	        if (tab === 'batter' || tab === 'pitcher') {
-	            $('#qualifiedFilter').removeClass('d-none');
-	        } else {
-	            $('#qualifiedFilter').addClass('d-none');
-	        }
+	        // 규정 선수 필터: 모든 탭에서 표시
+	        $('#qualifiedFilter').removeClass('d-none');
 	    }
 
 	    // 버튼 클릭 시 탭 전환
@@ -248,8 +244,28 @@
 	            renderTopPitcherList(data.topPitchers);
 	            currentBatterData = data.batterRankingList;
 	            currentPitcherData = data.pitcherRankingList;
-	            currentDefenseData = data.defenseRankingList || [];
+
+	            // 수비 포지션 한글→영문 매핑
+	            currentDefenseData = (data.defenseRankingList || []).map(function(d) {
+	                d.position = mapPositionToEng(d.position);
+	                return d;
+	            });
 	            currentRunnerData = data.runnerRankingList || [];
+
+	            // 수비/주루 규정 필터 (프론트엔드)
+	            if (qualifiedLevel > 0) {
+	                var baseG = getBaseGames(data.season);
+	                var reqG = Math.floor(baseG * qualifiedLevel / 100);
+	                currentDefenseData = currentDefenseData.filter(function(d) { return (d.g || 0) >= reqG; });
+	                currentRunnerData = currentRunnerData.filter(function(d) { return (d.g || 0) >= reqG; });
+	            }
+
+	            // 기본 다중 키 정렬 적용
+	            defaultSortBatters(currentBatterData);
+	            defaultSortPitchers(currentPitcherData);
+	            defaultSortDefense(currentDefenseData);
+	            defaultSortRunners(currentRunnerData);
+
 	            filteredBatterData = [...currentBatterData];
 	            filteredPitcherData = [...currentPitcherData];
 	            filteredDefenseData = [...currentDefenseData];
@@ -258,10 +274,10 @@
 	            pitcherCurrentPage = 1;
 	            defenseCurrentPage = 1;
 	            runnerCurrentPage = 1;
-	            renderBatterTable(filteredBatterData, data.currentSort, data.sortDirection);
-	            renderPitcherTable(filteredPitcherData, data.currentSort, data.sortDirection);
-	            renderDefenseTable(filteredDefenseData, data.currentSort, data.sortDirection);
-	            renderRunnerTable(filteredRunnerData, data.currentSort, data.sortDirection);
+	            renderBatterTable(filteredBatterData, 'OPS', 'DESC');
+	            renderPitcherTable(filteredPitcherData, 'W', 'DESC');
+	            renderDefenseTable(filteredDefenseData, 'IP', 'DESC');
+	            renderRunnerTable(filteredRunnerData, 'G', 'DESC');
 	        },
 	        error: function(xhr, status, error) {
 	            console.error('데이터 불러오기 실패:', error);
@@ -270,8 +286,37 @@
 	    });
 	}
 
-	// 타자 Top 리스트
+	// 한글 포지션 → 영문 매핑
+	function mapPositionToEng(pos) {
+	    var map = {'포수':'C','1루수':'1B','2루수':'2B','3루수':'3B','유격수':'SS',
+	               '좌익수':'LF','중견수':'CF','우익수':'RF','지명타자':'DH','투수':'P',
+	               '내야수':'IF','외야수':'OF'};
+	    return map[pos] || pos;
+	}
+
+	// 수비/주루 규정 필터 기준 게임 수 계산
+	function getBaseGames(season) {
+	    var currentYear = new Date().getFullYear();
+	    if (season >= currentYear) {
+	        var maxG = 0;
+	        currentBatterData.forEach(function(b) { if ((b.g || 0) > maxG) maxG = b.g; });
+	        return maxG > 0 ? maxG : 144;
+	    }
+	    return 144;
+	}
+
+	// 타자 Top 리스트 (포지션 순서: C, 1B, 2B, SS, 3B, LF, CF, RF, DH)
 	function renderTopBatterList(list) {
+	    var posOrder = {'C':0,'1B':1,'2B':2,'SS':3,'3B':4,'LF':5,'CF':6,'RF':7,'DH':8};
+	    // IF, OF, P 제외
+	    list = list.filter(function(b) {
+	        return b.position && !['IF','OF','P'].includes(b.position);
+	    });
+	    list.sort(function(a, b) {
+	        var oa = posOrder[a.position] !== undefined ? posOrder[a.position] : 99;
+	        var ob = posOrder[b.position] !== undefined ? posOrder[b.position] : 99;
+	        return oa - ob;
+	    });
 	    var html = '';
 	    list.forEach(function(batter) {
 	        html += '<li class="list-group-item d-flex justify-content-between">';
@@ -353,6 +398,7 @@
 	    html += '<th>순위</th>';
 	    html += '<th>선수명</th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'position\')">포지션' + (currentSort === 'POSITION' ? directionArrow : '') + '</a></th>';
+	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'OPS\')">OPS' + (currentSort === 'OPS' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'WOBA\')">wOBA' + (currentSort === 'WOBA' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'G\')">경기' + (currentSort === 'G' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'PA\')">타석' + (currentSort === 'PA' ? directionArrow : '') + '</a></th>';
@@ -375,8 +421,6 @@
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'TB\')">루타' + (currentSort === 'TB' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'OBP\')">출루율' + (currentSort === 'OBP' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'SLG\')">장타율' + (currentSort === 'SLG' ? directionArrow : '') + '</a></th>';
-	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'OPS\')">OPS' + (currentSort === 'OPS' ? directionArrow : '') + '</a></th>';
-	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'WRCPLUS\')">wRC+' + (currentSort === 'WRCPLUS' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'BABIP\')">BABIP' + (currentSort === 'BABIP' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'ISO\')">ISO' + (currentSort === 'ISO' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortBatterTable(\'K_RATE\')">K%' + (currentSort === 'K_RATE' ? directionArrow : '') + '</a></th>';
@@ -392,6 +436,7 @@
 	        html += '<td>' + actualRank + '</td>';
 	        html += '<td class="d-flex align-items-center gap-2"><img src="' + getLogoPath(batter.logoName) + '" style="width:28px;height:28px;">' + batter.playerName + '</td>';
 	        html += '<td>' + (batter.position || '-') + '</td>';
+	        html += '<td>' + formatDecimal(batter.ops, 3) + '</td>';
 	        html += '<td>' + formatDecimal(batter.woba, 3) + '</td>';
 	        html += '<td>' + formatInteger(batter.g) + '</td>';
 	        html += '<td>' + formatInteger(batter.pa) + '</td>';
@@ -414,8 +459,6 @@
 	        html += '<td>' + formatInteger(batter.tb) + '</td>';
 	        html += '<td>' + formatDecimal(batter.obp, 3) + '</td>';
 	        html += '<td>' + formatDecimal(batter.slg, 3) + '</td>';
-	        html += '<td>' + formatDecimal(batter.ops, 3) + '</td>';
-	        html += '<td>' + formatDecimal(batter.wrcPlus, 1) + '</td>';
 	        html += '<td>' + formatDecimal(batter.babip, 3) + '</td>';
 	        html += '<td>' + formatDecimal(batter.iso, 3) + '</td>';
 	        html += '<td>' + formatDecimal(batter.kRate, 1) + '</td>';
@@ -507,7 +550,6 @@
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'WHIP\')">WHIP' + (currentSort === 'WHIP' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'AVG\')">피안타율' + (currentSort === 'AVG' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'FIP\')">FIP' + (currentSort === 'FIP' ? directionArrow : '') + '</a></th>';
-	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'XFIP\')">xFIP' + (currentSort === 'XFIP' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'K9\')">K/9' + (currentSort === 'K9' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'BB9\')">BB/9' + (currentSort === 'BB9' ? directionArrow : '') + '</a></th>';
 	    html += '<th><a href="javascript:void(0);" onclick="sortPitcherTable(\'SAC\')">희번' + (currentSort === 'SAC' ? directionArrow : '') + '</a></th>';
@@ -548,7 +590,6 @@
 	        html += '<td>' + formatDecimal(pitcher.whip, 2) + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.avg, 3) + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.fip, 2) + '</td>';
-	        html += '<td>' + formatDecimal(pitcher.xfip, 2) + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.k9, 2) + '</td>';
 	        html += '<td>' + formatDecimal(pitcher.bb9, 2) + '</td>';
 	        html += '<td>' + formatInteger(pitcher.sac) + '</td>';
@@ -727,6 +768,52 @@
 	    renderRunnerPagination(totalPages);
 	}
 
+
+	// 기본 다중 키 정렬 함수
+	function defaultSortBatters(list) {
+	    list.sort(function(a, b) {
+	        var diff = (b.ops || 0) - (a.ops || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.woba || 0) - (a.woba || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.avg || 0) - (a.avg || 0);
+	        if (diff !== 0) return diff;
+	        return (a.playerName || '').localeCompare(b.playerName || '');
+	    });
+	}
+	function defaultSortPitchers(list) {
+	    list.sort(function(a, b) {
+	        var diff = (b.wins || 0) - (a.wins || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.g || 0) - (a.g || 0);
+	        if (diff !== 0) return diff;
+	        diff = (a.era || 0) - (b.era || 0);
+	        if (diff !== 0) return diff;
+	        return (a.playerName || '').localeCompare(b.playerName || '');
+	    });
+	}
+	function defaultSortDefense(list) {
+	    list.sort(function(a, b) {
+	        var diff = (b.ip || 0) - (a.ip || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.fpct || 0) - (a.fpct || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.g || 0) - (a.g || 0);
+	        if (diff !== 0) return diff;
+	        return (a.playerName || '').localeCompare(b.playerName || '');
+	    });
+	}
+	function defaultSortRunners(list) {
+	    list.sort(function(a, b) {
+	        var diff = (b.g || 0) - (a.g || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.sbPct || 0) - (a.sbPct || 0);
+	        if (diff !== 0) return diff;
+	        diff = (b.sba || 0) - (a.sba || 0);
+	        if (diff !== 0) return diff;
+	        return (a.playerName || '').localeCompare(b.playerName || '');
+	    });
+	}
 
 	// 공통 유틸
 	function getLogoPath(logoName) {
