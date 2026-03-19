@@ -130,33 +130,43 @@ def analyze(player_id):
             hypothesis['포지션_OPS_ttest'] = ttest
             findings.append(f"{position} vs 나머지 OPS: {ttest['interpretation']}")
 
-        # ── 3) 레이더: 해당 선수 vs 포지션 1위 ──
-        print_section('선수 vs 포지션 1위')
+        # ── 3) 레이더: 해당 선수 vs 포지션 1위 (자기 자신이면 2위와 비교) ──
+        print_section('선수 vs 포지션 상위 선수')
         player_row = league[league['playerId'] == player_id]
         if not player_row.empty and not top10.empty:
             pr = player_row.iloc[0]
-            top1 = top10.iloc[0]
+
+            # 자기 자신이 1위면 2위와 비교, 아니면 1위와 비교
+            compare_target = None
+            for _, row in top10.iterrows():
+                if int(row['playerId']) != player_id:
+                    compare_target = row
+                    break
+            if compare_target is None:
+                compare_target = top10.iloc[0]
 
             avail_metrics = [m for m in OFFENSE_METRICS if m in league.columns]
             radar_labels = []
             player_vals = []
-            top1_vals = []
+            target_vals = []
 
             for m in avail_metrics:
                 pv = safe_float(pr.get(m, 0))
-                tv = safe_float(top1.get(m, 0))
+                tv = safe_float(compare_target.get(m, 0))
                 max_v = max(abs(pv), abs(tv), 0.001)
                 player_vals.append(round(pv / max_v * 100, 1))
-                top1_vals.append(round(tv / max_v * 100, 1))
+                target_vals.append(round(tv / max_v * 100, 1))
                 radar_labels.append(m)
 
-            top1_name = top1.get('playerName', '1위')
+            target_name = compare_target.get('playerName', '비교 대상')
+            target_rank_list = same_pos['playerId'].tolist()
+            target_rank = target_rank_list.index(int(compare_target['playerId'])) + 1 if int(compare_target['playerId']) in target_rank_list else '?'
             charts.append(ChartBuilder.radar(
-                f'{info["name"]} vs {top1_name} ({position} 1위)',
+                f'{info["name"]} vs {target_name} ({position} {target_rank}위)',
                 radar_labels,
                 [
                     {'label': info['name'], 'data': player_vals},
-                    {'label': f'{top1_name} ({position} 1위)', 'data': top1_vals},
+                    {'label': f'{target_name} ({position} {target_rank}위)', 'data': target_vals},
                 ]
             ))
 

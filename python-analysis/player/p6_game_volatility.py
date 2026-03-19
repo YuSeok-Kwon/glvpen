@@ -106,10 +106,16 @@ def analyze(player_id):
             game_labels,
             [
                 {'label': metric_label,
-                 'data': [round(v, 3) for v in metric_vals]},
+                 'data': [round(v, 3) for v in metric_vals],
+                 'pointRadius': 1,
+                 'pointHoverRadius': 4,
+                 'borderWidth': 1.5,
+                 'borderColor': '#93C5FD'},
                 {'label': f'{MOVING_AVG_WINDOW}경기 이동평균',
                  'data': [round(v, 3) for v in ma],
-                 'borderDash': [5, 5]},
+                 'borderWidth': 3,
+                 'pointRadius': 0,
+                 'borderColor': '#DC2626'},
             ]
         ))
 

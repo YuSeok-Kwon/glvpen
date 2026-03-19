@@ -188,12 +188,12 @@ def analyze(player_id):
                            for m in compare_metrics]
             datasets.append({'label': info['name'], 'data': player_vals})
 
-            # 정규화
+            # 정규화 (max를 먼저 계산 후 일괄 적용)
+            max_per_metric = []
+            for i in range(len(compare_metrics)):
+                all_vals_for_m = [d['data'][i] for d in datasets]
+                max_per_metric.append(max(abs(v) for v in all_vals_for_m) or 1)
             for ds in datasets:
-                max_per_metric = []
-                for i in range(len(compare_metrics)):
-                    all_vals_for_m = [d['data'][i] for d in datasets]
-                    max_per_metric.append(max(abs(v) for v in all_vals_for_m) or 1)
                 ds['data'] = [round(v / mx * 100, 1)
                               for v, mx in zip(ds['data'], max_per_metric)]
 

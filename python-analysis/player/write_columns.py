@@ -130,11 +130,11 @@ def get_player_info_map(db, player_ids: list) -> dict:
 
 def build_player_card_html(info: dict) -> str:
     """선수 정보 카드 HTML"""
-    name = info.get('name', '?')
-    team = info.get('teamName', '?')
-    pos = info.get('position', '?')
-    tb = info.get('throwBat', '?')
-    num = info.get('backNumber', '?')
+    name = info.get('name') or '?'
+    team = info.get('teamName') or '?'
+    pos = info.get('position') or '미확인'
+    tb = info.get('throwBat') or '미확인'
+    num = info.get('backNumber') or '?'
     return (
         f'<div style="background:#f8f9fa;border-radius:8px;padding:12px 16px;'
         f'margin-bottom:12px;border-left:4px solid #0f3460;">'
