@@ -16,7 +16,7 @@ DB_CONFIG = {
 }
 
 # ==================== Gemini API 설정 ====================
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyDlwCYL2w94-NKMTnVenSYKEXnpQg3e2wA')
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 # ==================== 분석 설정 ====================
 
