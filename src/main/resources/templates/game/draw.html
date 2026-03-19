@@ -15,9 +15,14 @@
         <select id="positionSelect" class="form-select" style="width: 150px">
           <option value="ALL" selected>전체 포지션</option>
           <option value="P">투수</option>
-          <option value="IF">내야수</option>
-          <option value="OF">외야수</option>
           <option value="C">포수</option>
+          <option value="1B">1루수</option>
+          <option value="2B">2루수</option>
+          <option value="3B">3루수</option>
+          <option value="SS">유격수</option>
+          <option value="LF">좌익수</option>
+          <option value="CF">중견수</option>
+          <option value="RF">우익수</option>
           <option value="DH">지명타자</option>
         </select>
         <button id="drawBtn" class="btn btn-primary">카드 뽑기</button>
@@ -98,12 +103,12 @@
         if (card.grade === 'S' && card.imagePath) {
           const imageWrapper = document.createElement('div');
           imageWrapper.className = 'card-image-wrapper';
-          imageWrapper.innerHTML =
-            '<img src="/' +
-            card.imagePath +
-            '" alt="' +
-            card.playerName +
-            '" class="card-image hologram">';
+          const img = document.createElement('img');
+          img.src = '/' + card.imagePath;
+          img.alt = card.playerName;
+          img.className = 'card-image hologram';
+          img.onerror = function() { imageWrapper.style.display = 'none'; };
+          imageWrapper.appendChild(img);
           front.appendChild(imageWrapper);
         }
 

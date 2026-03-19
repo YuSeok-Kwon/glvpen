@@ -13,7 +13,8 @@ public class TeamStatsDTO {
 	    private int teamId;
 	    private int season;
 	    private String category;
-	    private double value;          
-	    private String rank;               
-	
+	    private double value;
+	    private String rank;
+	    private String series = "0";
+
 }

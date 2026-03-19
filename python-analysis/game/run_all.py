@@ -469,6 +469,8 @@ def parse_args():
                         help='이전 실행 이력 조회')
     parser.add_argument('--reset-history', action='store_true',
                         help='이력 초기화')
+    parser.add_argument('--all', action='store_true',
+                        help='전체 10팀 분석 (추천 시스템 우회)')
     return parser.parse_args()
 
 
@@ -616,7 +618,16 @@ def main():
 
         recommendations = {}
         for key in target_keys:
-            if key in manual:
+            if args.all:
+                rankings = recommender._cache.get('rankings')
+                if rankings is not None and not rankings.empty:
+                    recs = [(int(r['teamId']), r['teamName'], "전체 분석")
+                            for _, r in rankings.sort_values('ranking').iterrows()]
+                else:
+                    recs = [(tid, get_team_name(tid), "전체 분석")
+                            for tid in sorted(TEAM_NAMES.keys())]
+                recommendations[key] = recs
+            elif key in manual:
                 recs = []
                 for tid in manual[key]:
                     recs.append((tid, get_team_name(tid), "수동 지정"))

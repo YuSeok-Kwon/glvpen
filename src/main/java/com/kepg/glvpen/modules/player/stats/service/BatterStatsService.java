@@ -152,9 +152,12 @@ public class BatterStatsService {
                 .build();
     }
         
-    // 시즌별 포지션 wOBA 1위 타자 목록 조회
+    // 시즌별 포지션 wOBA 1위 타자 목록 조회 (규정타석 충족 선수만)
     public List<BatterTopDTO> getTopBattersByPosition(int season) {
-        List<Object[]> projections = batterStatsRepository.findTopBattersByPosition(season);
+        Map<Integer, Integer> teamGamesMap = scheduleService.getTeamGamesPlayedBySeason(season);
+        int maxGames = teamGamesMap.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+        int fullPA = getQualifiedPA(season, maxGames);
+        List<Object[]> projections = batterStatsRepository.findTopBattersByPosition(season, fullPA);
         List<BatterTopDTO> result = new ArrayList<>();
 
         for (Object[] row : projections) {

@@ -228,6 +228,7 @@ public class UserController {
         model.addAttribute("rankingList", homeData.getRankingList());
         model.addAttribute("todayAllGames", homeData.getTodayAllGames());
         model.addAttribute("todayFuturesGames", homeData.getTodayFuturesGames());
+        model.addAttribute("season", homeData.getSeason());
         model.addAttribute("seriesLabel", homeData.getSeriesLabel());
         model.addAttribute("recentColumns", homeData.getRecentColumns());
 

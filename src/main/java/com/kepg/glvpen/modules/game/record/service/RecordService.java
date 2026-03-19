@@ -103,6 +103,7 @@ public class RecordService {
         List<BatterRecordDTO> dtoList = new ArrayList<>();
 
         for (BatterRecord r : records) {
+            if (r.getPlayer() == null) continue;
             BatterRecordDTO dto = BatterRecordDTO.builder()
                 .playerId(r.getPlayer().getId())
                 .playerName(r.getPlayer().getName())
@@ -127,6 +128,7 @@ public class RecordService {
         List<PitcherRecordDTO> dtoList = new ArrayList<>();
 
         for (PitcherRecord r : records) {
+            if (r.getPlayer() == null) continue;
             PitcherRecordDTO dto = PitcherRecordDTO.builder()
                 .playerId(r.getPlayer().getId())
                 .playerName(r.getPlayer().getName())
@@ -152,6 +154,7 @@ public class RecordService {
         List<PitcherRecordDTO> dtoList = new ArrayList<>();
 
         for (PitcherRecord entity : entities) {
+            if (entity.getPlayer() == null) continue;
             dtoList.add(PitcherRecordDTO.builder()
                     .scheduleId(entity.getScheduleId())
                     .teamId(entity.getTeamId())

@@ -11,6 +11,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kepg.glvpen.modules.player.repository.PlayerRepository;
 import com.kepg.glvpen.modules.player.stats.domain.BatterStats;
 import com.kepg.glvpen.modules.player.stats.domain.PitcherStats;
 import com.kepg.glvpen.modules.player.stats.repository.BatterStatsRepository;
@@ -31,6 +32,7 @@ public class PlayerCardOverallService {
     private final BatterStatsRepository batterStatsRepository;
     private final PitcherStatsRepository pitcherStatsRepository;
     private final PlayerCardOverallRepository playerCardOverallRepository;
+    private final PlayerRepository playerRepository;
     
     // 타자 오버롤 계산 (포지션 + 시즌 리스트)
     public void calculateBatterOverallByPosition(List<Integer> seasons, String targetPosition) {
@@ -89,6 +91,11 @@ public class PlayerCardOverallService {
                 double pa = statMap.getOrDefault("PA", 0.0);
                 if (g < 10 || pa < 20) continue;
 
+                // 타격 기록 없는 선수 제외 (AVG=0, H=0)
+                double avg = statMap.getOrDefault("AVG", 0.0);
+                double h = statMap.getOrDefault("H", 0.0);
+                if (avg == 0 && h == 0) continue;
+
                 RawBatterScore raw = calculateRawBatterScoreWithWeight(playerId, season, statMap);
                 raw.setSeason(season);
                 rawList.add(raw);
@@ -100,8 +107,10 @@ public class PlayerCardOverallService {
     
     // 타자 점수 계산 (보정 포함)
     private RawBatterScore calculateRawBatterScoreWithWeight(Integer playerId, int season, Map<String, Double> statMap) {
-        double war = statMap.getOrDefault("WAR", 0.0);
-        double weight = war > 0 ? 1.0 + Math.pow(war, 1.05) / 4.0 : 1.0;
+        // wOBA 기반 가중치 (WAR 데이터 없음 대응)
+        double woba = statMap.getOrDefault("wOBA", 0.0);
+        double weight = woba > 0 ? 1.0 + Math.pow(woba / 0.35, 1.5) / 4.0 : 1.0;
+
         double pa = statMap.getOrDefault("PA", 0.0);
         double gameRatio = Math.min(pa / 400.0, 1.5);
 
@@ -113,8 +122,15 @@ public class PlayerCardOverallService {
         double avgScore = Math.min(statMap.getOrDefault("AVG", 0.0) / 0.35, 1.5) * 100;
         double contact = (hScore * 0.5 + avgScore * 0.5) * weight * gameRatio;
 
+        // SO=0 과대평가 방지: PA < 100이면 중립값
+        double so = statMap.getOrDefault("SO", 0.0);
         double bbScore = Math.min(statMap.getOrDefault("BB", 0.0) / 80.0, 1.5) * 100;
-        double soScore = (1.0 - Math.min(statMap.getOrDefault("SO", 0.0) / 150.0, 1.0)) * 100;
+        double soScore;
+        if (so == 0 && pa < 100) {
+            soScore = 50;
+        } else {
+            soScore = (1.0 - Math.min(so / 150.0, 1.0)) * 100;
+        }
         double discipline = (bbScore * 0.5 + soScore * 0.5) * weight * gameRatio;
 
         double sbScore = Math.min(statMap.getOrDefault("SB", 0.0) / 50.0, 1.5) * 100;
@@ -176,10 +192,11 @@ public class PlayerCardOverallService {
         maxMap.put("overall", getTopPercentAverage(overalls, 0.04));
     }
 
-    // 점수 정규화 (10~100)
+    // 점수 정규화 (10~100, 범위 강제)
     private int scaleToRange(double value, double min, double max) {
-        if (max == min) return 10; // 모두 같은 값일 때
-        return 10 + (int) Math.round((value - min) / (max - min) * 90);
+        if (max == min) return 10;
+        int result = 10 + (int) Math.round((value - min) / (max - min) * 90);
+        return Math.max(10, Math.min(100, result));
     }
     
     // 투수 오버롤 계산 (선발/구원 포함)
@@ -248,8 +265,9 @@ public class PlayerCardOverallService {
     
  // 투수 실제 데이터 추출 -> 보정
     private RawPitcherScore calculateRawPitcherScoreWithMinMax(int playerId, int season, Map<String, Double> statMap) {
-        double war = statMap.getOrDefault("WAR", 0.0);
-        double weight = war > 0 ? 1.0 + Math.pow(war, 1.05) / 4.0 : 1.0;
+        // FIP 기반 가중치 (WAR 데이터 없음 대응)
+        double fip = statMap.getOrDefault("FIP", 0.0);
+        double weight = (fip > 0 && fip < 6.0) ? 1.0 + Math.pow((6.0 - fip) / 3.0, 1.5) / 4.0 : 1.0;
 
         double g = statMap.getOrDefault("G", 0.0);
         double bb = statMap.getOrDefault("BB", 0.0);
@@ -368,8 +386,9 @@ public class PlayerCardOverallService {
             PlayerCardOverall card = list.get(i);
             String grade;
 
-            if (i < sCount) grade = "S";
-            else if (i < aCount) grade = "A";
+            // 상대평가 + 절대값 하한선 (OVERALL < 85이면 S 불가, < 70이면 A 불가)
+            if (i < sCount && card.getOverall() >= 85) grade = "S";
+            else if (i < aCount && card.getOverall() >= 70) grade = "A";
             else if (i < bCount) grade = "B";
             else if (i < cCount) grade = "C";
             else grade = "D";
@@ -402,39 +421,62 @@ public class PlayerCardOverallService {
             dto.setStamina(card.getStamina());
             dto.setOverall(card.getOverall());
 
-            List<Object[]> stats = batterStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, season);
-            Map<String, Double> statMap = new HashMap<>();
-            for (Object[] row : stats) {
-                String category = (String) row[0];
-                Double value = ((Number) row[1]).doubleValue();
-                statMap.put(category, value);
-            }
+            // 선수 이름 설정
+            playerRepository.findById(playerId).ifPresent(player -> {
+                dto.setPlayerName(player.getName());
+            });
 
-            dto.setAvg(statMap.getOrDefault("AVG", null));
-            dto.setOps(statMap.getOrDefault("OPS", null));
-            dto.setWar(statMap.getOrDefault("WAR", null));
-            dto.setHr(statMap.containsKey("HR") ? statMap.get("HR").intValue() : null);
-            dto.setSb(statMap.containsKey("SB") ? statMap.get("SB").intValue() : null);
+            if ("PITCHER".equals(card.getType())) {
+                // 투수: pitcherStatsRepository에서 스탯 조회
+                dto.setPosition("P");
+                List<Object[]> stats = pitcherStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, season);
+                Map<String, Double> statMap = new HashMap<>();
+                for (Object[] row : stats) {
+                    String category = (String) row[0];
+                    Double value = ((Number) row[1]).doubleValue();
+                    statMap.put(category, value);
+                }
+                dto.setWar(statMap.getOrDefault("WAR", null));
+                dto.setEra(statMap.getOrDefault("ERA", null));
+                dto.setWhip(statMap.getOrDefault("WHIP", null));
+                dto.setWins(statMap.containsKey("W") ? statMap.get("W").intValue() : null);
+                dto.setSaves(statMap.containsKey("SV") ? statMap.get("SV").intValue() : null);
+                dto.setHolds(statMap.containsKey("HLD") ? statMap.get("HLD").intValue() : null);
+            } else {
+                // 타자: batterStatsRepository에서 스탯 조회
+                List<Object[]> stats = batterStatsRepository.findStatsRawByPlayerIdAndSeason(playerId, season);
+                Map<String, Double> statMap = new HashMap<>();
+                for (Object[] row : stats) {
+                    String category = (String) row[0];
+                    Double value = ((Number) row[1]).doubleValue();
+                    statMap.put(category, value);
+                }
 
-            if (!stats.isEmpty()) {
-                String position = batterStatsRepository.findPositionByPlayerIdAndSeason(playerId, season);
-                dto.setPosition(position);
-            }
+                dto.setAvg(statMap.getOrDefault("AVG", null));
+                dto.setOps(statMap.getOrDefault("OPS", null));
+                dto.setWar(statMap.getOrDefault("WAR", null));
+                dto.setHr(statMap.containsKey("HR") ? statMap.get("HR").intValue() : null);
+                dto.setSb(statMap.containsKey("SB") ? statMap.get("SB").intValue() : null);
 
-            Optional<Object[]> teamInfoOpt = batterStatsRepository.findTeamAndPosition(playerId, season);
-            if (teamInfoOpt.isPresent()) {
-                Object[] arr = teamInfoOpt.get();
+                if (!stats.isEmpty()) {
+                    String position = batterStatsRepository.findPositionByPlayerIdAndSeason(playerId, season);
+                    dto.setPosition(position);
+                }
 
-                if (arr.length > 0 && arr[0] instanceof Object[]) {
-                    Object[] inner = (Object[]) arr[0]; // 진짜 값 들어있는 배열
+                Optional<Object[]> teamInfoOpt = batterStatsRepository.findTeamAndPosition(playerId, season);
+                if (teamInfoOpt.isPresent()) {
+                    Object[] arr = teamInfoOpt.get();
 
-                    dto.setPosition(inner[0] != null ? inner[0].toString() : null);
-                    dto.setTeamName(inner[1] != null ? inner[1].toString() : null);
-                    dto.setLogoName(inner[2] != null ? inner[2].toString() : null);
-                } else if (arr.length >= 3) {
-                    dto.setPosition(arr[0] != null ? arr[0].toString() : null);
-                    dto.setTeamName(arr[1] != null ? arr[1].toString() : null);
-                    dto.setLogoName(arr[2] != null ? arr[2].toString() : null);
+                    if (arr.length > 0 && arr[0] instanceof Object[]) {
+                        Object[] inner = (Object[]) arr[0];
+                        dto.setPosition(inner[0] != null ? inner[0].toString() : null);
+                        dto.setTeamName(inner[1] != null ? inner[1].toString() : null);
+                        dto.setLogoName(inner[2] != null ? inner[2].toString() : null);
+                    } else if (arr.length >= 3) {
+                        dto.setPosition(arr[0] != null ? arr[0].toString() : null);
+                        dto.setTeamName(arr[1] != null ? arr[1].toString() : null);
+                        dto.setLogoName(arr[2] != null ? arr[2].toString() : null);
+                    }
                 }
             }
             

@@ -1,6 +1,6 @@
 spring:
   config:
-    import: "classpath:security-variable.yml"
+    import: "optional:classpath:security-variable.yml"
   application:
     name: glvpen
   datasource:
@@ -35,3 +35,14 @@ server:
 logging:
   level:
     p6spy: off
+
+crawl:
+  scheduled:
+    enabled: false
+
+analysis:
+  scheduled:
+    enabled: false
+  python:
+    path: python3
+    base-dir: python-analysis

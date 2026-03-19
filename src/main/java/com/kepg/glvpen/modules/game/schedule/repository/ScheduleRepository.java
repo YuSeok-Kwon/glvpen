@@ -181,4 +181,26 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Integer> {
         ORDER BY matchDate ASC
         """, nativeQuery = true)
     List<Schedule> findAllFinishedBySeason(@Param("season") int season);
+
+    // 특정 날짜 범위의 종료된 경기 조회 (kboGameId 존재하는 것만) — 일일 크롤링용
+    @Query(value = """
+        SELECT * FROM kbo_schedule
+        WHERE DATE(matchDate) BETWEEN :startDate AND :endDate
+          AND status = '종료'
+          AND kboGameId IS NOT NULL
+        ORDER BY matchDate ASC
+        """, nativeQuery = true)
+    List<Schedule> findFinishedGamesByDateRange(@Param("startDate") String startDate,
+                                                @Param("endDate") String endDate);
+
+    // 특정 시즌의 종료된 시범경기 조회 (kboGameId 존재하는 것만)
+    @Query(value = """
+        SELECT * FROM kbo_schedule
+        WHERE YEAR(matchDate) = :season
+          AND status = '종료'
+          AND seriesType = '1'
+          AND kboGameId IS NOT NULL
+        ORDER BY matchDate ASC
+        """, nativeQuery = true)
+    List<Schedule> findFinishedExhibitionGamesBySeason(@Param("season") int season);
 }

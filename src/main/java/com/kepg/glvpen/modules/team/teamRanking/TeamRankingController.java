@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.kepg.glvpen.common.validator.SeasonValidator;
+import com.kepg.glvpen.modules.game.schedule.service.ScheduleService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -14,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/ranking")
 @RequiredArgsConstructor
 public class TeamRankingController {
+
+    private final ScheduleService scheduleService;
 
 
     @GetMapping("/rankings")
@@ -28,6 +31,7 @@ public class TeamRankingController {
         model.addAttribute("season", validSeason);
         model.addAttribute("currentSort", sort.trim().toUpperCase());
         model.addAttribute("sortDirection", direction);
+        model.addAttribute("seriesLabel", scheduleService.getActiveSeriesLabel());
         model.addAttribute("categoryNameMap", TeamRankingConstants.getCategoryNameMap());
         model.addAttribute("headers", TeamRankingConstants.getTeamRankingHeaders());
 
@@ -46,6 +50,7 @@ public class TeamRankingController {
         model.addAttribute("season", validSeason);
         model.addAttribute("currentSort", sort.trim().toUpperCase());
         model.addAttribute("sortDirection", direction);
+        model.addAttribute("seriesLabel", scheduleService.getActiveSeriesLabel());
         model.addAttribute("categoryNameMap", TeamRankingConstants.getCategoryNameMap());
         model.addAttribute("headers", TeamRankingConstants.getTeamRankingHeaders());
 

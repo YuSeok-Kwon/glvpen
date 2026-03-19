@@ -14,4 +14,6 @@ public class TeamHeadToHeadDTO {
     private int wins;
     private int losses;
     private int draws;
+    @Builder.Default
+    private String series = "0";
 }

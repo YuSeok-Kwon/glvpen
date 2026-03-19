@@ -10,8 +10,12 @@ import java.util.Random;
 
 import org.springframework.stereotype.Service;
 
+import com.kepg.glvpen.modules.player.domain.Player;
+import com.kepg.glvpen.modules.player.repository.PlayerRepository;
 import com.kepg.glvpen.modules.player.stats.repository.BatterStatsRepository;
 import com.kepg.glvpen.modules.player.stats.repository.PitcherStatsRepository;
+import com.kepg.glvpen.modules.team.domain.Team;
+import com.kepg.glvpen.modules.team.service.TeamService;
 import com.kepg.glvpen.modules.gameMode.simulationMode.dto.PlayerCardOverallDTO;
 import com.kepg.glvpen.modules.gameMode.simulationMode.repository.PlayerCardOverallRepository;
 import com.kepg.glvpen.modules.gameMode.simulationMode.domain.PlayerCardOverall;
@@ -31,6 +35,8 @@ import lombok.extern.slf4j.Slf4j;
 public class SimulationGameService {
 
     private final PlayerCardOverallRepository playerCardOverallRepository;
+    private final PlayerRepository playerRepository;
+    private final TeamService teamService;
     private final BatterStatsRepository batterStatsRepository;
     private final PitcherStatsRepository pitcherStatsRepository;
     private final UserLineupRepository userLineupRepository;
@@ -75,6 +81,7 @@ public class SimulationGameService {
 
             if (card != null) {
                 PlayerCardOverallDTO cardDTO = convertToDTO(card);
+                cardDTO.setPosition(pos);
                 Integer playerId = cardDTO.getPlayerId();
 
                 Map<String, Double> statMap;
@@ -122,9 +129,9 @@ public class SimulationGameService {
         return dtos;
     }
 
-    // Projection → DTO 변환
+    // Projection → DTO 변환 (playerName, teamName, logoName 포함)
     private PlayerCardOverallDTO convertToDTO(PlayerCardOverall p) {
-        return PlayerCardOverallDTO.builder()
+        PlayerCardOverallDTO dto = PlayerCardOverallDTO.builder()
             .id(p.getId())
             .playerId(p.getPlayerId())
             .season(p.getSeason())
@@ -139,6 +146,20 @@ public class SimulationGameService {
             .stuff(p.getStuff())
             .stamina(p.getStamina())
             .build();
+
+        // Player 테이블에서 이름, 팀 정보 조회
+        playerRepository.findById(p.getPlayerId()).ifPresent(player -> {
+            dto.setPlayerName(player.getName());
+            if (player.getTeamId() != null) {
+                Team team = teamService.getTeamById(player.getTeamId());
+                if (team != null) {
+                    dto.setTeamName(team.getName());
+                    dto.setLogoName(team.getLogoName());
+                }
+            }
+        });
+
+        return dto;
     }
 
     
@@ -159,6 +180,8 @@ public class SimulationGameService {
             }
 
             PlayerCardOverallDTO card = convertToDTO(cardOpt.get());
+            // UserLineupDTO에서 position 설정
+            card.setPosition(dto.getPosition());
 
             Map<String, Double> statMap;
             if ("PITCHER".equals(card.getType())) {

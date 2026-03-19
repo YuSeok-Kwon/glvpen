@@ -11,9 +11,13 @@ import com.kepg.glvpen.modules.player.repository.PlayerRepository;
 import com.kepg.glvpen.modules.player.stats.domain.BatterStats;
 import com.kepg.glvpen.modules.player.stats.domain.PitcherStats;
 import com.kepg.glvpen.modules.player.stats.repository.BatterStatsRepository;
+import com.kepg.glvpen.modules.player.stats.repository.DefenseStatsRepository;
 import com.kepg.glvpen.modules.player.stats.repository.PitcherStatsRepository;
 import com.kepg.glvpen.modules.player.stats.statsDto.BatterStatsDTO;
 import com.kepg.glvpen.modules.player.stats.statsDto.PitcherStatsDTO;
+
+import java.util.Map;
+import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +32,7 @@ public class SabermetricsBatchService {
 
     private final BatterStatsRepository batterStatsRepository;
     private final PitcherStatsRepository pitcherStatsRepository;
+    private final DefenseStatsRepository defenseStatsRepository;
     private final BatterStatsService batterStatsService;
     private final PitcherStatsService pitcherStatsService;
     private final PlayerRepository playerRepository;
@@ -60,14 +65,8 @@ public class SabermetricsBatchService {
                 double doubles = getStatValue(stats, "2B");
                 double triples = getStatValue(stats, "3B");
 
-                // Player 엔티티에서 포지션 가져오기 (우선)
-                Player player = playerRepository.findById(playerId).orElse(null);
-                String position = (player != null && player.getPosition() != null && !player.getPosition().isBlank())
-                        ? mapPosition(player.getPosition())
-                        : stats.stream()
-                            .map(BatterStats::getPosition)
-                            .filter(p -> p != null && !p.isBlank() && !"DH".equals(p))
-                            .findFirst().orElse("DH");
+                // 수비 기록 기반 구체적 포지션 결정 (1B, 2B, SS 등)
+                String position = resolveSpecificPosition(playerId, season);
 
                 // ===== 기본 산출 지표 (KBO BasicOld 전환 대응) =====
                 // TB (Total Bases) — BasicOld에서 직접 제공하지 않으므로 계산
@@ -196,22 +195,21 @@ public class SabermetricsBatchService {
     public void enrichPositions(int season) {
         log.info("=== 포지션 보강 시작: 시즌 {} ===", season);
 
-        // 타자 포지션 보강
+        // 타자 포지션 보강 (수비 기록 기반 구체적 포지션)
         List<Integer> batterIds = batterStatsRepository.findDistinctPlayerIdsBySeason(season);
         int batterCount = 0;
         for (Integer playerId : batterIds) {
-            Player player = playerRepository.findById(playerId).orElse(null);
-            if (player != null && player.getPosition() != null && !player.getPosition().isBlank()) {
-                String pos = mapPosition(player.getPosition());
-                List<BatterStats> stats = batterStatsRepository.findByPlayerIdAndSeason(playerId, season);
-                for (BatterStats stat : stats) {
-                    if ("DH".equals(stat.getPosition()) || stat.getPosition() == null || stat.getPosition().isBlank()) {
-                        stat.setPosition(pos);
-                        batterStatsRepository.save(stat);
-                    }
+            String pos = resolveSpecificPosition(playerId, season);
+            List<BatterStats> stats = batterStatsRepository.findByPlayerIdAndSeason(playerId, season);
+            for (BatterStats stat : stats) {
+                if ("DH".equals(stat.getPosition()) || "IF".equals(stat.getPosition())
+                        || "OF".equals(stat.getPosition()) || stat.getPosition() == null
+                        || stat.getPosition().isBlank()) {
+                    stat.setPosition(pos);
+                    batterStatsRepository.save(stat);
                 }
-                batterCount++;
             }
+            batterCount++;
         }
 
         // 투수 포지션 보강
@@ -287,14 +285,55 @@ public class SabermetricsBatchService {
     }
 
     /**
-     * 한국어 포지션명을 영문 약자로 변환
+     * 수비 기록(player_defense_stats)에서 가장 많이 출전한 포지션 결정
+     * fallback: Player.position → mapPosition()
+     */
+    private String resolveSpecificPosition(Integer playerId, int season) {
+        Optional<String> defensePos = defenseStatsRepository
+                .findPrimaryPositionByPlayerIdAndSeason(playerId, season);
+
+        if (defensePos.isPresent()) {
+            String mapped = mapDefensePosition(defensePos.get());
+            if (mapped != null) return mapped;
+        }
+
+        // fallback: Player 엔티티의 한글 포지션
+        Player player = playerRepository.findById(playerId).orElse(null);
+        if (player != null && player.getPosition() != null && !player.getPosition().isBlank()) {
+            return mapPosition(player.getPosition());
+        }
+        return "DH";
+    }
+
+    /**
+     * 수비 기록 한글 포지션명 → 영문 구체적 포지션 변환
+     */
+    private String mapDefensePosition(String koreanPos) {
+        if (koreanPos == null) return null;
+        return switch (koreanPos) {
+            case "포수" -> "C";
+            case "1루수" -> "1B";
+            case "2루수" -> "2B";
+            case "3루수" -> "3B";
+            case "유격수" -> "SS";
+            case "좌익수" -> "LF";
+            case "중견수" -> "CF";
+            case "우익수" -> "RF";
+            case "지명타자" -> "DH";
+            default -> null;
+        };
+    }
+
+    /**
+     * 한국어 포지션명을 영문 약자로 변환 (fallback용)
+     * 수비 기록 없는 내야수/외야수는 DH로 처리 (IF/OF 사용 금지)
      */
     private String mapPosition(String koreanPos) {
         if (koreanPos == null) return "DH";
+        String specific = mapDefensePosition(koreanPos);
+        if (specific != null) return specific;
         return switch (koreanPos) {
-            case "내야수" -> "IF";
-            case "외야수" -> "OF";
-            case "포수" -> "C";
+            case "내야수", "외야수" -> "DH";
             case "투수" -> "P";
             default -> "DH";
         };

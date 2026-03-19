@@ -27,8 +27,12 @@ import lombok.extern.slf4j.Slf4j;
  * KBO 공식 사이트 팀 순위/기록 크롤러
  * - 팀 순위: TeamRankDaily.aspx
  * - 팀 타격: Team/Hitter/Basic1.aspx + Basic2.aspx
- * - 팀 투수: Team/Pitcher/Basic1.aspx
+ * - 팀 투수: Team/Pitcher/Basic1.aspx + Basic2.aspx
+ * - 팀 수비: Team/Defense/Basic.aspx
+ * - 팀 주루: Team/Runner/Basic.aspx
+ * - 상대전적: TeamRank.aspx
  *
+ * 시리즈별(정규시즌/시범경기/포스트시즌) 분리 수집 지원
  * ASP.NET PostBack 기반 페이지:
  * select.change → __doPostBack → 페이지 리로드
  */
@@ -89,57 +93,79 @@ public class KboTeamStatsCrawler extends AbstractPlaywrightCrawler {
 
         withBrowser("KBO 팀순위", (page, browser) -> {
             navigateAndWait(page, TEAM_RANKING_URL);
-            selectSeasonDropdown(page, season);
-
-            Document doc = getJsoupDocument(page);
-            Elements rows = findFirstTableRows(doc);
-
-            int teamCount = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 8) continue;
-
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
-
-                    int ranking = parseInt(cells.get(0));
-                    String teamName = cells.get(1).text().trim();
-                    int games = parseInt(cells.get(2));
-                    int wins = parseInt(cells.get(3));
-                    int losses = parseInt(cells.get(4));
-                    int draws = parseInt(cells.get(5));
-                    double winRate = parseDouble(cells.get(6));
-                    double gamesBehind = parseDouble(cells.get(7));
-
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀순위 - 팀 매핑 실패: {}", teamName);
-                        continue;
-                    }
-
-                    TeamRankingDTO dto = new TeamRankingDTO();
-                    dto.setTeamId(teamId);
-                    dto.setSeason(season);
-                    dto.setRanking(ranking);
-                    dto.setGames(games);
-                    dto.setWins(wins);
-                    dto.setLosses(losses);
-                    dto.setDraws(draws);
-                    dto.setWinRate(winRate);
-                    dto.setGamesBehind(gamesBehind);
-
-                    teamRankingService.saveOrUpdate(dto);
-                    teamCount++;
-
-                    log.debug("팀순위 저장: {}위 {} ({}승 {}패 {}무)", ranking, teamName, wins, losses, draws);
-
-                } catch (Exception e) {
-                    log.warn("팀순위 행 처리 오류: {}", e.getMessage());
-                }
+            if (!selectSeasonDropdown(page, season)) {
+                log.warn("[KBO 팀순위] {}시즌 선택 불가 — 스킵", season);
+                return;
             }
 
-            log.info("[KBO 팀순위] {}시즌 완료: {}팀 처리", season, teamCount);
+            // 시리즈 드롭다운 옵션 동적 읽기
+            List<String[]> seriesOptions = getDropdownOptions(page, SEL_SERIES_DROPDOWN_RECORD);
+            if (seriesOptions.isEmpty()) {
+                seriesOptions = List.<String[]>of(new String[]{"0", "정규시즌"});
+            }
+            log.info("[KBO 팀순위] {}시즌 시리즈 {}개 감지", season, seriesOptions.size());
+
+            for (String[] seriesOpt : seriesOptions) {
+                String seriesValue = seriesOpt[0];
+                String seriesLabel = seriesOpt[1];
+
+                // PostBack 캐스케이드 방지: 매 시리즈마다 URL 재이동
+                navigateAndWait(page, TEAM_RANKING_URL);
+                selectSeasonDropdown(page, season);
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
+
+                Document doc = getJsoupDocument(page);
+                Elements rows = findFirstTableRows(doc);
+
+                int teamCount = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 8) continue;
+
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+
+                        int ranking = parseInt(cells.get(0));
+                        String teamName = cells.get(1).text().trim();
+                        int games = parseInt(cells.get(2));
+                        int wins = parseInt(cells.get(3));
+                        int losses = parseInt(cells.get(4));
+                        int draws = parseInt(cells.get(5));
+                        double winRate = parseDouble(cells.get(6));
+                        double gamesBehind = parseDouble(cells.get(7));
+
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀순위 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
+
+                        TeamRankingDTO dto = new TeamRankingDTO();
+                        dto.setTeamId(teamId);
+                        dto.setSeason(season);
+                        dto.setSeries(seriesValue);
+                        dto.setRanking(ranking);
+                        dto.setGames(games);
+                        dto.setWins(wins);
+                        dto.setLosses(losses);
+                        dto.setDraws(draws);
+                        dto.setWinRate(winRate);
+                        dto.setGamesBehind(gamesBehind);
+
+                        teamRankingService.saveOrUpdate(dto);
+                        teamCount++;
+
+                        log.debug("팀순위 저장: {}위 {} [{}] ({}승 {}패 {}무)",
+                                ranking, teamName, seriesLabel, wins, losses, draws);
+
+                    } catch (Exception e) {
+                        log.warn("팀순위 행 처리 오류: {}", e.getMessage());
+                    }
+                }
+
+                log.info("[KBO 팀순위] {}시즌 [{}] 완료: {}팀 처리", season, seriesLabel, teamCount);
+            }
         });
     }
 
@@ -149,105 +175,118 @@ public class KboTeamStatsCrawler extends AbstractPlaywrightCrawler {
         log.info("[KBO 팀타격] {}시즌 크롤링 시작 (Basic1 + Basic2)", season);
 
         withBrowser("KBO 팀타격", (page, browser) -> {
-            // ---- Basic1: AVG, R, H, HR, RBI ----
+            // 시리즈 드롭다운 옵션 읽기
             navigateAndWait(page, TEAM_BATTER_URL);
-
             if (!selectSeasonDropdown(page, season)) {
                 log.warn("[KBO 팀타격] {}시즌 선택 불가 — 스킵", season);
                 return;
             }
+            List<String[]> seriesOptions = getDropdownOptions(page, SEL_SERIES_DROPDOWN_RECORD);
+            if (seriesOptions.isEmpty()) {
+                seriesOptions = List.<String[]>of(new String[]{"0", "정규시즌"});
+            }
+            log.info("[KBO 팀타격] {}시즌 시리즈 {}개 감지", season, seriesOptions.size());
 
-            Document doc = getJsoupDocument(page);
-            Elements rows = findFirstTableRows(doc);
+            for (String[] seriesOpt : seriesOptions) {
+                String seriesValue = seriesOpt[0];
+                String seriesLabel = seriesOpt[1];
 
-            List<TeamStatsDTO> batch = new ArrayList<>();
-            int teamCount = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 15) continue;
+                List<TeamStatsDTO> batch = new ArrayList<>();
 
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+                // ---- Basic1: AVG, R, H, HR, RBI ----
+                navigateAndWait(page, TEAM_BATTER_URL);
+                if (!selectSeasonDropdown(page, season)) continue;
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-                    int ranking = parseInt(cells.get(0));
-                    String teamName = cells.get(1).text().trim();
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀타격 Basic1 - 팀 매핑 실패: {}", teamName);
-                        continue;
+                Document doc = getJsoupDocument(page);
+                Elements rows = findFirstTableRows(doc);
+
+                int teamCount = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 15) continue;
+
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+
+                        int ranking = parseInt(cells.get(0));
+                        String teamName = cells.get(1).text().trim();
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀타격 Basic1 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
+
+                        addTeamStat(batch, teamId, season, "AVG", parseDouble(cells.get(2)), ranking, seriesValue);
+                        addTeamStat(batch, teamId, season, "G", parseDouble(cells.get(3)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "PA", parseDouble(cells.get(4)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "AB", parseDouble(cells.get(5)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "R", parseDouble(cells.get(6)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "H", parseDouble(cells.get(7)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "2B", parseDouble(cells.get(8)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "3B", parseDouble(cells.get(9)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "HR", parseDouble(cells.get(10)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "TB", parseDouble(cells.get(11)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "RBI", parseDouble(cells.get(12)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SAC", parseDouble(cells.get(13)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SF", parseDouble(cells.get(14)), null, seriesValue);
+
+                        teamCount++;
+                    } catch (Exception e) {
+                        log.warn("팀타격 Basic1 행 처리 오류: {}", e.getMessage());
                     }
-
-                    addTeamStat(batch, teamId, season, "AVG", parseDouble(cells.get(2)), ranking);
-                    addTeamStat(batch, teamId, season, "G", parseDouble(cells.get(3)), null);
-                    addTeamStat(batch, teamId, season, "PA", parseDouble(cells.get(4)), null);
-                    addTeamStat(batch, teamId, season, "AB", parseDouble(cells.get(5)), null);
-                    addTeamStat(batch, teamId, season, "R", parseDouble(cells.get(6)), null);
-                    addTeamStat(batch, teamId, season, "H", parseDouble(cells.get(7)), null);
-                    addTeamStat(batch, teamId, season, "2B", parseDouble(cells.get(8)), null);
-                    addTeamStat(batch, teamId, season, "3B", parseDouble(cells.get(9)), null);
-                    addTeamStat(batch, teamId, season, "HR", parseDouble(cells.get(10)), null);
-                    addTeamStat(batch, teamId, season, "TB", parseDouble(cells.get(11)), null);
-                    addTeamStat(batch, teamId, season, "RBI", parseDouble(cells.get(12)), null);
-                    addTeamStat(batch, teamId, season, "SAC", parseDouble(cells.get(13)), null);
-                    addTeamStat(batch, teamId, season, "SF", parseDouble(cells.get(14)), null);
-
-                    teamCount++;
-                } catch (Exception e) {
-                    log.warn("팀타격 Basic1 행 처리 오류: {}", e.getMessage());
                 }
-            }
-            log.info("[KBO 팀타격] Basic1 완료: {}팀", teamCount);
+                log.info("[KBO 팀타격] Basic1 [{}] 완료: {}팀", seriesLabel, teamCount);
 
-            // ---- Basic2: BB, SO, SLG, OBP, OPS ----
-            navigateAndWait(page, TEAM_BATTER_URL2);
+                // ---- Basic2: BB, SO, SLG, OBP, OPS ----
+                navigateAndWait(page, TEAM_BATTER_URL2);
+                if (!selectSeasonDropdown(page, season)) continue;
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-            if (!selectSeasonDropdown(page, season)) {
-                log.warn("[KBO 팀타격 Basic2] {}시즌 선택 불가 — 스킵", season);
-                return;
-            }
+                doc = getJsoupDocument(page);
+                rows = findFirstTableRows(doc);
 
-            doc = getJsoupDocument(page);
-            rows = findFirstTableRows(doc);
+                int teamCount2 = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 14) continue;
 
-            int teamCount2 = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 14) continue;
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
 
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+                        String teamName = cells.get(1).text().trim();
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀타격 Basic2 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
 
-                    String teamName = cells.get(1).text().trim();
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀타격 Basic2 - 팀 매핑 실패: {}", teamName);
-                        continue;
+                        addTeamStat(batch, teamId, season, "BB", parseDouble(cells.get(3)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "IBB", parseDouble(cells.get(4)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "HBP", parseDouble(cells.get(5)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SO", parseDouble(cells.get(6)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "GDP", parseDouble(cells.get(7)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SLG", parseDouble(cells.get(8)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "OBP", parseDouble(cells.get(9)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "OPS", parseDouble(cells.get(10)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "RISP", parseDouble(cells.get(12)), null, seriesValue);
+
+                        teamCount2++;
+                    } catch (Exception e) {
+                        log.warn("팀타격 Basic2 행 처리 오류: {}", e.getMessage());
                     }
-
-                    addTeamStat(batch, teamId, season, "BB", parseDouble(cells.get(3)), null);
-                    addTeamStat(batch, teamId, season, "IBB", parseDouble(cells.get(4)), null);
-                    addTeamStat(batch, teamId, season, "HBP", parseDouble(cells.get(5)), null);
-                    addTeamStat(batch, teamId, season, "SO", parseDouble(cells.get(6)), null);
-                    addTeamStat(batch, teamId, season, "GDP", parseDouble(cells.get(7)), null);
-                    addTeamStat(batch, teamId, season, "SLG", parseDouble(cells.get(8)), null);
-                    addTeamStat(batch, teamId, season, "OBP", parseDouble(cells.get(9)), null);
-                    addTeamStat(batch, teamId, season, "OPS", parseDouble(cells.get(10)), null);
-                    addTeamStat(batch, teamId, season, "RISP", parseDouble(cells.get(12)), null);
-
-                    teamCount2++;
-                } catch (Exception e) {
-                    log.warn("팀타격 Basic2 행 처리 오류: {}", e.getMessage());
                 }
+
+                // 시리즈별 배치 저장
+                if (!batch.isEmpty()) {
+                    teamStatsService.saveBatch(batch);
+                }
+
+                log.info("[KBO 팀타격] Basic2 [{}] 완료: {}팀", seriesLabel, teamCount2);
             }
 
-            // 배치 저장
-            if (!batch.isEmpty()) {
-                teamStatsService.saveBatch(batch);
-            }
-
-            log.info("[KBO 팀타격] Basic2 완료: {}팀", teamCount2);
             log.info("[KBO 팀타격] {}시즌 크롤링 완료", season);
         });
     }
@@ -258,109 +297,121 @@ public class KboTeamStatsCrawler extends AbstractPlaywrightCrawler {
         log.info("[KBO 팀투수] {}시즌 크롤링 시작 (Basic1 + Basic2)", season);
 
         withBrowser("KBO 팀투수", (page, browser) -> {
-            List<TeamStatsDTO> batch = new ArrayList<>();
-
-            // ---- Basic1 ----
+            // 시리즈 드롭다운 옵션 읽기
             navigateAndWait(page, TEAM_PITCHER_URL);
-
             if (!selectSeasonDropdown(page, season)) {
                 log.warn("[KBO 팀투수] {}시즌 선택 불가 — 스킵", season);
                 return;
             }
+            List<String[]> seriesOptions = getDropdownOptions(page, SEL_SERIES_DROPDOWN_RECORD);
+            if (seriesOptions.isEmpty()) {
+                seriesOptions = List.<String[]>of(new String[]{"0", "정규시즌"});
+            }
+            log.info("[KBO 팀투수] {}시즌 시리즈 {}개 감지", season, seriesOptions.size());
 
-            Document doc = getJsoupDocument(page);
-            Elements rows = findFirstTableRows(doc);
+            for (String[] seriesOpt : seriesOptions) {
+                String seriesValue = seriesOpt[0];
+                String seriesLabel = seriesOpt[1];
 
-            int teamCount = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 18) continue;
+                List<TeamStatsDTO> batch = new ArrayList<>();
 
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+                // ---- Basic1 ----
+                navigateAndWait(page, TEAM_PITCHER_URL);
+                if (!selectSeasonDropdown(page, season)) continue;
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-                    int ranking = parseInt(cells.get(0));
-                    String teamName = cells.get(1).text().trim();
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀투수 Basic1 - 팀 매핑 실패: {}", teamName);
-                        continue;
+                Document doc = getJsoupDocument(page);
+                Elements rows = findFirstTableRows(doc);
+
+                int teamCount = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 18) continue;
+
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+
+                        int ranking = parseInt(cells.get(0));
+                        String teamName = cells.get(1).text().trim();
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀투수 Basic1 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
+
+                        addTeamStat(batch, teamId, season, "ERA", parseDouble(cells.get(2)), ranking, seriesValue);
+                        addTeamStat(batch, teamId, season, "투G", parseDouble(cells.get(3)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "W", parseDouble(cells.get(4)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "L", parseDouble(cells.get(5)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SV", parseDouble(cells.get(6)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "HLD", parseDouble(cells.get(7)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "WPCT", parseDouble(cells.get(8)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "IP", parseInningsPitched(cells.get(9)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "피안타", parseDouble(cells.get(10)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "피홈런", parseDouble(cells.get(11)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "투BB", parseDouble(cells.get(12)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "투SO", parseDouble(cells.get(14)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "실점", parseDouble(cells.get(15)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "자책점", parseDouble(cells.get(16)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "WHIP", parseDouble(cells.get(17)), null, seriesValue);
+
+                        teamCount++;
+                    } catch (Exception e) {
+                        log.warn("팀투수 Basic1 행 처리 오류: {}", e.getMessage());
                     }
-
-                    addTeamStat(batch, teamId, season, "ERA", parseDouble(cells.get(2)), ranking);
-                    addTeamStat(batch, teamId, season, "투G", parseDouble(cells.get(3)), null);
-                    addTeamStat(batch, teamId, season, "W", parseDouble(cells.get(4)), null);
-                    addTeamStat(batch, teamId, season, "L", parseDouble(cells.get(5)), null);
-                    addTeamStat(batch, teamId, season, "SV", parseDouble(cells.get(6)), null);
-                    addTeamStat(batch, teamId, season, "HLD", parseDouble(cells.get(7)), null);
-                    addTeamStat(batch, teamId, season, "WPCT", parseDouble(cells.get(8)), null);
-                    addTeamStat(batch, teamId, season, "IP", parseInningsPitched(cells.get(9)), null);
-                    addTeamStat(batch, teamId, season, "피안타", parseDouble(cells.get(10)), null);
-                    addTeamStat(batch, teamId, season, "피홈런", parseDouble(cells.get(11)), null);
-                    addTeamStat(batch, teamId, season, "투BB", parseDouble(cells.get(12)), null);
-                    addTeamStat(batch, teamId, season, "투SO", parseDouble(cells.get(14)), null);
-                    addTeamStat(batch, teamId, season, "실점", parseDouble(cells.get(15)), null);
-                    addTeamStat(batch, teamId, season, "자책점", parseDouble(cells.get(16)), null);
-                    addTeamStat(batch, teamId, season, "WHIP", parseDouble(cells.get(17)), null);
-
-                    teamCount++;
-                } catch (Exception e) {
-                    log.warn("팀투수 Basic1 행 처리 오류: {}", e.getMessage());
                 }
-            }
-            log.info("[KBO 팀투수] Basic1 완료: {}팀", teamCount);
+                log.info("[KBO 팀투수] Basic1 [{}] 완료: {}팀", seriesLabel, teamCount);
 
-            // ---- Basic2 ----
-            navigateAndWait(page, TEAM_PITCHER_URL2);
+                // ---- Basic2 ----
+                navigateAndWait(page, TEAM_PITCHER_URL2);
+                if (!selectSeasonDropdown(page, season)) continue;
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-            if (!selectSeasonDropdown(page, season)) {
-                log.warn("[KBO 팀투수 Basic2] {}시즌 선택 불가 — 스킵", season);
-                return;
-            }
+                doc = getJsoupDocument(page);
+                rows = findFirstTableRows(doc);
 
-            doc = getJsoupDocument(page);
-            rows = findFirstTableRows(doc);
+                int teamCount2 = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 17) continue;
 
-            int teamCount2 = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 17) continue;
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
 
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+                        String teamName = cells.get(1).text().trim();
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀투수 Basic2 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
 
-                    String teamName = cells.get(1).text().trim();
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀투수 Basic2 - 팀 매핑 실패: {}", teamName);
-                        continue;
+                        addTeamStat(batch, teamId, season, "CG", parseDouble(cells.get(3)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SHO", parseDouble(cells.get(4)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "QS", parseDouble(cells.get(5)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "BSV", parseDouble(cells.get(6)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "TBF", parseDouble(cells.get(7)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "NP", parseDouble(cells.get(8)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "피안타율", parseDouble(cells.get(9)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "투IBB", parseDouble(cells.get(14)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "WP", parseDouble(cells.get(15)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "BK", parseDouble(cells.get(16)), null, seriesValue);
+
+                        teamCount2++;
+                    } catch (Exception e) {
+                        log.warn("팀투수 Basic2 행 처리 오류: {}", e.getMessage());
                     }
-
-                    addTeamStat(batch, teamId, season, "CG", parseDouble(cells.get(3)), null);
-                    addTeamStat(batch, teamId, season, "SHO", parseDouble(cells.get(4)), null);
-                    addTeamStat(batch, teamId, season, "QS", parseDouble(cells.get(5)), null);
-                    addTeamStat(batch, teamId, season, "BSV", parseDouble(cells.get(6)), null);
-                    addTeamStat(batch, teamId, season, "TBF", parseDouble(cells.get(7)), null);
-                    addTeamStat(batch, teamId, season, "NP", parseDouble(cells.get(8)), null);
-                    addTeamStat(batch, teamId, season, "피안타율", parseDouble(cells.get(9)), null);
-                    addTeamStat(batch, teamId, season, "투IBB", parseDouble(cells.get(14)), null);
-                    addTeamStat(batch, teamId, season, "WP", parseDouble(cells.get(15)), null);
-                    addTeamStat(batch, teamId, season, "BK", parseDouble(cells.get(16)), null);
-
-                    teamCount2++;
-                } catch (Exception e) {
-                    log.warn("팀투수 Basic2 행 처리 오류: {}", e.getMessage());
                 }
+
+                // 시리즈별 배치 저장
+                if (!batch.isEmpty()) {
+                    teamStatsService.saveBatch(batch);
+                }
+
+                log.info("[KBO 팀투수] Basic2 [{}] 완료: {}팀", seriesLabel, teamCount2);
             }
 
-            // 배치 저장
-            if (!batch.isEmpty()) {
-                teamStatsService.saveBatch(batch);
-            }
-
-            log.info("[KBO 팀투수] Basic2 완료: {}팀", teamCount2);
             log.info("[KBO 팀투수] {}시즌 크롤링 완료", season);
         });
     }
@@ -372,52 +423,66 @@ public class KboTeamStatsCrawler extends AbstractPlaywrightCrawler {
 
         withBrowser("KBO 팀수비", (page, browser) -> {
             navigateAndWait(page, TEAM_DEFENSE_URL);
-
             if (!selectSeasonDropdown(page, season)) {
                 log.warn("[KBO 팀수비] {}시즌 선택 불가 — 스킵", season);
                 return;
             }
 
-            Document doc = getJsoupDocument(page);
-            Elements rows = findFirstTableRows(doc);
+            List<String[]> seriesOptions = getDropdownOptions(page, SEL_SERIES_DROPDOWN_RECORD);
+            if (seriesOptions.isEmpty()) {
+                seriesOptions = List.<String[]>of(new String[]{"0", "정규시즌"});
+            }
+            log.info("[KBO 팀수비] {}시즌 시리즈 {}개 감지", season, seriesOptions.size());
 
-            List<TeamStatsDTO> batch = new ArrayList<>();
-            int teamCount = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 13) continue;
+            for (String[] seriesOpt : seriesOptions) {
+                String seriesValue = seriesOpt[0];
+                String seriesLabel = seriesOpt[1];
 
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+                navigateAndWait(page, TEAM_DEFENSE_URL);
+                selectSeasonDropdown(page, season);
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-                    int ranking = parseInt(cells.get(0));
-                    String teamName = cells.get(1).text().trim();
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀수비 - 팀 매핑 실패: {}", teamName);
-                        continue;
+                Document doc = getJsoupDocument(page);
+                Elements rows = findFirstTableRows(doc);
+
+                List<TeamStatsDTO> batch = new ArrayList<>();
+                int teamCount = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 13) continue;
+
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+
+                        int ranking = parseInt(cells.get(0));
+                        String teamName = cells.get(1).text().trim();
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀수비 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
+
+                        addTeamStat(batch, teamId, season, "E", parseDouble(cells.get(3)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "DP", parseDouble(cells.get(7)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "FPCT", parseDouble(cells.get(8)), ranking, seriesValue);
+                        addTeamStat(batch, teamId, season, "PB", parseDouble(cells.get(9)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "도루허용", parseDouble(cells.get(10)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "도루저지", parseDouble(cells.get(11)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "CS%", parseDouble(cells.get(12)), null, seriesValue);
+
+                        teamCount++;
+                    } catch (Exception e) {
+                        log.warn("팀수비 행 처리 오류: {}", e.getMessage());
                     }
-
-                    addTeamStat(batch, teamId, season, "E", parseDouble(cells.get(3)), null);
-                    addTeamStat(batch, teamId, season, "DP", parseDouble(cells.get(7)), null);
-                    addTeamStat(batch, teamId, season, "FPCT", parseDouble(cells.get(8)), ranking);
-                    addTeamStat(batch, teamId, season, "PB", parseDouble(cells.get(9)), null);
-                    addTeamStat(batch, teamId, season, "도루허용", parseDouble(cells.get(10)), null);
-                    addTeamStat(batch, teamId, season, "도루저지", parseDouble(cells.get(11)), null);
-                    addTeamStat(batch, teamId, season, "CS%", parseDouble(cells.get(12)), null);
-
-                    teamCount++;
-                } catch (Exception e) {
-                    log.warn("팀수비 행 처리 오류: {}", e.getMessage());
                 }
-            }
 
-            if (!batch.isEmpty()) {
-                teamStatsService.saveBatch(batch);
-            }
+                if (!batch.isEmpty()) {
+                    teamStatsService.saveBatch(batch);
+                }
 
-            log.info("[KBO 팀수비] {}시즌 완료: {}팀 처리", season, teamCount);
+                log.info("[KBO 팀수비] {}시즌 [{}] 완료: {}팀 처리", season, seriesLabel, teamCount);
+            }
         });
     }
 
@@ -428,50 +493,64 @@ public class KboTeamStatsCrawler extends AbstractPlaywrightCrawler {
 
         withBrowser("KBO 팀주루", (page, browser) -> {
             navigateAndWait(page, TEAM_RUNNER_URL);
-
             if (!selectSeasonDropdown(page, season)) {
                 log.warn("[KBO 팀주루] {}시즌 선택 불가 — 스킵", season);
                 return;
             }
 
-            Document doc = getJsoupDocument(page);
-            Elements rows = findFirstTableRows(doc);
+            List<String[]> seriesOptions = getDropdownOptions(page, SEL_SERIES_DROPDOWN_RECORD);
+            if (seriesOptions.isEmpty()) {
+                seriesOptions = List.<String[]>of(new String[]{"0", "정규시즌"});
+            }
+            log.info("[KBO 팀주루] {}시즌 시리즈 {}개 감지", season, seriesOptions.size());
 
-            List<TeamStatsDTO> batch = new ArrayList<>();
-            int teamCount = 0;
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.size() < 9) continue;
+            for (String[] seriesOpt : seriesOptions) {
+                String seriesValue = seriesOpt[0];
+                String seriesLabel = seriesOpt[1];
 
-                    String firstCell = cells.get(0).text().trim();
-                    if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+                navigateAndWait(page, TEAM_RUNNER_URL);
+                selectSeasonDropdown(page, season);
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-                    int ranking = parseInt(cells.get(0));
-                    String teamName = cells.get(1).text().trim();
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("팀주루 - 팀 매핑 실패: {}", teamName);
-                        continue;
+                Document doc = getJsoupDocument(page);
+                Elements rows = findFirstTableRows(doc);
+
+                List<TeamStatsDTO> batch = new ArrayList<>();
+                int teamCount = 0;
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.size() < 9) continue;
+
+                        String firstCell = cells.get(0).text().trim();
+                        if (firstCell.equals("순위") || firstCell.isEmpty()) continue;
+
+                        int ranking = parseInt(cells.get(0));
+                        String teamName = cells.get(1).text().trim();
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("팀주루 - 팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
+
+                        addTeamStat(batch, teamId, season, "SBA", parseDouble(cells.get(3)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SB", parseDouble(cells.get(4)), ranking, seriesValue);
+                        addTeamStat(batch, teamId, season, "주루CS", parseDouble(cells.get(5)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "SB%", parseDouble(cells.get(6)), null, seriesValue);
+                        addTeamStat(batch, teamId, season, "OOB", parseDouble(cells.get(7)), null, seriesValue);
+
+                        teamCount++;
+                    } catch (Exception e) {
+                        log.warn("팀주루 행 처리 오류: {}", e.getMessage());
                     }
-
-                    addTeamStat(batch, teamId, season, "SBA", parseDouble(cells.get(3)), null);
-                    addTeamStat(batch, teamId, season, "SB", parseDouble(cells.get(4)), ranking);
-                    addTeamStat(batch, teamId, season, "주루CS", parseDouble(cells.get(5)), null);
-                    addTeamStat(batch, teamId, season, "SB%", parseDouble(cells.get(6)), null);
-                    addTeamStat(batch, teamId, season, "OOB", parseDouble(cells.get(7)), null);
-
-                    teamCount++;
-                } catch (Exception e) {
-                    log.warn("팀주루 행 처리 오류: {}", e.getMessage());
                 }
-            }
 
-            if (!batch.isEmpty()) {
-                teamStatsService.saveBatch(batch);
-            }
+                if (!batch.isEmpty()) {
+                    teamStatsService.saveBatch(batch);
+                }
 
-            log.info("[KBO 팀주루] {}시즌 완료: {}팀 처리", season, teamCount);
+                log.info("[KBO 팀주루] {}시즌 [{}] 완료: {}팀 처리", season, seriesLabel, teamCount);
+            }
         });
     }
 
@@ -482,99 +561,118 @@ public class KboTeamStatsCrawler extends AbstractPlaywrightCrawler {
 
         withBrowser("KBO 상대전적", (page, browser) -> {
             navigateAndWait(page, TEAM_RANK_URL);
-
             if (!selectSeasonDropdown(page, season)) {
                 log.warn("[KBO 상대전적] {}시즌 선택 불가 — 스킵", season);
                 return;
             }
 
-            Document doc = getJsoupDocument(page);
-
-            Elements tables = doc.select("table.tData");
-            if (tables.size() < 2) {
-                log.warn("[KBO 상대전적] 상대전적 테이블을 찾을 수 없습니다 (테이블 수: {})", tables.size());
-                return;
+            // 시리즈 드롭다운 옵션 읽기
+            List<String[]> seriesOptions = getDropdownOptions(page, SEL_SERIES_DROPDOWN_RECORD);
+            if (seriesOptions.isEmpty()) {
+                seriesOptions = List.<String[]>of(new String[]{"0", "정규시즌"});
             }
+            log.info("[KBO 상대전적] {}시즌 시리즈 {}개 감지", season, seriesOptions.size());
 
-            Element h2hTable = tables.get(1);
-            Elements rows = h2hTable.select("tbody tr");
+            for (String[] seriesOpt : seriesOptions) {
+                String seriesValue = seriesOpt[0];
+                String seriesLabel = seriesOpt[1];
 
-            Elements headerCells = h2hTable.select("thead tr th");
-            if (headerCells.isEmpty()) {
-                headerCells = h2hTable.select("tr:first-child th");
-            }
+                // PostBack 캐스케이드 방지: 매 시리즈마다 URL 재이동
+                navigateAndWait(page, TEAM_RANK_URL);
+                selectSeasonDropdown(page, season);
+                selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue);
 
-            List<Integer> opponentTeamIds = new java.util.ArrayList<>();
-            for (int i = 1; i < headerCells.size(); i++) {
-                String rawText = headerCells.get(i).text().trim();
-                String opponentName = rawText.replaceAll("\\s*\\(.*\\)", "").trim();
-                if ("합계".equals(opponentName) || opponentName.isEmpty()) {
-                    opponentTeamIds.add(null);
+                Document doc = getJsoupDocument(page);
+
+                Elements tables = doc.select("table.tData");
+                if (tables.size() < 2) {
+                    log.warn("[KBO 상대전적] [{}] 상대전적 테이블을 찾을 수 없습니다 (테이블 수: {})",
+                            seriesLabel, tables.size());
                     continue;
                 }
-                Integer opponentId = resolveTeamId(opponentName);
-                opponentTeamIds.add(opponentId);
-            }
 
-            log.info("[KBO 상대전적] 상대팀 {}개 감지: {}",
-                    opponentTeamIds.size(), opponentTeamIds);
+                Element h2hTable = tables.get(1);
+                Elements rows = h2hTable.select("tbody tr");
 
-            int recordCount = 0;
+                Elements headerCells = h2hTable.select("thead tr th");
+                if (headerCells.isEmpty()) {
+                    headerCells = h2hTable.select("tr:first-child th");
+                }
 
-            for (Element row : rows) {
-                try {
-                    Elements cells = row.select("td");
-                    if (cells.isEmpty()) continue;
-
-                    String teamName = cells.get(0).text().trim();
-                    if (teamName.isEmpty()) continue;
-                    Integer teamId = resolveTeamId(teamName);
-                    if (teamId == null) {
-                        log.warn("[상대전적] 기준팀 매핑 실패: {}", teamName);
+                List<Integer> opponentTeamIds = new java.util.ArrayList<>();
+                for (int i = 1; i < headerCells.size(); i++) {
+                    String rawText = headerCells.get(i).text().trim();
+                    String opponentName = rawText.replaceAll("\\s*\\(.*\\)", "").trim();
+                    if ("합계".equals(opponentName) || opponentName.isEmpty()) {
+                        opponentTeamIds.add(null);
                         continue;
                     }
-
-                    for (int i = 1; i < cells.size() && i - 1 < opponentTeamIds.size(); i++) {
-                        Integer opponentId = opponentTeamIds.get(i - 1);
-                        if (opponentId == null) continue;
-                        if (opponentId.equals(teamId)) continue;
-
-                        String cellText = cells.get(i).text().trim();
-                        if (cellText.isEmpty() || "-".equals(cellText)) continue;
-
-                        int[] wld = parseWinLossDraw(cellText);
-                        if (wld == null) continue;
-
-                        teamHeadToHeadService.saveOrUpdate(TeamHeadToHeadDTO.builder()
-                                .season(season)
-                                .teamId(teamId)
-                                .opponentTeamId(opponentId)
-                                .wins(wld[0])
-                                .losses(wld[1])
-                                .draws(wld[2])
-                                .build());
-
-                        recordCount++;
-                    }
-                } catch (Exception e) {
-                    log.warn("[상대전적] 행 처리 오류: {}", e.getMessage());
+                    Integer opponentId = resolveTeamId(opponentName);
+                    opponentTeamIds.add(opponentId);
                 }
-            }
 
-            log.info("[KBO 상대전적] {}시즌 완료: {}건 저장", season, recordCount);
+                log.info("[KBO 상대전적] [{}] 상대팀 {}개 감지: {}",
+                        seriesLabel, opponentTeamIds.size(), opponentTeamIds);
+
+                int recordCount = 0;
+
+                for (Element row : rows) {
+                    try {
+                        Elements cells = row.select("td");
+                        if (cells.isEmpty()) continue;
+
+                        String teamName = cells.get(0).text().trim();
+                        if (teamName.isEmpty()) continue;
+                        Integer teamId = resolveTeamId(teamName);
+                        if (teamId == null) {
+                            log.warn("[상대전적] 기준팀 매핑 실패: {}", teamName);
+                            continue;
+                        }
+
+                        for (int i = 1; i < cells.size() && i - 1 < opponentTeamIds.size(); i++) {
+                            Integer opponentId = opponentTeamIds.get(i - 1);
+                            if (opponentId == null) continue;
+                            if (opponentId.equals(teamId)) continue;
+
+                            String cellText = cells.get(i).text().trim();
+                            if (cellText.isEmpty() || "-".equals(cellText)) continue;
+
+                            int[] wld = parseWinLossDraw(cellText);
+                            if (wld == null) continue;
+
+                            teamHeadToHeadService.saveOrUpdate(TeamHeadToHeadDTO.builder()
+                                    .season(season)
+                                    .teamId(teamId)
+                                    .opponentTeamId(opponentId)
+                                    .series(seriesValue)
+                                    .wins(wld[0])
+                                    .losses(wld[1])
+                                    .draws(wld[2])
+                                    .build());
+
+                            recordCount++;
+                        }
+                    } catch (Exception e) {
+                        log.warn("[상대전적] 행 처리 오류: {}", e.getMessage());
+                    }
+                }
+
+                log.info("[KBO 상대전적] {}시즌 [{}] 완료: {}건 저장", season, seriesLabel, recordCount);
+            }
         });
     }
 
     // ==================== 헬퍼 ====================
 
     private void addTeamStat(List<TeamStatsDTO> batch, int teamId, int season,
-                              String category, double value, Integer ranking) {
+                              String category, double value, Integer ranking, String series) {
         TeamStatsDTO dto = new TeamStatsDTO();
         dto.setTeamId(teamId);
         dto.setSeason(season);
         dto.setCategory(category);
         dto.setValue(value);
         dto.setRank(ranking != null ? String.valueOf(ranking) : null);
+        dto.setSeries(series);
         batch.add(dto);
     }
 

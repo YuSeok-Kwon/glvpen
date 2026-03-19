@@ -45,8 +45,8 @@ public class AiColumnGeneratorService {
 
     // 로테이션 특집 주제 풀 (15개, 전략 B 확정)
     private static final String[][] ROTATING_TOPICS = {
-        {"세이버메트릭스 트렌드: wRC+, FIP, xFIP로 보는 리그 판도", "trend"},           // 0  전략5
-        {"선수 스포트라이트: WAR 상위 선수 심층 분석", "player"},                        // 1  전략1
+        {"세이버메트릭스 트렌드: wOBA, FIP, OPS로 보는 리그 판도", "trend"},              // 0  전략5
+        {"선수 스포트라이트: wOBA 상위 선수 심층 분석", "player"},                       // 1  전략1
         {"브레이크아웃 후보: 올 시즌 급성장 선수 분석", "player"},                       // 2  전략1-C
         {"행운 보정 분석: BABIP과 FIP-ERA 갭으로 보는 진짜 실력", "trend"},              // 3  전략1-B
         {"상대전적 패턴: 팀 간 맞대결 숨은 데이터", "game"},                             // 4  전략2-A
@@ -74,7 +74,7 @@ public class AiColumnGeneratorService {
         try {
             int weekOfYear = LocalDateTime.now().get(WeekFields.of(Locale.KOREA).weekOfYear());
 
-            List<TeamRanking> rankings = teamRankingRepository.findBySeasonOrderByRankingAsc(CURRENT_SEASON);
+            List<TeamRanking> rankings = teamRankingRepository.findBySeasonAndSeriesOrderByRankingAsc(CURRENT_SEASON, "0");
             if (rankings.isEmpty()) {
                 log.warn("팀 순위 데이터가 없어 주간 분석을 생성할 수 없습니다.");
                 return;
@@ -246,26 +246,110 @@ public class AiColumnGeneratorService {
 
     /**
      * 수동 트리거: 특정 주제로 AI 컬럼 생성
+     * 카테고리 기반 사전 분석 데이터 + 차트 JSON 포함
      */
     public AnalysisColumn generateColumnByTopic(String topic, String category, int season) {
         log.info("AI 컬럼 생성 - 주제: {}, 카테고리: {}, 시즌: {}", topic, category, season);
 
         String teamRankingData = buildTeamRankingData(season);
+        String analysisData = getAnalysisDataByCategory(category, season);
+        String chartJson = calculator.buildChartJson(category, season);
 
         StringBuilder prompt = new StringBuilder();
         prompt.append("당신은 KBO 야구 매거진 기사 작성 전문가입니다.\n")
               .append("주제: ").append(topic).append("\n")
               .append("시즌: ").append(season).append("\n\n");
 
-        if (!teamRankingData.isEmpty()) {
-            prompt.append("=== 실제 데이터 ===\n")
-                  .append("팀 순위:\n").append(teamRankingData).append("\n");
+        // 시즌 상황 컨텍스트
+        String seasonContext = buildSeasonContext(season);
+        if (!seasonContext.isEmpty()) {
+            prompt.append(seasonContext).append("\n");
         }
 
-        prompt.append(buildWritingRules());
+        if (!teamRankingData.isEmpty()) {
+            prompt.append("=== 팀 순위 (").append(season - 1).append(" 정규시즌 최종) ===\n")
+                  .append(teamRankingData).append("\n\n");
+        }
+
+        if (analysisData != null && !analysisData.isEmpty() && !analysisData.startsWith("[")) {
+            prompt.append("=== 사전 분석 데이터 (").append(season - 1).append(" 정규시즌 기록, 수치를 그대로 사용하세요) ===\n")
+                  .append(analysisData).append("\n\n");
+        }
+
+        if (chartJson != null) {
+            prompt.append("=== 차트 참조 데이터 (기사에서 차트 내용을 언급해주세요) ===\n")
+                  .append(chartJson).append("\n\n");
+        }
+
+        prompt.append(buildEnhancedWritingRules(false));
 
         String aiResponse = geminiClient.callGemini(prompt.toString());
-        return parseAndSaveColumn(aiResponse, topic, category, null, null);
+        AnalysisColumn column = parseAndSaveColumn(aiResponse, topic, category, null, null);
+
+        if (column != null && chartJson != null) {
+            column.setChartData(chartJson);
+            columnRepository.save(column);
+        }
+
+        return column;
+    }
+
+    /**
+     * 카테고리 기반 사전 분석 데이터 조회 (현재 시즌 → 전년 시즌 폴백)
+     */
+    private String getAnalysisDataByCategory(String category, int season) {
+        String result = tryAnalysisDataForSeason(category, season);
+        if ((result == null || result.isEmpty() || result.startsWith("[데이터") || result.startsWith("[계산") || result.startsWith("[타자")) && season > 2020) {
+            result = tryAnalysisDataForSeason(category, season - 1);
+        }
+        return result;
+    }
+
+    private String tryAnalysisDataForSeason(String category, int season) {
+        try {
+            return switch (category) {
+                case "player" -> calculator.calcWarSpotlight(season);
+                case "team" -> calculator.calcPositionValue(season);
+                case "game" -> calculator.calcInningScoring(season);
+                case "trend" -> calculator.calcSabermetricsTrend(season);
+                default -> "";
+            };
+        } catch (Exception e) {
+            log.warn("tryAnalysisDataForSeason 실패 (category={}, season={}): {}", category, season, e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 시즌 상황 컨텍스트 (시범경기/정규시즌 구분)
+     */
+    private String buildSeasonContext(int season) {
+        int currentYear = LocalDateTime.now().getYear();
+        int month = LocalDateTime.now().getMonthValue();
+        int day = LocalDateTime.now().getDayOfMonth();
+
+        if (season != currentYear) return "";
+
+        StringBuilder ctx = new StringBuilder();
+        ctx.append("=== 시즌 상황 ===\n");
+        ctx.append("현재 날짜: ").append(LocalDateTime.now().toLocalDate()).append("\n");
+        ctx.append("KBO ").append(season).append(" 시즌 일정: 시범경기 3/12~3/24, 정규시즌 개막 3/28\n");
+
+        if (month < 3 || (month == 3 && day < 12)) {
+            ctx.append("현재 상태: 시즌 시작 전 (스프링캠프)\n");
+            ctx.append("분석 기반: ").append(season - 1).append(" 정규시즌 확정 기록\n");
+            ctx.append("기사 관점: ").append(season).append(" 시즌 프리뷰/전망\n");
+        } else if (month == 3 && day < 28) {
+            ctx.append("현재 상태: 시범경기 기간 (정규시즌 개막 전)\n");
+            ctx.append("분석 기반: ").append(season - 1).append(" 정규시즌 확정 기록\n");
+            ctx.append("기사 관점: ").append(season).append(" 정규시즌 프리뷰/전망\n");
+            ctx.append("주의: 시범경기 성적은 참고 수준이며, 정규시즌 성적과 직결되지 않습니다.\n");
+            ctx.append("주의: '올 시즌 성적'이라고 표현하지 말고, '지난 시즌(").append(season - 1).append(") 기록 기반'임을 명시하세요.\n");
+        } else {
+            ctx.append("현재 상태: ").append(season).append(" 정규시즌 진행 중\n");
+        }
+
+        return ctx.toString();
     }
 
     // ==================== 데이터 수집 헬퍼 ====================
@@ -312,7 +396,7 @@ public class AiColumnGeneratorService {
      */
     private String buildTeamRankingData(int season) {
         try {
-            List<TeamRanking> rankings = teamRankingRepository.findBySeasonOrderByRankingAsc(season);
+            List<TeamRanking> rankings = teamRankingRepository.findBySeasonAndSeriesOrderByRankingAsc(season, "0");
             if (rankings.isEmpty()) {
                 return "";
             }

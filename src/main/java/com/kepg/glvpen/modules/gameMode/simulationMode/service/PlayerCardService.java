@@ -30,7 +30,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PlayerCardService {
 
-    private static final List<Integer> AVAILABLE_SEASONS = Arrays.asList(2025);
+    private static final List<Integer> AVAILABLE_SEASONS = Arrays.asList(2020, 2021, 2022, 2023, 2024, 2025);
 
     private final PlayerRepository playerRepository;
     private final BatterStatsRepository batterStatsRepository;
@@ -45,7 +45,7 @@ public class PlayerCardService {
         boolean isAll = "ALL".equals(position) || position == null || position.isEmpty();
         boolean isBatter = isAll || !"P".equals(position);
 
-        List<Integer> seasons = Arrays.asList(2025);
+        List<Integer> seasons = new ArrayList<>(AVAILABLE_SEASONS);
         Collections.shuffle(seasons); // 무작위 순서
 
         List<PlayerCardOverall> allCandidates = new ArrayList<>();

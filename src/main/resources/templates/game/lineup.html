@@ -316,7 +316,8 @@
 	    success: function(lineup) {
 	      for (var i = 0; i < lineup.length; i++) {
 	        var p = lineup[i];
-	        var slot = $('.lineup-slot[data-position="' + p.orderNum + '"]');
+	        var slotKey = p.orderNum === 10 ? 'P' : String(p.orderNum);
+	        var slot = $('.lineup-slot[data-position="' + slotKey + '"]');
 
 	        if (slot.length > 0) {
 	          slot.text(p.playerName + ' (' + p.position + ')');
@@ -430,8 +431,9 @@
     		  return;
     		}
     	  
+    	  var numericOrderNum = orderNum === 'P' ? 10 : parseInt(orderNum);
     	  for (let i = 0; i < selectedLineup.length; i++) {
-    	    if (selectedLineup[i].orderNum === orderNum) {
+    	    if (selectedLineup[i].orderNum === numericOrderNum) {
     	      selectedLineup.splice(i, 1);
     	      break;
     	    }
@@ -440,7 +442,7 @@
     	  selectedLineup.push({
     	    playerId: playerId,
     	    position: position,
-    	    orderNum: orderNum,
+    	    orderNum: orderNum === 'P' ? 10 : parseInt(orderNum),
     	    season: season
     	  });
 

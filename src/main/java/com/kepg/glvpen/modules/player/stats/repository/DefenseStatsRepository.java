@@ -23,6 +23,15 @@ public interface DefenseStatsRepository extends JpaRepository<DefenseStats, Inte
             @Param("position") String position);
 
     @Query(value = """
+            SELECT position FROM player_defense_stats
+            WHERE playerId = :playerId AND season = :season
+              AND category = 'G' AND series = '0'
+            ORDER BY value DESC LIMIT 1
+            """, nativeQuery = true)
+    Optional<String> findPrimaryPositionByPlayerIdAndSeason(
+            @Param("playerId") Integer playerId, @Param("season") int season);
+
+    @Query(value = """
             SELECT
                 p.name AS playerName,
                 t.name AS teamName,

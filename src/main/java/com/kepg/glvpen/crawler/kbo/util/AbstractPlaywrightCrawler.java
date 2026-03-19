@@ -171,6 +171,61 @@ public abstract class AbstractPlaywrightCrawler {
         return id;
     }
 
+    // ==================== dataOffset 동적 감지 ====================
+
+    /**
+     * 테이블 헤더에서 첫 번째 카테고리(ERA, AVG 등)의 위치를 찾아 dataOffset 결정.
+     * 상황별 테이블에 추가 컬럼이 실제로 존재하는지 헤더 기반으로 정확히 판단.
+     *
+     * 예) 순위|선수명|팀명|ERA|G|... → dataOffset=3
+     * 예) 순위|선수명|팀명|월|ERA|G|... → dataOffset=4
+     *
+     * @param doc Jsoup Document
+     * @param firstCategory 첫 번째 카테고리명 (예: "ERA", "AVG")
+     * @param hasSitColHint 드롭다운 기반 힌트 (fallback용)
+     * @return 데이터 시작 위치 (보통 3 또는 4)
+     */
+    protected int detectDataOffset(Document doc, String firstCategory, boolean hasSitColHint) {
+        // 1차: 테이블 헤더에서 첫 번째 카테고리 위치 찾기
+        Elements headers = doc.select("table.tData thead th");
+        if (headers.isEmpty()) {
+            headers = doc.select("#cphContents_cphContents_cphContents_udpContent table thead th");
+        }
+
+        for (int i = 0; i < headers.size(); i++) {
+            if (firstCategory.equals(headers.get(i).text().trim())) {
+                log.debug("dataOffset 헤더 감지: {}={} (위치 {})", firstCategory, headers.get(i).text(), i);
+                return i;
+            }
+        }
+
+        // 2차: 헤더에서 못 찾으면 첫 데이터 행의 컬럼 수로 추론
+        Elements rows = doc.select("table.tData tbody tr");
+        if (!rows.isEmpty()) {
+            Element firstRow = rows.first();
+            Elements cells = firstRow.select("td");
+            if (cells.size() > 3) {
+                // cells[3]이 숫자(ERA 등)이면 dataOffset=3, 텍스트(월별 등)이면 dataOffset=4
+                String cell3Text = cells.get(3).text().trim();
+                try {
+                    Double.parseDouble(cell3Text);
+                    log.debug("dataOffset 데이터 추론: cells[3]='{}' (숫자) → dataOffset=3", cell3Text);
+                    return 3;
+                } catch (NumberFormatException e) {
+                    if (!cell3Text.isEmpty() && !"-".equals(cell3Text)) {
+                        log.debug("dataOffset 데이터 추론: cells[3]='{}' (텍스트) → dataOffset=4", cell3Text);
+                        return 4;
+                    }
+                }
+            }
+        }
+
+        // 3차: fallback - 드롭다운 기반 힌트 사용
+        int fallback = hasSitColHint ? 4 : 3;
+        log.warn("dataOffset 감지 실패, fallback 사용: {}", fallback);
+        return fallback;
+    }
+
     // ==================== 파싱 유틸 ====================
 
     protected double parseDouble(Element cell) {
@@ -179,6 +234,27 @@ public abstract class AbstractPlaywrightCrawler {
             if (text.isEmpty() || "-".equals(text)) return 0.0;
             return Double.parseDouble(text);
         } catch (NumberFormatException e) {
+            return 0.0;
+        }
+    }
+
+    /**
+     * 이닝(IP) 전용 파싱. "180 2/3", "180⅔" 등 분수 형식 지원.
+     */
+    protected double parseInnings(Element cell) {
+        try {
+            String text = cell.text().trim().replace(",", "");
+            if (text.isEmpty() || "-".equals(text)) return 0.0;
+            text = text.replace("⅓", " 1/3").replace("⅔", " 2/3");
+            if (text.contains("/")) {
+                String[] parts = text.split("\\s+");
+                double whole = parts.length > 1 ? Double.parseDouble(parts[0]) : 0;
+                String fracPart = parts.length > 1 ? parts[1] : parts[0];
+                String[] frac = fracPart.split("/");
+                return whole + Double.parseDouble(frac[0]) / Double.parseDouble(frac[1]);
+            }
+            return Double.parseDouble(text);
+        } catch (Exception e) {
             return 0.0;
         }
     }

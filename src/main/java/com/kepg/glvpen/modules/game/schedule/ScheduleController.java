@@ -18,7 +18,9 @@ import com.kepg.glvpen.modules.game.schedule.dto.ScheduleCardView;
 import com.kepg.glvpen.modules.game.schedule.service.ScheduleService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequestMapping("/schedule")
 @Controller
 @RequiredArgsConstructor
@@ -92,27 +94,36 @@ public class ScheduleController {
         try {
             detail = scheduleService.getGameDetail(matchId);
         } catch (Exception e) {
+            log.error("[detail-view] getGameDetail 실패 - matchId: {}, league: {}", matchId, league, e);
             return "redirect:/schedule/result-view?league=" + league;
         }
 
         if (detail == null) {
+            log.warn("[detail-view] 경기 데이터 없음 - matchId: {}", matchId);
             return "redirect:/schedule/result-view?league=" + league;
         }
 
-        LocalDate date = detail.getMatchDate().toLocalDateTime().toLocalDate();
-        List<ScheduleCardView> allGames = scheduleService.getSchedulesByDate(date);
+        try {
+            LocalDate date = detail.getMatchDate().toLocalDateTime().toLocalDate();
+            List<ScheduleCardView> allGames = scheduleService.getSchedulesByDate(date);
 
-        Integer prevMatchId = scheduleService.getPrevMatchId(matchId);
-        Integer nextMatchId = scheduleService.getNextMatchId(matchId);
+            Integer prevMatchId = scheduleService.getPrevMatchId(matchId);
+            Integer nextMatchId = scheduleService.getNextMatchId(matchId);
 
-        model.addAttribute("prevMatchId", prevMatchId);
-        model.addAttribute("nextMatchId", nextMatchId);
-        model.addAttribute("game", detail);
-        model.addAttribute("otherGames", allGames);
-        model.addAttribute("league", league);
+            model.addAttribute("prevMatchId", prevMatchId);
+            model.addAttribute("nextMatchId", nextMatchId);
+            model.addAttribute("game", detail);
+            model.addAttribute("otherGames", allGames);
+            model.addAttribute("league", league);
+        } catch (Exception e) {
+            log.error("[detail-view] 부가 데이터 로드 실패 - matchId: {}", matchId, e);
+            model.addAttribute("game", detail);
+            model.addAttribute("otherGames", List.of());
+            model.addAttribute("league", league);
+        }
         return "schedule/detail";
     }
-    
+
     @GetMapping("/detail-redirect-view")
     public String redirectToMatchDetail(@RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         List<ScheduleCardView> schedules = scheduleService.getSchedulesByDate(date);

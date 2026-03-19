@@ -18,4 +18,5 @@ public class TeamRankingDTO {
 	int draws;
 	double winRate;
 	Double gamesBehind;
+	String series = "0";
 }

@@ -9,9 +9,11 @@ import com.kepg.glvpen.modules.team.teamHeadToHead.domain.TeamHeadToHead;
 
 public interface TeamHeadToHeadRepository extends JpaRepository<TeamHeadToHead, Integer> {
 
-    Optional<TeamHeadToHead> findBySeasonAndTeamIdAndOpponentTeamId(int season, int teamId, int opponentTeamId);
+    // 크롤러 saveOrUpdate용: series 포함
+    Optional<TeamHeadToHead> findBySeasonAndTeamIdAndOpponentTeamIdAndSeries(int season, int teamId, int opponentTeamId, String series);
 
-    List<TeamHeadToHead> findBySeasonAndTeamId(int season, int teamId);
+    // 화면 조회용: series 포함
+    List<TeamHeadToHead> findBySeasonAndTeamIdAndSeries(int season, int teamId, String series);
 
-    List<TeamHeadToHead> findBySeasonOrderByTeamIdAscOpponentTeamIdAsc(int season);
+    List<TeamHeadToHead> findBySeasonAndSeriesOrderByTeamIdAscOpponentTeamIdAsc(int season, String series);
 }

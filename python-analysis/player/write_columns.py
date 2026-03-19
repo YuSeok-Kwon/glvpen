@@ -1,6 +1,6 @@
 """
 선수 분석 결과 기반 컬럼 기사 생성.
-p1~p9 JSON 출력을 읽어 HTML 컬럼을 생성하고 analysis_column 테이블에 저장.
+p1~p9 JSON 출력을 읽어 기사형 HTML 컬럼을 생성하고 analysis_column 테이블에 저장.
 
 실행:
   python3 player/write_columns.py              # 전체 컬럼 생성
@@ -16,10 +16,12 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from common.db_connector import DBConnector
+from common.article_generator import generate_article
+from config import DATA_SEASON, PREDICT_SEASON, SEASONS
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 HISTORY_PATH = os.path.join(OUTPUT_DIR, 'run_history.json')
-SEASON = 2025
+SEASON = DATA_SEASON  # 분석 데이터 시즌 (JSON 파일명, DB 조회용)
 
 # ==================== 분석별 메타데이터 ====================
 
@@ -100,17 +102,21 @@ def load_history() -> dict:
     return {}
 
 
-def load_player_charts(key: str, player_name: str) -> list:
-    """특정 분석-선수의 차트 JSON 로드"""
+def load_analysis_output(key: str, player_name: str) -> dict:
+    """분석 출력 JSON 로드. 하위 호환: 리스트면 {'charts': list} 형태로 변환."""
     filepath = os.path.join(OUTPUT_DIR, f'{key}_{player_name}_{SEASON}.json')
-    if os.path.exists(filepath):
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    if not os.path.exists(filepath):
+        return {'charts': [], 'findings': [], 'stats': {}}
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    # 하위 호환: 기존 리스트 형식이면 변환
+    if isinstance(data, list):
+        return {'charts': data, 'findings': [], 'stats': {}}
+    return data
 
 
 def get_player_info_map(db, player_ids: list) -> dict:
-    """선수 ID 목록 → {id: info_dict} 매핑"""
+    """선수 ID 목록 -> {id: info_dict} 매핑"""
     if not player_ids:
         return {}
     placeholders = ','.join(['%s'] * len(player_ids))
@@ -144,82 +150,9 @@ def build_player_card_html(info: dict) -> str:
     )
 
 
-def build_chart_summary_html(charts: list, player_name: str) -> str:
-    """차트 데이터에서 핵심 수치 추출하여 HTML 생성"""
-    html_parts = []
-
-    for chart in charts:
-        chart_type = chart.get('chartType', '')
-        title = chart.get('title', '')
-
-        if chart_type == 'line':
-            # 라인 차트: 추이 요약
-            datasets = chart.get('datasets', [])
-            labels = chart.get('labels', [])
-            for ds in datasets[:3]:  # 최대 3개 데이터셋
-                data = ds.get('data', [])
-                label = ds.get('label', '')
-                if not data or not labels:
-                    continue
-                # None/null 제거
-                valid = [(l, d) for l, d in zip(labels, data) if d is not None]
-                if len(valid) >= 2:
-                    first_val = valid[0][1]
-                    last_val = valid[-1][1]
-                    if isinstance(first_val, (int, float)) and isinstance(last_val, (int, float)):
-                        change = last_val - first_val
-                        direction = '↑' if change > 0 else ('↓' if change < 0 else '→')
-                        html_parts.append(
-                            f'<span style="margin-right:16px;">'
-                            f'<strong>{label}</strong> '
-                            f'{valid[0][0]}: {first_val} {direction} '
-                            f'{valid[-1][0]}: {last_val}'
-                            f'</span>'
-                        )
-
-        elif chart_type == 'radar':
-            # 레이더 차트: 축별 수치 나열
-            datasets = chart.get('datasets', [])
-            labels = chart.get('labels', [])
-            for ds in datasets[:1]:  # 첫 번째만
-                data = ds.get('data', [])
-                if labels and data:
-                    items = [f'{l}: {d}' for l, d in zip(labels, data) if d is not None]
-                    if items:
-                        html_parts.append(
-                            f'<span style="color:#6c757d;">{", ".join(items)}</span>'
-                        )
-
-        elif chart_type in ('bar', 'horizontalBar'):
-            # 바 차트: Top 값 추출
-            datasets = chart.get('datasets', [])
-            labels = chart.get('labels', [])
-            for ds in datasets[:1]:
-                data = ds.get('data', [])
-                if labels and data:
-                    pairs = [(l, d) for l, d in zip(labels, data)
-                             if d is not None and isinstance(d, (int, float))]
-                    if pairs:
-                        top = max(pairs, key=lambda x: x[1])
-                        html_parts.append(
-                            f'<span style="margin-right:16px;">'
-                            f'최고: <strong>{top[0]}</strong> ({top[1]})'
-                            f'</span>'
-                        )
-
-    if html_parts:
-        return (
-            f'<div style="background:#fff3cd;border-radius:6px;padding:10px 14px;'
-            f'margin:8px 0 16px;font-size:0.9rem;">'
-            + '<br>'.join(html_parts)
-            + '</div>'
-        )
-    return ''
-
-
 def generate_column_html(key: str, history_entries: list, db) -> tuple:
     """
-    분석 키에 대한 컬럼 HTML 생성.
+    분석 키에 대한 기사형 컬럼 HTML 생성.
     반환: (title, content_html, chart_json, summary, player_ids)
     """
     meta = ANALYSIS_META.get(key, {})
@@ -229,77 +162,39 @@ def generate_column_html(key: str, history_entries: list, db) -> tuple:
     # 선수 정보 조회
     info_map = get_player_info_map(db, player_ids)
 
-    # 제목 생성
+    # 제목 생성 (DATA_SEASON 데이터 → PREDICT_SEASON 전망)
     title_players = ', '.join(player_names[:3])
     title = meta.get('title_template', '{players} 분석').format(players=title_players)
-    title = f"[{SEASON}] {title}"
+    title = f"[{PREDICT_SEASON} 시즌 전망] {title}"
 
-    # 차트 데이터 수집
-    all_charts = []
-    for name in player_names:
-        charts = load_player_charts(key, name)
-        all_charts.extend(charts)
-
-    # HTML 본문 생성
-    parts = []
-
-    # 도입부
-    subtitle = meta.get('subtitle', '')
-    description = meta.get('description', '')
-    parts.append(f'<p><strong>{subtitle}</strong></p>')
-    parts.append(f'<p>{description}</p>')
-    parts.append('<hr style="margin:1.5rem 0;">')
-
-    # 선수별 섹션
-    for i, entry in enumerate(history_entries):
+    # ArticleGenerator용 데이터 구성
+    entries_data = []
+    for entry in history_entries:
         pid = entry['player_id']
         pname = entry['player_name']
         info = info_map.get(pid, {})
 
-        parts.append(f'<h3 style="margin-top:2rem;">{i+1}. {pname}</h3>')
+        # 분석 출력 로드 (차트 + findings)
+        output = load_analysis_output(key, pname)
 
-        # 선수 카드
-        if info:
-            parts.append(build_player_card_html(info))
+        entries_data.append({
+            'name': pname,
+            'card_html': build_player_card_html(info) if info else '',
+            'findings': output.get('findings', []),
+            'charts': output.get('charts', []),
+        })
 
-        # 차트 요약 (해당 선수 차트만)
-        player_charts = load_player_charts(key, pname)
-        chart_summary = build_chart_summary_html(player_charts, pname)
-        if chart_summary:
-            parts.append(chart_summary)
-
-        # 추천 이유
-        reason = entry.get('reason', '')
-        if reason:
-            parts.append(f'<p style="color:#495057;">{reason}</p>')
-
-        # 차트 수 안내
-        chart_count = len(player_charts)
-        if chart_count > 0:
-            chart_titles = [c.get('title', '') for c in player_charts if c.get('title')]
-            if chart_titles:
-                chart_list = ''.join(f'<li>{t}</li>' for t in chart_titles)
-                parts.append(
-                    f'<details style="margin:8px 0 16px;">'
-                    f'<summary style="cursor:pointer;color:#0f3460;font-weight:600;">'
-                    f'차트 {chart_count}개 포함</summary>'
-                    f'<ul style="margin-top:8px;color:#6c757d;font-size:0.9rem;">'
-                    f'{chart_list}</ul></details>'
-                )
-
-    # 마무리
-    parts.append('<hr style="margin:2rem 0 1rem;">')
-    parts.append(
-        f'<p style="color:#adb5bd;font-size:0.85rem;">'
-        f'본 분석은 glvpen Python 배치 분석 시스템으로 자동 생성되었습니다.<br>'
-        f'분석 일시: {datetime.now().strftime("%Y년 %m월 %d일")}</p>'
+    # 기사 생성 (Gemini 우선 → fallback)
+    content_html, all_charts, ai_summary = generate_article(
+        key, entries_data, meta,
+        data_season=SEASON, predict_season=PREDICT_SEASON
     )
 
-    content_html = '\n'.join(parts)
     chart_json_str = json.dumps(all_charts, ensure_ascii=False) if all_charts else None
 
-    # 요약 생성
-    summary = f'{SEASON} 시즌 {title_players}의 {meta.get("subtitle", "분석")}.'
+    # 요약: Gemini 요약 우선, 없으면 기본 패턴
+    summary = ai_summary or \
+        f'{SEASON} 시즌 데이터 기반 {title_players}의 {PREDICT_SEASON} 시즌 {meta.get("subtitle", "전망")}.'
 
     return title, content_html, chart_json_str, summary, player_ids
 
@@ -391,7 +286,7 @@ def main():
             if chart_json:
                 try:
                     chart_count = len(json.loads(chart_json))
-                except:
+                except Exception:
                     pass
 
             print(f"    제목: {title}")

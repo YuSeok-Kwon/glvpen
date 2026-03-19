@@ -107,8 +107,10 @@ public class UserHomeService {
         // 오늘 전체 1군 경기 일정 (시리즈 타입 자동 감지)
         List<ScheduleCardView> todayAllGames = scheduleService.getTodayGamesAutoDetect();
 
-        // 활성 시리즈 라벨
-        String seriesLabel = scheduleService.getActiveSeriesLabel();
+        // 시리즈 라벨: 현재 시즌 데이터면 활성 시리즈, 과거 시즌이면 정규시즌
+        String seriesLabel = (season == SeasonValidator.currentSeason())
+                ? scheduleService.getActiveSeriesLabel()
+                : "정규시즌";
 
         // 오늘 퓨처스 경기 일정
         List<ScheduleCardView> todayFuturesGames = futuresScheduleService.getTodaySchedules();
@@ -120,6 +122,7 @@ public class UserHomeService {
                 .rankingList(rankingList)
                 .todayAllGames(todayAllGames)
                 .todayFuturesGames(todayFuturesGames)
+                .season(season)
                 .seriesLabel(seriesLabel)
                 .recentColumns(recentColumns)
                 .build();

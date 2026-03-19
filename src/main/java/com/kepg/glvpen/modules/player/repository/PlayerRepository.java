@@ -12,7 +12,8 @@ import com.kepg.glvpen.modules.player.domain.Player;
 
 public interface PlayerRepository extends JpaRepository<Player, Integer> {
 
-    // 팀별 최고 wOBA 타자 조회 (포지션이 투수가 아닌 경우)
+    // 팀별 최고 wOBA 타자 조회 (규정타석 충족 선수만)
+    // 규정타석 = 팀 최다 출전 경기수 × 3.1
     @Query(value = """
             SELECT p.name, s.position, s.value AS woba, s.ranking, p.id
             FROM player_batter_stats s
@@ -22,12 +23,26 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
               AND p.teamId = :teamId
               AND s.position != 'P'
               AND s.series = '0' AND s.situationType = '' AND s.situationValue = ''
+              AND EXISTS (
+                SELECT 1 FROM player_batter_stats pa_c
+                WHERE pa_c.playerId = s.playerId AND pa_c.season = :season
+                  AND pa_c.category = 'PA' AND pa_c.series = '0'
+                  AND pa_c.situationType = '' AND pa_c.situationValue = ''
+                  AND pa_c.value >= (
+                    SELECT COALESCE(MAX(g_m.value), 100) * 3.1
+                    FROM player_batter_stats g_m
+                    JOIN player p_t ON g_m.playerId = p_t.id
+                    WHERE g_m.season = :season AND g_m.category = 'G'
+                      AND g_m.series = '0' AND g_m.situationType = '' AND g_m.situationValue = ''
+                      AND p_t.teamId = :teamId
+                  )
+              )
             ORDER BY s.value DESC
             LIMIT 1
             """, nativeQuery = true)
     List<Object[]> findTopHitterByTeamIdAndSeason(@Param("teamId") int teamId, @Param("season") int season);
 
-    // 팀별 최고 ERA 투수 조회 (ERA 낮을수록 좋음, FIP 데이터 없을 때 fallback)
+    // 팀별 최고 ERA 투수 조회 (규정이닝 50% 이상 OR 팀내 경기수 상위 20%)
     @Query(value = """
             SELECT p.name, s.position, s.value AS era, s.ranking, p.id
             FROM player_pitcher_stats s
@@ -37,6 +52,29 @@ public interface PlayerRepository extends JpaRepository<Player, Integer> {
               AND p.teamId = :teamId
               AND s.series = '0' AND s.situationType = '' AND s.situationValue = ''
               AND s.value > 0
+              AND (
+                EXISTS (
+                  SELECT 1 FROM player_pitcher_stats ip_c
+                  WHERE ip_c.playerId = s.playerId AND ip_c.season = :season
+                    AND ip_c.category = 'IP' AND ip_c.series = '0'
+                    AND ip_c.situationType = '' AND ip_c.situationValue = ''
+                    AND ip_c.value >= (
+                      SELECT COALESCE(MAX(g_m.value), 30) * 0.5
+                      FROM player_pitcher_stats g_m
+                      JOIN player p_t ON g_m.playerId = p_t.id
+                      WHERE g_m.season = :season AND g_m.category = 'G'
+                        AND g_m.series = '0' AND g_m.situationType = '' AND g_m.situationValue = ''
+                        AND p_t.teamId = :teamId
+                    )
+                )
+                OR EXISTS (
+                  SELECT 1 FROM player_pitcher_stats g_c
+                  WHERE g_c.playerId = s.playerId AND g_c.season = :season
+                    AND g_c.category = 'G' AND g_c.series = '0'
+                    AND g_c.situationType = '' AND g_c.situationValue = ''
+                    AND g_c.value >= 20
+                )
+              )
             ORDER BY s.value ASC
             LIMIT 1
             """, nativeQuery = true)

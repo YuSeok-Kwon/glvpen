@@ -1,12 +1,25 @@
 package com.kepg.glvpen.modules.user.service;
 
+import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.kepg.glvpen.modules.gameMode.simulationMode.domain.PlayerCardOverall;
+import com.kepg.glvpen.modules.gameMode.simulationMode.domain.UserCard;
+import com.kepg.glvpen.modules.gameMode.simulationMode.domain.UserLineup;
+import com.kepg.glvpen.modules.gameMode.simulationMode.repository.PlayerCardOverallRepository;
+import com.kepg.glvpen.modules.gameMode.simulationMode.repository.UserCardRepository;
+import com.kepg.glvpen.modules.gameMode.simulationMode.repository.UserLineupRepository;
+import com.kepg.glvpen.modules.player.stats.repository.BatterStatsRepository;
 import com.kepg.glvpen.modules.team.domain.Team;
 import com.kepg.glvpen.modules.team.repository.TeamRepository;
 import com.kepg.glvpen.modules.user.domain.User;
@@ -24,7 +37,11 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final TeamRepository teamRepository;
 	private final PasswordEncoder passwordEncoder;
-	
+	private final PlayerCardOverallRepository playerCardOverallRepository;
+	private final UserCardRepository userCardRepository;
+	private final UserLineupRepository userLineupRepository;
+	private final BatterStatsRepository batterStatsRepository;
+
 	// 로그인
 	public User getUser(String loginId, String password) {
 		Optional<User> optionalUser = userRepository.findByLoginId(loginId);
@@ -39,7 +56,7 @@ public class UserService {
 
 		return null;
 	}
-	
+
 	// 회원가입
 	@Transactional
 	public boolean addUser(String loginId,
@@ -69,13 +86,133 @@ public class UserService {
 
 		try {
 			userRepository.save(user);
+			createInitialCardsAndLineup(user);
 			return true;
 		} catch(PersistenceException e) {
 			log.error("회원가입 실패 - loginId: {}, error: {}", loginId, e.getMessage());
 			return false;
 		}
 	}
-	
+
+	// 회원가입 시 선호팀 기반 초기 카드 + 라인업 자동 생성
+	private void createInitialCardsAndLineup(User user) {
+		if (user.getFavoriteTeam() == null) return;
+
+		try {
+			int teamId = user.getFavoriteTeam().getId();
+			int season = 2025;
+
+			// 팀 C/D 등급 카드 조회 (랜덤 순서)
+			List<PlayerCardOverall> teamCards = playerCardOverallRepository.findTeamLowGradeCards(teamId, season);
+
+			List<PlayerCardOverall> batterCards = teamCards.stream()
+					.filter(c -> "BATTER".equals(c.getType())).toList();
+			List<PlayerCardOverall> pitcherCards = teamCards.stream()
+					.filter(c -> "PITCHER".equals(c.getType())).toList();
+
+			// 포지션별 타자 배치 (9명)
+			String[] positions = {"C", "1B", "2B", "3B", "SS", "LF", "CF", "RF", "DH"};
+			Map<String, PlayerCardOverall> lineup = new LinkedHashMap<>();
+			Set<Integer> usedPlayers = new HashSet<>();
+
+			// 1차: 팀 카드에서 해당 포지션 선수 배치
+			for (PlayerCardOverall card : batterCards) {
+				String pos = batterStatsRepository.findPositionByPlayerIdAndSeason(card.getPlayerId(), season);
+				if (pos == null || "P".equals(pos) || usedPlayers.contains(card.getPlayerId())) continue;
+				if (!lineup.containsKey(pos)) {
+					lineup.put(pos, card);
+					usedPlayers.add(card.getPlayerId());
+				}
+			}
+
+			// 2차: 빈 포지션은 팀 내 남은 타자로 채우기
+			for (String pos : positions) {
+				if (lineup.containsKey(pos)) continue;
+				for (PlayerCardOverall card : batterCards) {
+					if (usedPlayers.contains(card.getPlayerId())) continue;
+					lineup.put(pos, card);
+					usedPlayers.add(card.getPlayerId());
+					break;
+				}
+			}
+
+			// 3차: 여전히 부족하면 전체 C/D 카드에서 채우기
+			if (lineup.size() < 9) {
+				List<PlayerCardOverall> allCards = playerCardOverallRepository.findAllLowGradeCards(season);
+				for (String pos : positions) {
+					if (lineup.containsKey(pos)) continue;
+					for (PlayerCardOverall card : allCards) {
+						if (!"BATTER".equals(card.getType()) || usedPlayers.contains(card.getPlayerId())) continue;
+						lineup.put(pos, card);
+						usedPlayers.add(card.getPlayerId());
+						break;
+					}
+				}
+			}
+
+			// 투수 선택
+			PlayerCardOverall pitcher = pitcherCards.isEmpty() ? null : pitcherCards.get(0);
+			if (pitcher == null) {
+				List<PlayerCardOverall> allCards = playerCardOverallRepository.findAllLowGradeCards(season);
+				pitcher = allCards.stream()
+						.filter(c -> "PITCHER".equals(c.getType()))
+						.findFirst().orElse(null);
+			}
+
+			// UserCard + UserLineup 일괄 생성
+			Timestamp now = Timestamp.from(Instant.now());
+			int order = 1;
+
+			for (Map.Entry<String, PlayerCardOverall> entry : lineup.entrySet()) {
+				PlayerCardOverall card = entry.getValue();
+				String pos = entry.getKey();
+
+				userCardRepository.save(UserCard.builder()
+						.userId(user.getId())
+						.playerId(card.getPlayerId())
+						.season(season)
+						.grade(card.getGrade())
+						.position(pos)
+						.createdAt(now)
+						.build());
+
+				userLineupRepository.save(UserLineup.builder()
+						.userId(user.getId())
+						.playerId(card.getPlayerId())
+						.position(pos)
+						.orderNum(order++)
+						.season(season)
+						.build());
+			}
+
+			// 투수 카드 + 라인업
+			if (pitcher != null) {
+				userCardRepository.save(UserCard.builder()
+						.userId(user.getId())
+						.playerId(pitcher.getPlayerId())
+						.season(season)
+						.grade(pitcher.getGrade())
+						.position("P")
+						.createdAt(now)
+						.build());
+
+				userLineupRepository.save(UserLineup.builder()
+						.userId(user.getId())
+						.playerId(pitcher.getPlayerId())
+						.position("P")
+						.orderNum(10)
+						.season(season)
+						.build());
+			}
+
+			log.info("초기 라인업 생성 완료 - userId: {}, 타자: {}명, 투수: {}",
+					user.getId(), lineup.size(), pitcher != null ? "배정" : "없음");
+
+		} catch (Exception e) {
+			log.error("초기 라인업 생성 실패 - userId: {}", user.getId(), e);
+		}
+	}
+
 	// id 중복확인
 	public boolean duplicateId(String loginId) {
 		if(userRepository.countByLoginId(loginId) > 0) {
@@ -84,7 +221,7 @@ public class UserService {
 			return false;
 		}
 	}
-	
+
 	// 닉네임 중복확인
 	public boolean duplicateNickname(String nickname) {
 		if(userRepository.countByNickname(nickname) > 0) {
@@ -93,26 +230,26 @@ public class UserService {
 			return false;
 		}
 	}
-	
+
 	// id찾기
 	public User findLoginId(String name, String email) {
 		Optional<User> optionalUser = userRepository.findByNameAndEmail(name, email);
-		
+
 		if(optionalUser.isPresent()) {
 			User user = optionalUser.get();
-			
+
 			return user;
 		} else {
 			return null;
 		}
 	}
-	
+
 	// 비밀번호 찾기 위한 정보일치 확인
 	public boolean findUser(String loginId, String name, String email) {
 
 		return userRepository.findByLoginIdAndNameAndEmail(loginId, name, email) != null;
 	}
-	
+
 	// 비밀번호 재설정
 	@Transactional
 	public boolean resetPassword(String loginId, String password) {
@@ -139,7 +276,7 @@ public class UserService {
 			return false;
 		}
 	}
-	
+
 	// 모든 유저의 pk_Id정보 찾기
 	public List<Integer> findAllUserIds(){
 		return userRepository.findAllUserIds();

@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.kepg.glvpen.modules.game.schedule.service.ScheduleService;
 import com.kepg.glvpen.modules.analysis.dto.ChartDataDTO;
 import com.kepg.glvpen.modules.analysis.dto.DashboardDTO;
 import com.kepg.glvpen.modules.analysis.dto.PlayerAnalysisDTO;
@@ -38,6 +39,10 @@ public class AnalysisService {
     private final AnalysisColumnRepository columnRepository;
     private final TeamStatsRepository teamStatsRepository;
     private final PlayerRepository playerRepository;
+    private final ScheduleService scheduleService;
+
+    private static final double PA_MULTIPLIER = 3.1;
+    private static final int STANDARD_QUALIFIED_PA = 446;
     private final GameSummaryRecordRepository gameSummaryRecordRepository;
 
     /**
@@ -472,7 +477,10 @@ public class AnalysisService {
     // ====== 내부 메서드 ======
 
     private Map<String, Double> calculatePositionWobaAvg(int season) {
-        List<Object[]> topByPosition = batterStatsRepository.findTopBattersByPosition(season);
+        Map<Integer, Integer> teamGamesMap = scheduleService.getTeamGamesPlayedBySeason(season);
+        int maxGames = teamGamesMap.values().stream().mapToInt(Integer::intValue).max().orElse(0);
+        int fullPA = (maxGames > 0) ? (int) Math.floor(maxGames * PA_MULTIPLIER) : STANDARD_QUALIFIED_PA;
+        List<Object[]> topByPosition = batterStatsRepository.findTopBattersByPosition(season, fullPA);
         Map<String, Double> posMap = new LinkedHashMap<>();
         for (Object[] row : topByPosition) {
             String pos = (String) row[0];

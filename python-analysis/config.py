@@ -15,8 +15,36 @@ DB_CONFIG = {
     'database': os.getenv('DB_NAME', 'glvpen'),
 }
 
+# ==================== Gemini API 설정 ====================
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyDlwCYL2w94-NKMTnVenSYKEXnpQg3e2wA')
+
 # ==================== 분석 설정 ====================
-CURRENT_SEASON = int(os.getenv('CURRENT_SEASON', 2025))
+
+def _detect_data_season() -> int:
+    """DB에서 최신 시즌을 자동 감지. 실패 시 환경변수 또는 2025 사용."""
+    fallback = int(os.getenv('DATA_SEASON', 2025))
+    try:
+        import mysql.connector
+        conn = mysql.connector.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(season) FROM team_stats")
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if row and row[0]:
+            return int(row[0])
+    except Exception:
+        pass
+    return fallback
+
+
+# DATA_SEASON: DB에 있는 최신 시즌 (자동 감지)
+# PREDICT_SEASON: 기사에서 전망하는 다음 시즌
+DATA_SEASON = _detect_data_season()
+PREDICT_SEASON = DATA_SEASON + 1
+
+# SEASONS: 분석에 사용할 시즌 범위 (DATA_SEASON 기준 최근 6시즌)
+SEASONS = list(range(DATA_SEASON - 5, DATA_SEASON + 1))
 
 # ==================== 정규 분석 토픽 (0~14) ====================
 # AiColumnGeneratorService.ROTATING_TOPICS 배열과 인덱스 매핑

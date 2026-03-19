@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -174,6 +175,78 @@ public class KboGameCenterCrawler {
         }
 
         log.info("[게임센터] {}시즌 완료: {}건 크롤링, {}건 스킵", season, crawled, skipped);
+    }
+
+    /**
+     * 시범경기 전용 게임센터 크롤링
+     * seriesType="1"인 경기만 타겟팅하여 크롤링
+     */
+    public void crawlExhibitionGameCenters(int season, boolean forceRecrawl) {
+        log.info("[게임센터] {}시즌 시범경기 크롤링 시작 (force={})", season, forceRecrawl);
+
+        List<Schedule> games = scheduleRepository.findFinishedExhibitionGamesBySeason(season);
+        log.info("[게임센터] {}시즌 종료된 시범경기 {}건 발견", season, games.size());
+
+        int crawled = 0;
+        int skipped = 0;
+
+        for (Schedule game : games) {
+            String kboGameId = game.getKboGameId();
+            int scheduleId = game.getId();
+
+            if (!forceRecrawl && isAlreadyCrawled(scheduleId)) {
+                skipped++;
+                continue;
+            }
+
+            try {
+                crawlGameCenter(kboGameId, season);
+                crawled++;
+                Thread.sleep(300);
+            } catch (Exception e) {
+                log.error("[게임센터] 시범경기 크롤링 실패: {} - {}", kboGameId, e.getMessage());
+            }
+        }
+
+        log.info("[게임센터] {}시즌 시범경기 완료: {}건 크롤링, {}건 스킵", season, crawled, skipped);
+    }
+
+    /**
+     * 당일 + 전날 경기만 크롤링 (일일 자동 크롤링용)
+     */
+    public void crawlRecentGameCenters(int season) {
+        LocalDate today = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+        String startDate = yesterday.toString();
+        String endDate = today.toString();
+
+        log.info("[게임센터] 최근 경기 크롤링: {} ~ {}", startDate, endDate);
+
+        List<Schedule> games = scheduleRepository.findFinishedGamesByDateRange(startDate, endDate);
+        log.info("[게임센터] {} ~ {} 종료된 경기 {}건 발견", startDate, endDate, games.size());
+
+        int crawled = 0;
+        int skipped = 0;
+
+        for (Schedule game : games) {
+            String kboGameId = game.getKboGameId();
+            int scheduleId = game.getId();
+
+            if (isAlreadyCrawled(scheduleId)) {
+                skipped++;
+                continue;
+            }
+
+            try {
+                crawlGameCenter(kboGameId, season);
+                crawled++;
+                Thread.sleep(300);
+            } catch (Exception e) {
+                log.error("[게임센터] 크롤링 실패: {} - {}", kboGameId, e.getMessage());
+            }
+        }
+
+        log.info("[게임센터] 최근 경기 완료: {}건 크롤링, {}건 스킵", crawled, skipped);
     }
 
     /**

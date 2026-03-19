@@ -17,7 +17,7 @@ from common.db_connector import DBConnector
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 
-SEASONS = [2020, 2021, 2022, 2023, 2024, 2025]
+from config import SEASONS
 
 
 # ==================== 선수 정보 ====================
@@ -109,6 +109,21 @@ def save_chart_json(filename: str, charts: list):
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(charts, f, ensure_ascii=False, indent=2, default=str)
     print(f"\n  -> 차트 JSON 저장: {filepath}")
+
+
+def save_analysis_output(filename: str, charts: list,
+                         findings: list = None, stats_dict: dict = None):
+    """차트 + 인사이트를 통합 저장"""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    filepath = os.path.join(OUTPUT_DIR, filename)
+    data = {
+        'charts': charts,
+        'findings': findings or [],
+        'stats': stats_dict or {},
+    }
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+    print(f"\n  -> 분석 JSON 저장: {filepath}")
 
 
 def print_header(title: str, info: dict):

@@ -15,8 +15,9 @@ HISTORY_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'output', 'run_history.json'
 )
 
-SEASONS = [2020, 2021, 2022, 2023, 2024, 2025]
-LATEST_SEASON = SEASONS[-1]
+from config import SEASONS, DATA_SEASON
+
+LATEST_SEASON = DATA_SEASON
 
 
 class PlayerRecommender:

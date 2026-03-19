@@ -20,8 +20,10 @@ public class TeamHeadToHeadService {
 
     @Transactional
     public void saveOrUpdate(TeamHeadToHeadDTO dto) {
+        String series = dto.getSeries() != null ? dto.getSeries() : "0";
         Optional<TeamHeadToHead> optional = teamHeadToHeadRepository
-                .findBySeasonAndTeamIdAndOpponentTeamId(dto.getSeason(), dto.getTeamId(), dto.getOpponentTeamId());
+                .findBySeasonAndTeamIdAndOpponentTeamIdAndSeries(
+                        dto.getSeason(), dto.getTeamId(), dto.getOpponentTeamId(), series);
 
         TeamHeadToHead entity;
         if (optional.isPresent()) {
@@ -34,6 +36,7 @@ public class TeamHeadToHeadService {
                     .season(dto.getSeason())
                     .teamId(dto.getTeamId())
                     .opponentTeamId(dto.getOpponentTeamId())
+                    .series(series)
                     .wins(dto.getWins())
                     .losses(dto.getLosses())
                     .draws(dto.getDraws())
@@ -43,11 +46,13 @@ public class TeamHeadToHeadService {
         teamHeadToHeadRepository.save(entity);
     }
 
+    // 기본: 정규시즌
     public List<TeamHeadToHead> getBySeasonAndTeam(int season, int teamId) {
-        return teamHeadToHeadRepository.findBySeasonAndTeamId(season, teamId);
+        return teamHeadToHeadRepository.findBySeasonAndTeamIdAndSeries(season, teamId, "0");
     }
 
+    // 기본: 정규시즌
     public List<TeamHeadToHead> getBySeason(int season) {
-        return teamHeadToHeadRepository.findBySeasonOrderByTeamIdAscOpponentTeamIdAsc(season);
+        return teamHeadToHeadRepository.findBySeasonAndSeriesOrderByTeamIdAscOpponentTeamIdAsc(season, "0");
     }
 }

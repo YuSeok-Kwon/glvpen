@@ -30,8 +30,8 @@ try {
     // 크롤링 옵션 — 2020~2024 다시즌 수집 (일정/팀 수집 완료)
     // 예: -Dcrawl.schedule=true
     boolean crawlSchedule = Boolean.parseBoolean(System.getProperty("crawl.schedule", "false"));
-    boolean crawlTeam = false;
-    boolean crawlPlayer = false;
+    boolean crawlTeam = Boolean.parseBoolean(System.getProperty("crawl.team", "false"));
+    boolean crawlPlayer = Boolean.parseBoolean(System.getProperty("crawl.player", "false"));
 
     // 크롤링 옵션 — 투수/수비/주루 전용 재크롤링 (PostBack 캐스케이드 수정 후)
     // 예: -Dcrawl.pitcherOnly=true -Dcrawl.defenseOnly=true -Dcrawl.runnerOnly=true
@@ -62,6 +62,14 @@ try {
     // 라인업 누락 재크롤링
     // 예: -Dcrawl.lineup=true
     boolean crawlLineup = Boolean.parseBoolean(System.getProperty("crawl.lineup", "false"));
+
+    // 시범경기 게임센터 크롤링
+    // 예: -Dcrawl.exhibition=true
+    boolean crawlExhibition = Boolean.parseBoolean(System.getProperty("crawl.exhibition", "false"));
+
+    // 상황별 데이터 재수집 (정규시즌 상황 옵션만)
+    // 예: -Dcrawl.situationOnly=true
+    boolean crawlSituationOnly = Boolean.parseBoolean(System.getProperty("crawl.situationOnly", "false"));
 
     // 세이버메트릭스 계산 — 시스템 프로퍼티로 비활성화 가능
     // 예: -Dcrawl.sabermetrics=false
@@ -98,6 +106,8 @@ try {
     log.info("강제 재크롤링: {}", forceRecrawl ? "예" : "아니오");
     log.info("키플레이어 누락 재크롤링: {}", recrawlKeyPlayers ? "예" : "아니오");
     log.info("라인업 누락 재크롤링: {}", crawlLineup ? "예" : "아니오");
+    log.info("시범경기 게임센터: {}", crawlExhibition ? "예" : "아니오");
+    log.info("상황별 데이터 재수집: {}", crawlSituationOnly ? "예" : "아니오");
     log.info("세이버메트릭스 계산: {}", calculateSabermetrics ? "예" : "아니오");
     log.info("다시즌 배치 크롤링: {}", crawlMultiSeason ? multiSeasonEnd + "→" + multiSeasonStart + " (역순)" : "아니오");
 
@@ -268,6 +278,21 @@ try {
             gameCenterCrawler.recrawlMissingLineups(multiSeasonStart, multiSeasonEnd);
         }
 
+        if (crawlExhibition) {
+            log.info("\n[10단계] 다시즌 시범경기 게임센터 크롤링: {}→{} (force={})", multiSeasonEnd, multiSeasonStart, forceRecrawl);
+            for (int year = multiSeasonEnd; year >= multiSeasonStart; year--) {
+                gameCenterCrawler.crawlExhibitionGameCenters(year, forceRecrawl);
+            }
+        }
+
+        if (crawlSituationOnly) {
+            log.info("\n[11단계] 다시즌 상황별 데이터 재수집: {}→{}", multiSeasonEnd, multiSeasonStart);
+            for (int year = multiSeasonEnd; year >= multiSeasonStart; year--) {
+                log.info("--- {}시즌 상황별 데이터 재수집 ---", year);
+                playerCrawler.crawlSituationOnly(year);
+            }
+        }
+
     } else {
         // 단일 시즌 크롤링
 
@@ -334,6 +359,16 @@ try {
         if (crawlLineup) {
             log.info("\n[9단계] 라인업 누락 재크롤링 ({}시즌)", targetSeason);
             gameCenterCrawler.recrawlMissingLineups(targetSeason, targetSeason);
+        }
+
+        if (crawlExhibition) {
+            log.info("\n[10단계] 시범경기 게임센터 크롤링 ({}시즌, force={})", targetSeason, forceRecrawl);
+            gameCenterCrawler.crawlExhibitionGameCenters(targetSeason, forceRecrawl);
+        }
+
+        if (crawlSituationOnly) {
+            log.info("\n[11단계] 상황별 데이터 재수집 ({}시즌)", targetSeason);
+            playerCrawler.crawlSituationOnly(targetSeason);
         }
     }
 

@@ -264,7 +264,8 @@ public final class KboConstants {
         "AVG", "BB", "IBB", "HBP", "SO", "GDP", "SLG", "OBP", "OPS", "MH", "RISP", "PH-BA"
     };
 
-    // 투수 Basic1: 순위|선수명|팀명|ERA|G|W|L|SV|HLD|WPCT|IP|H|HR|BB|HBP|SO|R|ER|WHIP
+    // 투수 Basic1 (팀 선택 시): 순위|선수명|팀명|ERA|G|W|L|SV|HLD|WPCT|IP|H|HR|BB|HBP|SO|R|ER|WHIP
+    // 주의: 전체 랭킹 뷰는 CG|SHO|TBF 추가 (21열), 팀 선택 시는 위 16개 데이터 컬럼 (19열)
     public static final String[] PITCHER_BASIC1_CATS = {
         "ERA", "G", "W", "L", "SV", "HLD", "WPCT", "IP", "H", "HR", "BB", "HBP", "SO", "R", "ER", "WHIP"
     };

@@ -41,7 +41,7 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
     Optional<String> findStatValueByPlayerIdCategoryAndSeason(
             @Param("playerId") int playerId, @Param("category") String category, @Param("season") int season);
 
-    // 포지션별 wOBA 1위 타자 조회 (수비 포지션 기준)
+    // 포지션별 wOBA 1위 타자 조회 (수비 포지션 기준, 규정타석 충족 선수만)
     @Query(value = """
             SELECT
                 position, playerName, teamName, logoName, woba
@@ -81,11 +81,19 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
                 WHERE bs.season = :season
                   AND bs.category = 'wOBA'
                   AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
+                  AND EXISTS (
+                      SELECT 1 FROM player_batter_stats pa_stat
+                      WHERE pa_stat.playerId = bs.playerId
+                        AND pa_stat.season = bs.season
+                        AND pa_stat.category = 'PA'
+                        AND pa_stat.series = '0' AND pa_stat.situationType = '' AND pa_stat.situationValue = ''
+                        AND pa_stat.value >= :minPa
+                  )
             ) AS ranked
             WHERE ranked.row_num = 1
             ORDER BY ranked.position
             """, nativeQuery = true)
-    List<Object[]> findTopBattersByPosition(@Param("season") int season);
+    List<Object[]> findTopBattersByPosition(@Param("season") int season, @Param("minPa") double minPa);
 
     // 시즌별 전체 타자 스탯 요약 (수비 포지션 기준)
     @Query(value = """

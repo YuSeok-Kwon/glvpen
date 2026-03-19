@@ -99,7 +99,7 @@
 
         // 게임 요약 정보 조회
         $.ajax({
-          url: '/game/result/summary',
+          url: '/api/game-results/summary',
           method: 'GET',
           data: { scheduleId: scheduleId, userId: userId },
           success: function (data) {

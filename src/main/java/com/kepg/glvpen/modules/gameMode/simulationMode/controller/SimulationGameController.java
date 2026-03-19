@@ -42,8 +42,10 @@ public class SimulationGameController {
 	}
 	
 	@GetMapping("/ready-view")
-	public String gameReadyView(HttpSession session) {
-
+	public String gameReadyView(HttpSession session, Model model) {
+		User user = (User) session.getAttribute("loginUser");
+		int userId = getUserIdOrDefault(user);
+		model.addAttribute("userId", userId);
 		return "game/ready";
 	}
 	

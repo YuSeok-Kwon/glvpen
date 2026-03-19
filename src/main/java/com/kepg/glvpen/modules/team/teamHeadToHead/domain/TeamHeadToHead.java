@@ -21,7 +21,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "team_head_to_head", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"season", "teamId", "opponentTeamId"})
+        @UniqueConstraint(name = "uk_h2h_full",
+                          columnNames = {"season", "teamId", "opponentTeamId", "series"})
 })
 @EntityListeners(AuditingEntityListener.class)
 @Getter
@@ -43,6 +44,10 @@ public class TeamHeadToHead {
 
     @Column(nullable = false)
     private int opponentTeamId;
+
+    @Column(length = 10, columnDefinition = "VARCHAR(10) DEFAULT '0'")
+    @Builder.Default
+    private String series = "0";
 
     private int wins;
 

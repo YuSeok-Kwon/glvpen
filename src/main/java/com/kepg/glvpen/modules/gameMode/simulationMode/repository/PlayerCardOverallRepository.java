@@ -119,6 +119,25 @@ public interface PlayerCardOverallRepository extends JpaRepository<PlayerCardOve
 	PlayerCardOverall findRandomPitcherByOverallRange(
     	    @Param("minOverall") double minOverall,
     	    @Param("maxOverall") double maxOverall);
-    
-    
+
+	// 팀별 C/D 등급 카드 랜덤 조회 (회원가입 초기 라인업용)
+	@Query(value = """
+		    SELECT o.*
+		    FROM sim_player_card_overall o
+		    JOIN player p ON o.playerId = p.id
+		    WHERE p.teamId = :teamId AND o.season = :season
+		      AND o.grade IN ('C', 'D')
+		    ORDER BY RAND()
+		    """, nativeQuery = true)
+	List<PlayerCardOverall> findTeamLowGradeCards(@Param("teamId") int teamId, @Param("season") int season);
+
+	// 전체 C/D 등급 카드 랜덤 조회 (폴백용, 제한 50개)
+	@Query(value = """
+		    SELECT o.*
+		    FROM sim_player_card_overall o
+		    WHERE o.season = :season AND o.grade IN ('C', 'D')
+		    ORDER BY RAND()
+		    LIMIT 50
+		    """, nativeQuery = true)
+	List<PlayerCardOverall> findAllLowGradeCards(@Param("season") int season);
 }

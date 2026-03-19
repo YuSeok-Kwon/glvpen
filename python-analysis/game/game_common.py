@@ -38,9 +38,9 @@ def get_game_type_label(game_type: str) -> str:
 
 def classify_game_type(game_date) -> str:
     """날짜 기반 경기유형 분류.
-    - 3월 22일 이전: preseason
+    - 3월 27일 이전: preseason (2026 시범경기: 3/12~24)
+    - 3월 28일 ~ 10월 10일: regular (2026 정규시즌: 3/28~)
     - 10월 11일 이후: postseason
-    - 나머지: regular
     """
     if isinstance(game_date, str):
         game_date = pd.to_datetime(game_date)
@@ -49,7 +49,7 @@ def classify_game_type(game_date) -> str:
 
     if month < 3:
         return 'preseason'
-    elif month == 3 and day <= 22:
+    elif month == 3 and day <= 27:
         return 'preseason'
     elif month >= 11:
         return 'postseason'
@@ -73,11 +73,13 @@ def filter_schedules_by_type(schedules: pd.DataFrame, game_type: str = 'all') ->
 # ==================== 파싱 ====================
 
 def parse_inning_scores(inning_str) -> list:
-    """'1,0,2,0,0,1,0,0,0' → [1, 0, 2, 0, 0, 1, 0, 0, 0]"""
+    """'1,0,2,0,0,1,0,0,0' 또는 '1 0 2 0 0 1 0 0 0' → [1, 0, 2, 0, 0, 1, 0, 0, 0]"""
     if not inning_str or pd.isna(inning_str):
         return []
     try:
-        return [int(x.strip()) for x in str(inning_str).split(',') if x.strip()]
+        s = str(inning_str).strip()
+        sep = ',' if ',' in s else ' '
+        return [int(x.strip()) for x in s.split(sep) if x.strip()]
     except (ValueError, AttributeError):
         return []
 
@@ -142,6 +144,21 @@ def save_chart_json(filename: str, charts: list):
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(charts, f, ensure_ascii=False, indent=2, default=str)
     print(f"\n  -> 차트 JSON 저장: {filepath}")
+
+
+def save_analysis_output(filename: str, charts: list,
+                         findings: list = None, stats_dict: dict = None):
+    """차트 + 인사이트를 통합 저장"""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    filepath = os.path.join(OUTPUT_DIR, filename)
+    data = {
+        'charts': charts,
+        'findings': findings or [],
+        'stats': stats_dict or {},
+    }
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+    print(f"\n  -> 분석 JSON 저장: {filepath}")
 
 
 def print_header(title: str, team_name: str, game_type: str = 'regular'):

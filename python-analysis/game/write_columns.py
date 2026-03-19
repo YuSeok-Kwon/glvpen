@@ -1,6 +1,7 @@
 """
 경기 분석 결과 기반 컬럼 기사 생성.
-g1~g7 JSON 출력을 읽어 HTML 컬럼을 생성하고 analysis_column 테이블에 저장.
+g1~g7 JSON 출력을 읽어 팀별 기사형 HTML 컬럼을 생성하고 analysis_column 테이블에 저장.
+분석 주제당 10개 팀 각각 개별 기사를 생성한다.
 
 실행:
   python3 game/write_columns.py                    # 전체 컬럼 생성
@@ -11,16 +12,27 @@ import sys
 import os
 import json
 import argparse
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from common.db_connector import DBConnector
-from game.game_common import LATEST_SEASON, GAME_TYPES, get_game_type_label
+from common.article_generator import generate_article
+from game.game_common import GAME_TYPES, get_game_type_label, TEAM_NAMES
+from config import DATA_SEASON, PREDICT_SEASON
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output')
 HISTORY_PATH = os.path.join(OUTPUT_DIR, 'run_history.json')
-SEASON = LATEST_SEASON
+SEASON = DATA_SEASON
+
+
+def get_ranking_map(db, season: int) -> dict:
+    """팀 ID -> 순위 매핑"""
+    rankings = db.get_team_rankings(season)
+    if rankings.empty:
+        return {}
+    return {int(row['teamId']): int(row['ranking'])
+            for _, row in rankings.iterrows()}
+
 
 # ==================== 분석별 메타데이터 ====================
 
@@ -79,13 +91,16 @@ def load_history() -> dict:
     return {}
 
 
-def load_team_charts(key: str, team_name: str, game_type: str) -> list:
-    """분석 결과 JSON 로드"""
+def load_analysis_output(key: str, team_name: str, game_type: str) -> dict:
+    """분석 출력 JSON 로드."""
     filepath = os.path.join(OUTPUT_DIR, f'{key}_{team_name}_{SEASON}_{game_type}.json')
-    if os.path.exists(filepath):
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
+    if not os.path.exists(filepath):
+        return {'charts': [], 'findings': [], 'stats': {}}
+    with open(filepath, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    if isinstance(data, list):
+        return {'charts': data, 'findings': [], 'stats': {}}
+    return data
 
 
 def get_team_info_map(db, team_ids: list) -> dict:
@@ -104,132 +119,55 @@ def get_team_info_map(db, team_ids: list) -> dict:
     return result
 
 
-def build_chart_summary_html(charts: list, team_name: str) -> str:
-    """차트 요약 HTML 생성"""
-    html_parts = []
-
-    for chart in charts:
-        chart_type = chart.get('chartType', '')
-        title = chart.get('title', '')
-
-        if chart_type == 'bar':
-            datasets = chart.get('datasets', [])
-            labels = chart.get('labels', [])
-            for ds in datasets[:1]:
-                data = ds.get('data', [])
-                if labels and data:
-                    pairs = [(l, d) for l, d in zip(labels, data)
-                             if d is not None and isinstance(d, (int, float))]
-                    if pairs:
-                        top = max(pairs, key=lambda x: x[1])
-                        html_parts.append(
-                            f'<span style="margin-right:16px;">'
-                            f'최고: <strong>{top[0]}</strong> ({top[1]})'
-                            f'</span>'
-                        )
-
-        elif chart_type == 'doughnut':
-            labels = chart.get('labels', [])
-            datasets = chart.get('datasets', [])
-            if datasets:
-                data = datasets[0].get('data', [])
-                total = sum(d for d in data if isinstance(d, (int, float)))
-                if total > 0 and labels:
-                    items = [f'{l}: {d} ({d/total*100:.0f}%)'
-                             for l, d in zip(labels, data) if isinstance(d, (int, float))]
-                    html_parts.append(', '.join(items))
-
-        elif chart_type == 'scatter':
-            datasets = chart.get('datasets', [])
-            for ds in datasets[:1]:
-                points = ds.get('data', [])
-                if points:
-                    html_parts.append(f'데이터 포인트 {len(points)}개')
-
-    if html_parts:
-        return (
-            f'<div style="background:#fff3cd;border-radius:6px;padding:10px 14px;'
-            f'margin:8px 0 16px;font-size:0.9rem;">'
-            + '<br>'.join(html_parts)
-            + '</div>'
-        )
-    return ''
-
-
-def generate_column_html(key: str, history_entries: list, db, game_type: str) -> tuple:
-    """컬럼 HTML 생성"""
-    meta = ANALYSIS_META.get(key, {})
-    team_names = [e['team_name'] for e in history_entries]
-    team_ids = [e['team_id'] for e in history_entries]
-
-    info_map = get_team_info_map(db, team_ids)
-
-    gt_label = get_game_type_label(game_type)
-    title_teams = ', '.join(team_names[:3])
-    title = meta.get('title_template', '{teams} 분석').format(teams=title_teams)
-    title = f"[{SEASON} {gt_label}] {title}"
-
-    all_charts = []
-    for name in team_names:
-        charts = load_team_charts(key, name, game_type)
-        all_charts.extend(charts)
-
-    parts = []
-
-    # 도입부
-    subtitle = meta.get('subtitle', '')
-    description = meta.get('description', '')
-    parts.append(f'<p><strong>{subtitle}</strong></p>')
-    parts.append(f'<p>{description}</p>')
-    parts.append('<hr style="margin:1.5rem 0;">')
-
-    # 팀별 섹션
-    for i, entry in enumerate(history_entries):
-        tid = entry['team_id']
-        tname = entry['team_name']
-
-        parts.append(f'<h3 style="margin-top:2rem;">{i+1}. {tname}</h3>')
-
-        info = info_map.get(tid, {})
-        if info:
-            parts.append(
-                f'<div style="background:#f8f9fa;border-radius:8px;padding:12px 16px;'
-                f'margin-bottom:12px;border-left:4px solid #0f3460;">'
-                f'<strong>{info.get("teamName", tname)}</strong>'
-                f'</div>'
-            )
-
-        team_charts = load_team_charts(key, tname, game_type)
-        chart_summary = build_chart_summary_html(team_charts, tname)
-        if chart_summary:
-            parts.append(chart_summary)
-
-        chart_count = len(team_charts)
-        if chart_count > 0:
-            chart_titles = [c.get('title', '') for c in team_charts if c.get('title')]
-            if chart_titles:
-                chart_list = ''.join(f'<li>{t}</li>' for t in chart_titles)
-                parts.append(
-                    f'<details style="margin:8px 0 16px;">'
-                    f'<summary style="cursor:pointer;color:#0f3460;font-weight:600;">'
-                    f'차트 {chart_count}개 포함</summary>'
-                    f'<ul style="margin-top:8px;color:#6c757d;font-size:0.9rem;">'
-                    f'{chart_list}</ul></details>'
-                )
-
-    # 마무리
-    parts.append('<hr style="margin:2rem 0 1rem;">')
-    parts.append(
-        f'<p style="color:#adb5bd;font-size:0.85rem;">'
-        f'본 분석은 glvpen Python 배치 분석 시스템으로 자동 생성되었습니다.<br>'
-        f'분석 일시: {datetime.now().strftime("%Y년 %m월 %d일")}</p>'
+def build_team_card_html(info: dict, rank: int = None) -> str:
+    name = info.get('teamName', '?')
+    rank_str = f' | {rank}위' if rank else ''
+    return (
+        f'<div style="background:#f8f9fa;border-radius:8px;padding:12px 16px;'
+        f'margin-bottom:12px;border-left:4px solid #0f3460;">'
+        f'<strong>{name}</strong>'
+        f'<span style="color:#6c757d;">{rank_str}</span>'
+        f'</div>'
     )
 
-    content_html = '\n'.join(parts)
-    chart_json_str = json.dumps(all_charts, ensure_ascii=False) if all_charts else None
-    summary = f'{SEASON} {gt_label} {title_teams}의 {meta.get("subtitle", "분석")}.'
 
-    return title, content_html, chart_json_str, summary, team_ids
+def generate_column_html(key: str, entry: dict, db,
+                         game_type: str, ranking_map: dict) -> tuple:
+    """팀 1개에 대한 개별 기사 HTML 생성."""
+    meta = ANALYSIS_META.get(key, {})
+    tid = entry['team_id']
+    tname = entry['team_name']
+
+    info_map = get_team_info_map(db, [tid])
+    info = info_map.get(tid, {})
+    rank = ranking_map.get(tid)
+
+    gt_label = get_game_type_label(game_type)
+    base_title = meta.get('title_template', '{teams} 분석').format(teams=tname)
+    title = f"[{PREDICT_SEASON} 시즌 전망 {gt_label}] {base_title}"
+
+    # JSON 파일은 짧은 이름(LG, KIA 등)으로 저장됨
+    short_name = TEAM_NAMES.get(tid, tname)
+    output = load_analysis_output(key, short_name, game_type)
+
+    entries_data = [{
+        'name': tname,
+        'card_html': build_team_card_html(info, rank) if info else '',
+        'findings': output.get('findings', []),
+        'charts': output.get('charts', []),
+    }]
+
+    content_html, all_charts, ai_summary = generate_article(
+        key, entries_data, meta,
+        data_season=SEASON, predict_season=PREDICT_SEASON
+    )
+
+    chart_json_str = json.dumps(all_charts, ensure_ascii=False) if all_charts else None
+
+    summary = ai_summary or \
+        f'{SEASON} {gt_label} 데이터 기반 {tname}의 {PREDICT_SEASON} 시즌 {meta.get("subtitle", "전망")}.'
+
+    return title, content_html, chart_json_str, summary, tid
 
 
 # ==================== DB 저장 ====================
@@ -307,8 +245,12 @@ def main():
 
     db = DBConnector()
     try:
+        ranking_map = get_ranking_map(db, SEASON)
+        if ranking_map:
+            print(f"\n  [순위] {SEASON} 시즌 팀 순위 로딩 완료 ({len(ranking_map)}팀)")
+
         print("\n" + "=" * 70)
-        print("  경기 분석 컬럼 생성")
+        print("  경기 분석 컬럼 생성 (팀별 개별 기사)")
         print("=" * 70)
 
         results = []
@@ -317,41 +259,48 @@ def main():
                 meta = ANALYSIS_META.get(key, {})
                 gt_label = get_game_type_label(game_type)
 
-                print(f"\n  [{key}] {meta.get('title_template', key).format(teams='...')} ({gt_label})")
+                # 순위순 정렬
+                entries.sort(key=lambda e: ranking_map.get(e['team_id'], 99))
 
-                title, content, chart_json, summary, team_ids = \
-                    generate_column_html(key, entries, db, game_type)
+                print(f"\n  [{key}] {meta.get('title_template', key).format(teams='...')} "
+                      f"({gt_label}, {len(entries)}팀)")
 
-                chart_count = 0
-                if chart_json:
-                    try:
-                        chart_count = len(json.loads(chart_json))
-                    except Exception:
-                        pass
+                for entry in entries:
+                    tname = entry['team_name']
+                    rank = ranking_map.get(entry['team_id'], '?')
+                    print(f"\n    [{tname} ({rank}위)]")
 
-                print(f"    제목: {title}")
-                print(f"    팀: {', '.join(e['team_name'] for e in entries)}")
-                print(f"    본문: {len(content)}자 | 차트: {chart_count}개")
+                    title, content, chart_json, summary, tid = \
+                        generate_column_html(key, entry, db, game_type, ranking_map)
 
-                if args.dry_run:
-                    print(f"    [dry-run] DB 저장 건너뜀")
-                    results.append((key, title, 'dry-run', 0))
-                else:
-                    first_tid = team_ids[0] if team_ids else None
-                    column_id, action = save_column(
-                        db, title, content, chart_json, summary,
-                        meta.get('category', 'game'), first_tid
-                    )
-                    print(f"    -> {action} (column_id: {column_id})")
-                    results.append((key, title, action, column_id))
+                    chart_count = 0
+                    if chart_json:
+                        try:
+                            chart_count = len(json.loads(chart_json))
+                        except Exception:
+                            pass
+
+                    print(f"      제목: {title}")
+                    print(f"      본문: {len(content)}자 | 차트: {chart_count}개")
+
+                    if args.dry_run:
+                        print(f"      [dry-run] DB 저장 건너뜀")
+                        results.append((key, tname, 'dry-run', 0))
+                    else:
+                        column_id, action = save_column(
+                            db, title, content, chart_json, summary,
+                            meta.get('category', 'game'), tid
+                        )
+                        print(f"      -> {action} (column_id: {column_id})")
+                        results.append((key, tname, action, column_id))
 
         # 결과 요약
         print("\n" + "=" * 70)
         print("  컬럼 생성 결과")
         print("=" * 70)
-        for key, title, action, cid in results:
+        for key, name, action, cid in results:
             status = action if action == 'dry-run' else f'{action} (ID:{cid})'
-            print(f"    [{key}] {status}")
+            print(f"    [{key}] {name}: {status}")
         print(f"\n  총 {len(results)}건 {'미리보기' if args.dry_run else '저장'} 완료")
         print("=" * 70 + "\n")
 

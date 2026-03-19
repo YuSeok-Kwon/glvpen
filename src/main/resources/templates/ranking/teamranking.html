@@ -21,7 +21,10 @@
 	  <div class="row gy-4 mx-2 mx-md-5">
 	    <div class="col-lg-4 col-md-12">
 	      <div class="card border-point shadow-sm p-3">
-	        <h5 class="text-center fw-bold mb-3">KBO 리그 팀 순위</h5>
+	        <h5 class="text-center fw-bold mb-3">
+	          KBO 리그 팀 순위
+	          <span id="series-label" class="badge bg-secondary fs-6" th:text="${seriesLabel}" style="display:none;">시범경기</span>
+	        </h5>
 	        <div id="team-ranking-list"></div>
 	      </div>
 	    </div>
@@ -55,7 +58,7 @@
 	(function() {
 	  var currentYear = new Date().getFullYear();
 	  var minYear = 2022;
-	  var defaultSeason = currentYear - 1;
+	  var defaultSeason = currentYear;
 	  var select = document.getElementById('season-select');
 	  for (var y = currentYear; y >= minYear; y--) {
 	    var opt = document.createElement('option');
@@ -86,6 +89,18 @@
 	      renderStatTable(data.statRankingList, data.headers, data.categoryNameMap, data.currentSort, data.sortDirection);
 	      $('input[name="sort"]').val(data.currentSort);
 	      $('input[name="direction"]').val(data.sortDirection);
+
+	      // fallback된 시즌이 다르면 드롭다운 동기화
+	      if (data.season && data.season != season) {
+	        $('#season-select').val(data.season);
+	      }
+
+	      // 시리즈 라벨 업데이트
+	      if (data.seriesLabel) {
+	        $('#series-label').text(data.seriesLabel).show();
+	      } else {
+	        $('#series-label').hide();
+	      }
 	    },
 	    error: function (xhr, status, error) {
 	      console.error('시즌 변경 실패:', error);
@@ -114,6 +129,10 @@
 	      renderStatTable(data.statRankingList, data.headers, data.categoryNameMap, data.currentSort, data.sortDirection);
 	      $('input[name="sort"]').val(sortKey);
 	      $('input[name="direction"]').val(newDirection);
+
+	      if (data.seriesLabel) {
+	        $('#series-label').text(data.seriesLabel).show();
+	      }
 	    },
 	    error: function (xhr, status, error) {
 	      console.error('정렬 실패:', error);

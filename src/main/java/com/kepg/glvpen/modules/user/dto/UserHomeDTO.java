@@ -56,6 +56,9 @@ public class UserHomeDTO {
     // 오늘 퓨처스 경기 일정
     private List<ScheduleCardView> todayFuturesGames;
 
+    // 현재 표시 중인 시즌 연도
+    private int season;
+
     // 현재 활성 시리즈 라벨 (시범경기/정규시즌/포스트시즌)
     private String seriesLabel;
 

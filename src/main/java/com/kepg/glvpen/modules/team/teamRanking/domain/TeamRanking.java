@@ -6,8 +6,8 @@ import lombok.*;
 @Entity
 @Table(name = "team_ranking",
        uniqueConstraints = @UniqueConstraint(
-           name = "uk_team_ranking_season",
-           columnNames = {"season", "teamId"}
+           name = "uk_team_ranking_full",
+           columnNames = {"season", "teamId", "series"}
        ))
 @Getter
 @Setter
@@ -23,6 +23,10 @@ public class TeamRanking {
     private int season;
 
     private int teamId;
+
+    @Column(length = 10, columnDefinition = "VARCHAR(10) DEFAULT '0'")
+    @Builder.Default
+    private String series = "0";
 
     private int ranking;
 

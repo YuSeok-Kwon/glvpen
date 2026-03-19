@@ -16,7 +16,7 @@ from common.stats_utils import StatsUtils
 from player.player_common import (
     get_player_info, is_pitcher, merge_real_position,
     filter_qualified_batters,
-    save_chart_json, print_header, print_section, print_stat,
+    save_chart_json, save_analysis_output, print_header, print_section, print_stat,
     safe_float, SEASONS
 )
 
@@ -177,7 +177,7 @@ def analyze(player_id):
         print_section('인사이트')
         print(f"  {insight}")
 
-        save_chart_json(f'p7_{info["name"]}_{season}.json', charts)
+        save_analysis_output(f'p7_{info["name"]}_{season}.json', charts, findings, stats_dict)
     finally:
         db.close()
 

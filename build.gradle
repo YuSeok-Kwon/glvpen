@@ -83,7 +83,7 @@ tasks.register('crawl', JavaExec) {
 	systemProperty 'spring.main.web-application-type', 'none'
 	// 크롤링 시즌 범위 및 세이버메트릭스 프로퍼티 전달
 	// 사용법: ./gradlew crawl -Dcrawl.seasonStart=2022 -Dcrawl.seasonEnd=2023 -Dcrawl.sabermetrics=false
-	['crawl.schedule', 'crawl.seasonStart', 'crawl.seasonEnd', 'crawl.sabermetrics', 'crawl.batterOnly', 'crawl.batterBasic2', 'crawl.pitcherOnly', 'crawl.defenseOnly', 'crawl.runnerOnly', 'crawl.gameCenter', 'crawl.futures', 'crawl.forceRecrawl', 'crawl.recrawlKeyPlayers', 'crawl.lineup', 'spring.flyway.enabled', 'spring.jpa.hibernate.ddl-auto'].each { prop ->
+	['crawl.schedule', 'crawl.seasonStart', 'crawl.seasonEnd', 'crawl.sabermetrics', 'crawl.player', 'crawl.team', 'crawl.batterOnly', 'crawl.batterBasic2', 'crawl.pitcherOnly', 'crawl.defenseOnly', 'crawl.runnerOnly', 'crawl.gameCenter', 'crawl.futures', 'crawl.forceRecrawl', 'crawl.recrawlKeyPlayers', 'crawl.lineup', 'crawl.exhibition', 'crawl.situationOnly', 'spring.flyway.enabled', 'spring.jpa.hibernate.ddl-auto'].each { prop ->
 		if (System.getProperty(prop) != null) {
 			systemProperty prop, System.getProperty(prop)
 		}

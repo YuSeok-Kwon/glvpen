@@ -115,26 +115,26 @@
 		    
 				<!-- 원정팀 -->
 				<div class="d-flex align-items-center justify-content-center justify-content-md-end gap-2 order-0 order-md-0" style="flex: 1;">
-				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" class="table-team-logo mb-1 me-2">  
-				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-5 fs-md-4 fw-bold">기아 타이거즈</span>
-				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-5 fs-md-4">기아 타이거즈</span>
-				
-				  <span th:if="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-4 fs-md-3 fw-bold text-dark">3</span>
-				  <span th:unless="${game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-4 fs-md-3 text-dark">3</span>
+				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" class="table-team-logo mb-1 me-2">
+				  <span th:if="${game.awayTeamScore != null and game.homeTeamScore != null and game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-5 fs-md-4 fw-bold">기아 타이거즈</span>
+				  <span th:unless="${game.awayTeamScore != null and game.homeTeamScore != null and game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamName}" class="fs-5 fs-md-4">기아 타이거즈</span>
+
+				  <span th:if="${game.awayTeamScore != null and game.homeTeamScore != null and game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore}" class="fs-4 fs-md-3 fw-bold text-dark">3</span>
+				  <span th:unless="${game.awayTeamScore != null and game.homeTeamScore != null and game.awayTeamScore > game.homeTeamScore}" th:text="${game.awayTeamScore != null ? game.awayTeamScore : '-'}" class="fs-4 fs-md-3 text-dark">3</span>
 				</div>
-				
+
 				<!-- VS -->
 				<div class="order-1 order-md-1 mx-3 mx-md-4" style="flex: 0 0 auto;">
 				  <span class="text-secondary fs-4 fs-md-3">VS</span>
 				</div>
-				
+
 				<!-- 홈팀 -->
 				<div class="d-flex align-items-center justify-content-center justify-content-md-start gap-2 order-2 order-md-2" style="flex: 1;">
-				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-4 fs-md-3 fw-bold text-dark">6</span>
-				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-4 fs-md-3 text-dark">6</span>
-				
-				  <span th:if="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-5 fs-md-4 fw-bold">롯데 자이언츠 (홈)</span>
-				  <span th:unless="${game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-5 fs-md-4">롯데 자이언츠 (홈)</span>
+				  <span th:if="${game.homeTeamScore != null and game.awayTeamScore != null and game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore}" class="fs-4 fs-md-3 fw-bold text-dark">6</span>
+				  <span th:unless="${game.homeTeamScore != null and game.awayTeamScore != null and game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamScore != null ? game.homeTeamScore : '-'}" class="fs-4 fs-md-3 text-dark">6</span>
+
+				  <span th:if="${game.homeTeamScore != null and game.awayTeamScore != null and game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-5 fs-md-4 fw-bold">롯데 자이언츠 (홈)</span>
+				  <span th:unless="${game.homeTeamScore != null and game.awayTeamScore != null and game.homeTeamScore > game.awayTeamScore}" th:text="${game.homeTeamName + ' (홈)'}" class="fs-5 fs-md-4">롯데 자이언츠 (홈)</span>
 				
 				  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" class="table-team-logo mb-1 me-2">
 				</div>

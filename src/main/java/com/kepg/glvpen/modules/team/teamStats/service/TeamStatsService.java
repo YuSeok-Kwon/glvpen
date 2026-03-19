@@ -31,13 +31,13 @@ public class TeamStatsService {
     private final TeamStatsRepository teamStatsRepository;
     private final JdbcTemplate jdbcTemplate;
 
-    // 배치 Upsert (ON DUPLICATE KEY UPDATE)
+    // 배치 Upsert (ON DUPLICATE KEY UPDATE) — series 포함
     @Transactional
     public void saveBatch(List<TeamStatsDTO> dtos) {
         if (dtos == null || dtos.isEmpty()) return;
         String sql = """
-            INSERT INTO team_stats (teamId, season, category, value, ranking)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO team_stats (teamId, season, category, value, ranking, series)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE value = VALUES(value), ranking = VALUES(ranking)
             """;
         jdbcTemplate.batchUpdate(sql, dtos, 500, (ps, dto) -> {
@@ -51,18 +51,25 @@ public class TeamStatsService {
             } else {
                 ps.setNull(5, java.sql.Types.INTEGER);
             }
+            ps.setString(6, dto.getSeries() != null ? dto.getSeries() : "0");
         });
         log.info("[배치저장] 팀 스탯 {}건 저장 완료", dtos.size());
     }
 
-    // 팀 스탯 저장 또는 업데이트
+    // 팀 스탯 저장 또는 업데이트 (series 포함)
     public void saveOrUpdate(int teamId, int season, String category, double value, Integer ranking) {
-        Optional<TeamStats> optional = teamStatsRepository.findByTeamIdAndSeasonAndCategory(teamId, season, category);
+        saveOrUpdate(teamId, season, category, value, ranking, "0");
+    }
+
+    public void saveOrUpdate(int teamId, int season, String category, double value, Integer ranking, String series) {
+        Optional<TeamStats> optional = teamStatsRepository
+                .findByTeamIdAndSeasonAndCategoryAndSeries(teamId, season, category, series);
 
         TeamStats stat = optional.orElseGet(() -> TeamStats.builder()
                 .teamId(teamId)
                 .season(season)
                 .category(category)
+                .series(series)
                 .build());
 
         stat.setValue(value);

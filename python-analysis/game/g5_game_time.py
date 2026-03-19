@@ -16,7 +16,7 @@ from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
 from game.game_common import (
-    get_team_name, save_chart_json, print_header, print_section, print_stat,
+    get_team_name, save_chart_json, save_analysis_output, print_header, print_section, print_stat,
     safe_float, filter_schedules_by_type, filter_score_boards, parse_game_time,
     output_filename, TEAM_NAMES, LATEST_SEASON, GAME_TYPES,
 )
@@ -160,7 +160,7 @@ def analyze(team_id: int, game_type: str = 'regular'):
         print(f"  {insight}")
 
         fname = output_filename('g5', team_name, LATEST_SEASON, game_type)
-        save_chart_json(fname, charts)
+        save_analysis_output(fname, charts, findings)
     finally:
         db.close()
 

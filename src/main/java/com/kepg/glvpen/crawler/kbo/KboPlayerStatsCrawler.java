@@ -116,6 +116,39 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
         log.info("[KBO 투수] {}시즌 크롤링 완료", season);
     }
 
+    // ==================== 상황별 데이터 재수집 ====================
+
+    /**
+     * 상황별 데이터만 재수집 (정규시즌 한정)
+     * 전체(situationType="") 데이터는 이미 정상 → 스킵
+     * 상황 옵션이 있는 경우에만 수집 (option value != "")
+     */
+    public void crawlSituationOnly(int season) {
+        log.info("=== [상황별 재수집] {}시즌 시작 ===", season);
+
+        // 타자 페이지
+        log.info("[상황별 재수집] 타자 {}페이지 처리", BATTER_PAGE_URLS.length);
+        for (int pageIdx = 0; pageIdx < BATTER_PAGE_URLS.length; pageIdx++) {
+            String url = BATTER_PAGE_URLS[pageIdx];
+            String[] categories = BATTER_PAGE_CATS[pageIdx];
+            String pageLabel = "타자페이지" + (pageIdx + 1) + "(상황별)";
+            log.info("[{}] URL: {}, 카테고리 {}개", pageLabel, url, categories.length);
+            crawlPlayerStatsPage(season, url, categories, pageLabel, true, true);
+        }
+
+        // 투수 페이지
+        log.info("[상황별 재수집] 투수 {}페이지 처리", PITCHER_PAGE_URLS.length);
+        for (int pageIdx = 0; pageIdx < PITCHER_PAGE_URLS.length; pageIdx++) {
+            String url = PITCHER_PAGE_URLS[pageIdx];
+            String[] categories = PITCHER_PAGE_CATS[pageIdx];
+            String pageLabel = "투수페이지" + (pageIdx + 1) + "(상황별)";
+            log.info("[{}] URL: {}, 카테고리 {}개", pageLabel, url, categories.length);
+            crawlPlayerStatsPage(season, url, categories, pageLabel, false, true);
+        }
+
+        log.info("=== [상황별 재수집] {}시즌 완료 ===", season);
+    }
+
     // ==================== 수비 기록 크롤링 ====================
 
     public void crawlDefenseStats(int season) {
@@ -239,13 +272,23 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
     // ==================== 타자/투수 공통 크롤링 로직 ====================
 
     /**
+     * 기존 호환: situationOnly=false
+     */
+    private void crawlPlayerStatsPage(int season, String url, String[] categories,
+                                       String pageLabel, boolean isBatter) {
+        crawlPlayerStatsPage(season, url, categories, pageLabel, isBatter, false);
+    }
+
+    /**
      * 하나의 URL 페이지에 대해 팀×시리즈×상황 전체 조합 순회
      * 드롭다운 option을 페이지에서 동적으로 읽어옴
      *
      * 핵심: 팀마다 URL을 새로 네비게이션하여 ASP.NET PostBack 누적 손상 방지
+     *
+     * @param situationOnly true이면 정규시즌(series="0")의 상황 옵션(value!="")만 수집
      */
     private void crawlPlayerStatsPage(int season, String url, String[] categories,
-                                       String pageLabel, boolean isBatter) {
+                                       String pageLabel, boolean isBatter, boolean situationOnly) {
         Playwright pw = null;
         Browser browser = null;
         Page page = null;
@@ -285,6 +328,9 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
                         String seriesLabel = seriesOpt[1];
                         boolean isRegularSeason = "0".equals(seriesValue);
 
+                        // situationOnly 모드: 정규시즌만 처리
+                        if (situationOnly && !isRegularSeason) continue;
+
                         if (!selectDropdown(page, SEL_SERIES_DROPDOWN_RECORD, seriesValue)) continue;
 
                         if (!ensureTeamSelected(page, url, season, teamValue, seriesValue, null)) continue;
@@ -302,13 +348,19 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
                             List<String[]> sitOptions = getDropdownOptions(page, SEL_SITUATION_DROPDOWN);
 
                             if (sitOptions.isEmpty()) {
-                                totalRows += paginateAndCollectStats(
-                                        page, season, effectiveCats, false, seriesValue, "", isBatter);
+                                // situationOnly 모드: 상황 드롭다운이 없으면 스킵
+                                if (!situationOnly) {
+                                    totalRows += paginateAndCollectStats(
+                                            page, season, effectiveCats, false, seriesValue, "", isBatter);
+                                }
                             } else {
                                 for (String[] sitOpt : sitOptions) {
                                     String sitValue = sitOpt[0];
                                     String sitLabel = sitOpt[1];
                                     boolean hasSitCol = !sitValue.isEmpty();
+
+                                    // situationOnly 모드: 전체(value="")는 스킵
+                                    if (situationOnly && sitValue.isEmpty()) continue;
 
                                     selectDropdown(page, SEL_SITUATION_DROPDOWN, sitValue);
 
@@ -347,9 +399,9 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
     private int paginateAndCollectStats(Page page, int season, String[] categories,
                                          boolean hasSitCol, String seriesCode,
                                          String sitCode, boolean isBatter) {
-        int dataOffset = hasSitCol ? 4 : 3;
         int totalRows = 0;
         int pageNum = 1;
+        int dataOffset = -1; // 첫 페이지에서 동적 감지
 
         List<BatterStatsDTO> batterBatch = isBatter ? new ArrayList<>() : null;
         List<PitcherStatsDTO> pitcherBatch = !isBatter ? new ArrayList<>() : null;
@@ -358,6 +410,11 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
             Document doc = getJsoupDocument(page);
             Elements rows = findDataRows(doc);
             if (rows.isEmpty()) break;
+
+            // 첫 페이지에서 헤더 기반으로 dataOffset 동적 감지
+            if (dataOffset < 0) {
+                dataOffset = detectDataOffset(doc, categories[0], hasSitCol);
+            }
 
             for (Element row : rows) {
                 try {
@@ -371,7 +428,8 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
                     int ranking = parseInt(cells.get(0));
                     String playerName = cells.get(1).text().trim();
                     String teamName = cells.get(2).text().trim();
-                    String sitValue = hasSitCol ? cells.get(3).text().trim() : "";
+                    // 실제 감지된 dataOffset이 4일 때만 상황값 컬럼 존재
+                    String sitValue = (dataOffset >= 4) ? cells.get(3).text().trim() : "";
 
                     if (playerName.isEmpty() || teamName.isEmpty()) continue;
 
@@ -387,7 +445,7 @@ public class KboPlayerStatsCrawler extends AbstractPlaywrightCrawler {
                         if (cellIdx >= cells.size()) break;
 
                         String cat = categories[i];
-                        double value = parseDouble(cells.get(cellIdx));
+                        double value = "IP".equals(cat) ? parseInnings(cells.get(cellIdx)) : parseDouble(cells.get(cellIdx));
 
                         if (isBatter) {
                             batterBatch.add(BatterStatsDTO.builder()

@@ -5,22 +5,26 @@
 
 <head>
   <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
     body {
-      background-image: url('/static/game/ground.jpg');
+      background-image: url('/static/game/bg2.png');
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      background-attachment: fixed;
       position: relative;
       height: auto;
     }
-    
+
     .overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0, 0, 0, 0.65);
       pointer-events: none;
       z-index: -1;
     }
@@ -29,57 +33,89 @@
     .base-point {
       position: absolute;
       font-size: 1.4rem;
-	  font-weight: bold;
-	  color: white;
-	  background: transparent;
-	  opacity: 1;
-	}
-
+      font-weight: bold;
+      color: white;
+      background: transparent;
+      opacity: 1;
+    }
     .runner-icon {
       position: absolute;
-      font-size: 3rem;
+      font-size: 3.5rem;
       transition: top 0.2s ease, left 0.2s ease;
       transform: translate(-50%, -50%);
       z-index: 10;
     }
-    
-	.play-by-play-wrapper {
-	  width: 1200px;
-	  height: 120px;
-	  margin: 2rem auto;
-	  background-color: rgba(0, 0, 0, 0.6);
-	  padding: 1rem;
-	  border-radius: 1rem;
-	  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
-	  border: 2px solid #ffffff44;
-	  overflow: hidden; /* 자식 요소가 넘치지 않게 강제 차단 */
-	}
-	
-	#play-by-play {
-	  height: 80px;
-	  overflow-y: auto; 
-	  font-size: 1.1rem;
-	  color: white;
-	  line-height: 1;
-	  font-family: 'Noto Sans KR', sans-serif;
-	  white-space: normal;
-	  word-break: break-word;
-	  padding-right: 4px;
-	}
-	#play-by-play::-webkit-scrollbar {
-	  display: none;
-	}
-	/* 라인업 카드 */
-	.card-mini {
-	  font-size: 0.75rem;
-	  padding: 4px 8px;
-	  width : 90px;
-	  border: 1px solid #ccc;
-	  border-radius: 6px;
-	  background-color: #f8f9fa;
-	  z-index: 10;
-	  box-shadow: 1px 1px 4px rgba(0,0,0,0.2);
-	}
+
+    /* 중계 */
+    .play-by-play-wrapper {
+      width: 100%;
+      max-width: 900px;
+      height: 140px;
+      margin: 2rem auto;
+      margin-bottom: 4rem;
+      background-color: rgba(0, 0, 0, 0.6);
+      padding: 1rem 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+      border: 2px solid #ffffff44;
+      overflow: hidden;
+      position: relative;
+      z-index: 5;
+      text-align: center;
+    }
+    #play-by-play {
+      height: 90px;
+      overflow-y: auto;
+      font-size: 1.1rem;
+      color: white;
+      line-height: 1.4;
+      font-family: 'Noto Sans KR', sans-serif;
+      white-space: normal;
+      word-break: break-word;
+      padding: 4px 16px;
+      text-align: center;
+    }
+    #play-by-play::-webkit-scrollbar { display: none; }
+
+    /* 라인업 카드 */
+    .card-mini {
+      font-size: 0.75rem;
+      padding: 4px 8px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background-color: #f8f9fa;
+      z-index: 10;
+      box-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+      margin-bottom: 6px;
+    }
+
+    /* 라인업 박스: 화면 양쪽에 고정 */
+    .lineup-box {
+      position: fixed;
+      top: 80px;
+      width: 180px;
+      z-index: 20;
+    }
+    #user-lineup-box { left: 340px; }
+    #bot-lineup-box  { right: 340px; }
+
+    /* 스코어보드 */
+    #score-board {
+      padding: 0 220px;
+    }
+    #score-board table {
+      width: 100%;
+      margin: 0 auto;
+      font-size: 1.1rem;
+    }
+
+    .content.container,
+    .content.container-fluid {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      max-width: 100%;
+    }
   </style>
 </head>
 
@@ -88,14 +124,16 @@
        th:attr="data-schedule-id=${scheduleId}, data-user-id=${userId}">
   </div>
 
-  <div class="container-fluid d-flex flex-column" style="position: relative;">
-    <div class="text-center mt-5">
+  <div style="position: relative; width: 100%; padding: 0; z-index: 1;">
+    <!-- 버튼 영역 -->
+    <div class="text-center mt-3">
 		<div id="game-button-area" class="text-center">
 		  <button id="start-game-btn" class="btn btn-warning fw-bold px-4 py-2">🏁 경기 시작</button>
 		</div>
 	</div>
+
     <!-- 스코어보드 -->
-    <div id="score-board" class="text-white text-center pt-3">
+    <div id="score-board" class="text-white text-center pt-2">
       <table class="table table-bordered table-sm text-white mb-0" style="background-color: rgba(0,0,0,0.3);">
         <thead>
           <tr>
@@ -120,60 +158,52 @@
         </tbody>
       </table>
     </div>
-    
-    <div class="d-flex justify-content-between">
-        <!-- 왼쪽: 유저 라인업 -->
-        <div id="user-lineup-box"
-             class="position-relative"
-             style="width: 1000px; height: 600px; margin-top: 10px; overflow: visible;"></div>
-             
-        <!-- 중계 텍스트 영역 -->
-        <div class="play-by-play-wrapper mx-5">
-           <h5 class="text-white">📺 중계 방송</h5>
-          <div id="play-by-play"></div>
-        </div>
-        
-        <!-- 오른쪽: 봇 라인업 -->
-        <div id="bot-lineup-box"
-             class="position-relative"
-             style="width: 1000px; height: 600px; margin-top: 10px; overflow: visible;"></div>
+
+    <!-- 왼쪽 고정: 유저 라인업 -->
+    <div id="user-lineup-box" class="lineup-box">
+      <h6 class="text-white text-center fw-bold mb-2" style="background: rgba(0,0,0,0.5); padding: 4px; border-radius: 6px;">🧑 내 라인업</h6>
     </div>
-    
-    <!-- 경기장 영역 (라인업 + 루 + 주자) -->
-    <div id="field" class="d-flex justify-content-center align-items-top">
-      
-      <!-- 중앙: 야구장 구성 -->
-      <div id="stadium" class="position-relative" style="width: 400px; height: 400px;">
-        <!-- 루 위치 -->
-        <div id="base-home" class="base-point" style="top: -30%; left: 43%;">
-            <img src="/static/game/home.png" width="35"/>
+
+    <!-- 오른쪽 고정: 봇 라인업 -->
+    <div id="bot-lineup-box" class="lineup-box">
+      <h6 class="text-white text-center fw-bold mb-2" style="background: rgba(0,0,0,0.5); padding: 4px; border-radius: 6px;">🤖 BOT 라인업</h6>
+    </div>
+
+    <!-- 중앙: 경기장 -->
+    <div class="d-flex justify-content-center" style="margin-top: 20px;">
+      <div id="stadium" class="position-relative" style="width: 500px; height: 420px;">
+        <div id="base-home" class="base-point" style="top: 70%; left: 43%;">
+            <img src="/static/game/%ED%99%88%ED%94%8C%EB%A0%88%EC%9D%B4%ED%8A%B8.png" width="45"/>
         </div>
-        <div id="base-1" class="base-point" style="top: -65%; left: 86%;">
-            <img src="/static/game/base.png" width="35"/>
+        <div id="base-1" class="base-point" style="top: 35%; left: 86%;">
+            <img src="/static/game/1%2C2%2C3%EB%A3%A8.png" width="45"/>
         </div>
-        <div id="base-2" class="base-point" style="top: -100%; left: 43%;">
-            <img src="/static/game/base.png" width="35"/>
+        <div id="base-2" class="base-point" style="top: 0%; left: 43%;">
+            <img src="/static/game/1%2C2%2C3%EB%A3%A8.png" width="45"/>
         </div>
-        <div id="base-3" class="base-point" style="top: -65%; left:0%;">
-            <img src="/static/game/base.png" width="35"/>
+        <div id="base-3" class="base-point" style="top: 35%; left: 0%;">
+            <img src="/static/game/1%2C2%2C3%EB%A3%A8.png" width="45"/>
         </div>
 
-        <!-- 유저 팀 주자 -->
-		<div id="runner-1" class="runner-icon" style="display:none;">🧍‍♂️</div>
-		<div id="runner-2" class="runner-icon" style="display:none;">🏃‍♂️</div>
-		<div id="runner-3" class="runner-icon" style="display:none;">🏃</div>
-		<div id="runner-4" class="runner-icon" style="display:none;">🧍‍♂️</div>
+        <div id="runner-1" class="runner-icon" style="display:none;">🧍‍♂️</div>
+        <div id="runner-2" class="runner-icon" style="display:none;">🏃‍♂️</div>
+        <div id="runner-3" class="runner-icon" style="display:none;">🏃</div>
+        <div id="runner-4" class="runner-icon" style="display:none;">🧍‍♂️</div>
         <div id="runner-5" class="runner-icon" style="display:none;">🏃‍♂️</div>
         <div id="runner-6" class="runner-icon" style="display:none;">🏃</div>
-		
-		<!-- 봇 팀 주자 -->
-		<div id="bot-runner-1" class="runner-icon" style="display:none;">🤖</div>
-		<div id="bot-runner-2" class="runner-icon" style="display:none;">👾</div>
-		<div id="bot-runner-3" class="runner-icon" style="display:none;">🛸</div>
-      </div>
 
-      
-     </div>
+        <div id="bot-runner-1" class="runner-icon" style="display:none;">🤖</div>
+        <div id="bot-runner-2" class="runner-icon" style="display:none;">👾</div>
+        <div id="bot-runner-3" class="runner-icon" style="display:none;">🛸</div>
+      </div>
+    </div>
+
+    <!-- 중계 텍스트 -->
+    <div class="play-by-play-wrapper">
+       <h5 class="text-white">📺 중계 방송</h5>
+      <div id="play-by-play"></div>
+    </div>
+
     <!-- 문제 출제 모달 -->
 	<div class="modal fade" id="eventQuestionModal" tabindex="-1" aria-hidden="true">
 	  <div class="modal-dialog modal-dialog-centered">
@@ -212,6 +242,7 @@
 	let gameQuestions = [];     // 5문제 저장
 	let questionIndex = 0;      // 현재까지 보여준 문제 수
 	let isPaused = false;      // 경기 일시정지
+	let gameEnded = false;     // 경기 즉시 종료 플래그
 	
 	const overlay = document.querySelector('.overlay');
 	
@@ -237,14 +268,6 @@
 	  // 기존 시작 버튼 제거
 	  buttonArea.innerHTML = '';
 
-	  // 일시정지 버튼
-	  const pauseBtn = document.createElement('button');
-	  pauseBtn.className = 'btn btn-danger fw-bold me-2';
-	  pauseBtn.innerText = '⏸ 게임 일시정지';
-	  pauseBtn.onclick = function () {
-	    isPaused = true;
-	  };
-
 	  // 라인업 구성 버튼
 	  const lineupBtn = document.createElement('button');
 	  lineupBtn.className = 'btn btn-secondary fw-bold me-2';
@@ -258,17 +281,45 @@
 		resultBtn.className = 'btn btn-success fw-bold';
 		resultBtn.innerText = '📊 게임 결과보기';
 		resultBtn.onclick = function () {
-		  if (scheduleId && userId) {
-		    window.location.href = `/game/result-view?scheduleId=${scheduleId}&userId=${userId}`;
-		  } else {
-		    alert('게임 정보를 불러올 수 없습니다.');
+		  gameEnded = true;
+		  isPaused = false;
+
+		  // 스코어보드 전체 채우기
+		  for (let i = 0; i < gameResult.length; i++) {
+		    const inning = gameResult[i];
+		    document.getElementById('u' + i).innerText = inning.userScore;
+		    document.getElementById('b' + i).innerText = inning.botScore;
 		  }
+		  let uSum = 0, bSum = 0;
+		  for (let i = 0; i < gameResult.length; i++) {
+		    uSum += gameResult[i].userScore;
+		    bSum += gameResult[i].botScore;
+		  }
+		  document.getElementById('uTotal').innerText = uSum;
+		  document.getElementById('bTotal').innerText = bSum;
+
+		  resetRunners();
+
+		  // 모달 열려있으면 닫기
+		  const modalEl = document.getElementById('eventQuestionModal');
+		  const openModal = bootstrap.Modal.getInstance(modalEl);
+		  if (openModal) openModal.hide();
+
+		  showGameResult();
 		};
 
+	  // 클래식 시뮬 홈 버튼
+	  const homeBtn = document.createElement('button');
+	  homeBtn.className = 'btn btn-outline-light fw-bold ms-2';
+	  homeBtn.innerText = '🏠 시뮬레이션 홈';
+	  homeBtn.onclick = function () {
+	    window.location.href = '/game/classic-sim-mode';
+	  };
+
 	  // 버튼 추가
-	  buttonArea.appendChild(pauseBtn);
 	  buttonArea.appendChild(lineupBtn);
 	  buttonArea.appendChild(resultBtn);
+	  buttonArea.appendChild(homeBtn);
 	});
 	
 	// 라인업 카드 렌더링 함수 (기본 또는 봇 여부 구분)
@@ -278,7 +329,11 @@
 		    console.error("renderLineup 타겟 요소를 찾을 수 없습니다:", targetId);
 		    return;
 		  }
+
+	  // 제목(h6)은 유지하고 카드만 초기화
+	  const title = container.querySelector('h6');
 	  container.innerHTML = '';
+	  if (title) container.appendChild(title);
 
 	  const positionOrder = {
 	    'C': 1, '1B': 2, '2B': 3, '3B': 4, 'SS': 5,
@@ -294,18 +349,11 @@
 	  for (let i = 0; i < lineup.length; i++) {
 	    const card = lineup[i];
 	    const div = document.createElement('div');
-	    div.className = 'card-mini text-center bg-light border rounded position-absolute p-1';
+	    div.className = 'card-mini text-center bg-light border rounded p-1';
 	    div.innerHTML =
-	      '<div class="fw-bold">' + card.playerName + '</div>' +
-	      '<div>' + card.position + '</div>' +
-	      '<div class="text-muted">' + card.grade + '등급</div>';
-
-	    div.style.top = (i * 70) + 'px';
-	    div.style.left = (i * 30) + 'px';
-	    if (isBot) {
-	      div.style.left = 'auto';
-	      div.style.right = (i * 30) + 'px';
-	    }
+	      '<div class="fw-bold">' + (card.playerName || '???') + '</div>' +
+	      '<div>' + (card.position || '') + '</div>' +
+	      '<div class="text-muted">' + (card.grade || '') + '등급</div>';
 
 	    container.appendChild(div);
 	  }
@@ -477,10 +525,10 @@
 	    container.appendChild(line);
 	    container.scrollTop = container.scrollHeight;
 	
-	    let delayTime = 2000;
-	    if (result === '홈런') delayTime = 6000;
-	    else if (result === '2루타' || result === '3루타') delayTime = 4000;
-	    else if (result === '안타' || result === '볼넷') delayTime = 3000;
+	    let delayTime = 1500;
+	    if (result === '홈런') delayTime = 4600;
+	    else if (result === '2루타' || result === '3루타') delayTime = 3000;
+	    else if (result === '안타' || result === '볼넷') delayTime = 2300;
 	
 	    setTimeout(resolve, delayTime);
 	  });
@@ -489,7 +537,7 @@
 	// 이닝 사이 짧은 딜레이
 	function delayInningBreak() {
 	  return new Promise(function (resolve) {
-	    setTimeout(resolve, 1000);
+	    setTimeout(resolve, 770);
 	  });
 	}
 	
@@ -517,6 +565,7 @@
 	  let userSum = 0;
 	  let botSum = 0;
 	  for (let i = 0; i < gameResult.length; i++) {
+	    if (gameEnded) return;
 	    const inning = gameResult[i];
 	
 	    // --- 이닝 시작 시 문제 출제 조건
@@ -544,6 +593,7 @@
 	    // 유저 공격
 	    resetRunners();
 	    for (let j = 0; j < inning.userPlays.length; j++) {
+	      if (gameEnded) return;
 	      const play = inning.userPlays[j];
 	      const replaced = replaceBatterName(play, userLineup);
 	      handlePlayResult(replaced.split(': ')[1], 'user');
@@ -578,6 +628,7 @@
 	    // 봇 공격
 	    resetRunners();
 	    for (let j = 0; j < inning.botPlays.length; j++) {
+	      if (gameEnded) return;
 	      const play = inning.botPlays[j];
 	      const replaced = replaceBatterName(play, botLineup);
 	      handlePlayResult(replaced.split(': ')[1], 'bot');
@@ -590,6 +641,7 @@
 	  }
 	
 	  await delayAndLog('경기 종료');
+	  showGameResult();
 	}
 	
 	// 각 상황별 주자 처리
@@ -714,7 +766,57 @@
 	    });
 	  }
 	}
-	
+
+	// 경기 종료 후 MVP, 하이라이트 표시
+	function showGameResult() {
+	  const wrapper = document.querySelector('.play-by-play-wrapper');
+	  wrapper.style.height = 'auto';
+	  wrapper.style.maxHeight = '400px';
+	  wrapper.style.overflow = 'auto';
+	  const container = document.getElementById('play-by-play');
+	  container.style.height = 'auto';
+	  container.style.maxHeight = 'none';
+	  container.style.overflowY = 'auto';
+
+	  // 스코어보드에서 합계 읽기
+	  const uSum = parseInt(document.getElementById('uTotal').innerText || 0);
+	  const bSum = parseInt(document.getElementById('bTotal').innerText || 0);
+
+	  $.ajax({
+	    url: '/api/game-results/summary',
+	    method: 'GET',
+	    data: { scheduleId: scheduleId, userId: userId },
+	    success: function(data) {
+	      const resultText = data.userScore > data.botScore ? '승리!' :
+	                         (data.userScore < data.botScore ? '패배...' : '무승부');
+
+	      let html = '<p style="font-size:1.5rem;font-weight:bold;">경기 종료 ' +
+	                 data.userScore + ' : ' + data.botScore + '</p>' +
+	                 '<p style="font-size:2rem;">' + resultText + '</p>';
+
+	      if (data.mvp && data.mvp !== '없음') {
+	        html += '<p style="font-size:1.1rem;color:#ffc107;font-weight:bold;">MVP: ' + data.mvp + '</p>';
+	      }
+
+	      if (data.gameLog && data.gameLog.length > 0) {
+	        html += '<hr style="border-color:#ffffff44;">' +
+	                '<p style="font-size:1rem;color:#ffc107;font-weight:bold;">하이라이트</p>';
+	        for (let k = 0; k < data.gameLog.length; k++) {
+	          html += '<p style="font-size:0.95rem;">' + data.gameLog[k] + '</p>';
+	        }
+	      }
+
+	      container.innerHTML = html;
+	    },
+	    error: function() {
+	      const resultText = uSum > bSum ? '승리!' : (uSum < bSum ? '패배...' : '무승부');
+	      container.innerHTML =
+	        '<p style="font-size:1.5rem;font-weight:bold;">경기 종료 ' + uSum + ' : ' + bSum + '</p>' +
+	        '<p style="font-size:2rem;">' + resultText + '</p>';
+	    }
+	  });
+	}
+
 </script>
 </th:block>
 </html>

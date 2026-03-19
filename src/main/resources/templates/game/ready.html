@@ -9,7 +9,6 @@
 	  padding: 0;
 	  width: 100%;
 	  height: 100%;
-	  overflow-x: hidden; /* 좌우 스크롤 방지 */
 	}
 	body {
 	  background: url('/static/game/bg1.png') center center / cover no-repeat fixed;
@@ -57,23 +56,16 @@
 	  z-index: 1;
 	}
 	
-	#user-lineup > div,
-	#bot-lineup > div {
-	  min-width: unset;
-	  max-width: 10%;
-	  box-sizing: border-box;
-	}
-	
-	/* 크기를 줄인 카드 레이아웃 */
+	/* 카드 레이아웃 */
 	.pokemon-card {
-	  width: 100%;
-	  max-width: 130px;
-	  height: 220px;    
+	  width: 150px;
+	  height: 260px;
 	  perspective: 1000px;
 	  margin: 0 !important;
-	  font-size: 0.65rem; 
+	  font-size: 0.75rem;
 	  border-radius: 10px;
 	  overflow: hidden;
+	  flex-shrink: 0;
 	}
 	
 	.card-banner {
@@ -109,61 +101,62 @@
 	}
 	
 	.card-front {
-	  background-color: #ffffff10;
-	  color: white;
+	  background-color: rgba(255, 255, 255, 0.9);
+	  color: #222;
 	}
 	.card-stats{
 	  font-size: 0.8rem;
-	  color: black;
+	  color: #333;
 	}
 	.card-back {
-	  background-color: #000000cc;
+	  background-color: rgba(0, 0, 0, 0.88);
 	  color: white;
 	  transform: rotateY(180deg);
 	}
 	#user-lineup,
-#bot-lineup {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
-  justify-items: center;
-  width: 100%;
-}
-	
+	#bot-lineup {
+	  display: flex !important;
+	  flex-wrap: nowrap !important;
+	  justify-content: center;
+	  gap: 20px;
+	  width: 100%;
+	  padding: 0 24px;
+	}
+
 	#user-lineup > div,
 	#bot-lineup > div {
-	  flex: 1 1 10%;
-	  max-width: 10%; 
-	  min-width: 100px; 
-}
+	  flex: 0 0 auto;
+	  min-width: 150px;
+	  max-width: 160px;
+	}
   </style>
 </head>
 <th:block layout:fragment="contents">
-    <main class="main-wrapper" data-user-id="[[${session.userId}]]">
+    <main class="main-wrapper" data-user-id="[[${userId}]]">
       <div class="overlay"></div>
 		<div class="content container-fluid">
 
 		  <!-- 페이지 제목 -->
 		  <div class="text-center pt-4 pb-2" style="position:relative; z-index:1;">
 		    <a href="/game/classic-sim-mode" class="text-white text-decoration-none small">&larr; 시뮬레이션 메뉴</a>
-		    <h2 class="text-white fw-bold mt-2 mb-0" style="text-shadow: 0 2px 8px rgba(0,0,0,0.4);">GAME READY</h2>
+		    <h2 class="text-white fw-bold mt-2 mb-0" style="text-shadow: 0 2px 8px rgba(0,0,0,0.4); background: rgba(0,0,0,0.5); display: inline-block; padding: 6px 24px; border-radius: 8px;">GAME READY</h2>
 		    <p class="text-white-50 small mb-0">라인업을 확인하고 게임을 시작하세요</p>
 		  </div>
 
 		  <!-- 유저 라인업 -->
 		  <div class="pt-3">
 		    <h3 class="text-center text-white mb-2 d-flex justify-content-center align-items-center gap-3">
-			  내 라인업
+			  <span style="background: rgba(0,0,0,0.5); padding: 4px 16px; border-radius: 6px;">내 라인업</span>
                 <a href="/game/lineup-view" class="btn btn-light btn-sm ms-3">라인업 구성하러가기</a>
             </h3>
-		    <div class="text-white text-center mb-1" id="user-summary"></div>
-            <div class="d-flex flex-wrap justify-content-center" id="user-lineup"></div>
+		    <div class="text-white text-center mb-1" id="user-summary" style="background: rgba(0,0,0,0.4); display: inline-block; padding: 4px 16px; border-radius: 6px; margin: 0 auto;"></div>
+            <div id="user-lineup"></div>
 		  </div>
 		
 		  <!-- 봇 라인업 -->
 		  <div class="">
 		    <div class="d-flex justify-content-center align-items-center text-center text-white mb-2">
-		    <h3 class="text-center text-white mb-2">BOT 라인업</h3>
+		    <h3 class="text-center text-white mb-2"><span style="background: rgba(0,0,0,0.5); padding: 4px 16px; border-radius: 6px;">BOT 라인업</span></h3>
 			  <label for="difficulty-select" class="mx-2">난이도</label>
 			  <select id="difficulty-select" class="form-select d-inline-block w-auto">
 			    <option value="easy">쉬움</option>
@@ -171,8 +164,8 @@
 			    <option value="hard">어려움</option>
 			  </select>
 			</div>
-		    <div class="text-white text-center mb-1" id="bot-summary"></div>
-            <div class="d-flex flex-wrap justify-content-center" id="bot-lineup"></div>
+		    <div class="text-white text-center mb-1" id="bot-summary" style="background: rgba(0,0,0,0.4); display: inline-block; padding: 4px 16px; border-radius: 6px; margin: 0 auto;"></div>
+            <div id="bot-lineup"></div>
 		  </div>
 		
 		  <!-- 시작 버튼 -->
@@ -186,7 +179,7 @@
 
 <th:block layout:fragment="script">
 <script th:inline="javascript">
-    const userId = [[${session.userId}]];
+    const userId = [[${userId}]];
 </script>
 <script>
   let selectedDifficulty = 'normal';
@@ -254,7 +247,7 @@
 	function createCardElement(card, orderNum) {
 	  var wrapper = document.createElement('div');
 	  wrapper.className = 'd-flex flex-column align-items-center mb-3';
-	  wrapper.style.minWidth = '180px';
+	  wrapper.style.minWidth = '150px';
 	
 	  var flipWrapper = document.createElement('div');
 	  flipWrapper.className = 'pokemon-card card card-flip';
@@ -280,12 +273,12 @@
 	  }
 	
 	  var info = document.createElement('div');
-	  info.className = 'card-info text-center text-black mt-5';
+	  info.className = 'card-info text-center mt-5';
 	  info.innerHTML = '<h5 class="player-name">' + card.playerName + '</h5>';
 	  front.appendChild(info);
 	
 	  var overall = document.createElement('div');
-	  overall.className = 'text-center fw-bold text-black fs-6';
+	  overall.className = 'text-center fw-bold fs-6';
 	  overall.innerHTML = '<strong>Overall: ' + card.overall + '</strong>';
 	  front.appendChild(overall);
 	
@@ -321,7 +314,7 @@
 	
 	  var orderLabel = document.createElement('div');
 	  orderLabel.className = 'mt-2 text-white fw-bold';
-	  orderLabel.innerText = orderNum === '10' ? '투수' : orderNum + '번 타자';
+	  orderLabel.innerText = (orderNum == 10) ? '투수' : orderNum + '번 타자';
 	  wrapper.appendChild(orderLabel);
 	
 	  return wrapper;

@@ -13,7 +13,7 @@ from common.db_connector import DBConnector
 from common.chart_builder import ChartBuilder
 from common.stats_utils import StatsUtils
 from team.team_common import (
-    get_team_name, save_chart_json, print_header, print_section, print_stat,
+    get_team_name, save_chart_json, save_analysis_output, print_header, print_section, print_stat,
     safe_float, LATEST_SEASON, TEAM_NAMES
 )
 
@@ -141,7 +141,7 @@ def analyze(team_id: int):
         print_section('인사이트')
         print(f"  {insight}")
 
-        save_chart_json(f't5_{team_name}_{LATEST_SEASON}.json', charts)
+        save_analysis_output(f't5_{team_name}_{LATEST_SEASON}.json', charts, findings, stats_dict)
     finally:
         db.close()
 
