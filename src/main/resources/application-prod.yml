@@ -1,3 +1,8 @@
+# ============================================
+# glvpen 프로덕션 프로필 (AWS EC2 + RDS)
+# ============================================
+
+# --- 스케줄링 활성화 ---
 crawl:
   scheduled:
     enabled: true
@@ -5,16 +10,64 @@ crawl:
 analysis:
   scheduled:
     enabled: true
+  python:
+    path: python3
+    base-dir: /opt/glvpen/python-analysis
 
+# --- Spring Boot ---
 spring:
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/glvpen
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/glvpen?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
   thymeleaf:
     cache: true
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
 
-# security-variable.yml 대체 (AWS 환경변수로 주입)
+# --- 서버 ---
+server:
+  port: 8080
+  shutdown: graceful
+  tomcat:
+    max-threads: 100
+    accept-count: 50
+    connection-timeout: 10000
+
+# --- Graceful Shutdown ---
+spring.lifecycle:
+  timeout-per-shutdown-phase: 30s
+
+# --- 로깅 ---
+logging:
+  level:
+    root: INFO
+    com.kepg.glvpen: INFO
+    com.kepg.glvpen.crawler: INFO
+    p6spy: OFF
+    org.hibernate.SQL: WARN
+  file:
+    name: /opt/glvpen/logs/glvpen.log
+  logback:
+    rollingpolicy:
+      max-file-size: 50MB
+      max-history: 30
+      total-size-cap: 1GB
+
+# --- security-variable.yml 대체 (환경변수 주입) ---
 mysql:
   password: ${DB_PASSWORD}
 

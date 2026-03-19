@@ -13,7 +13,17 @@ processResources {
 }
 
 group = 'com.kepg'
-version = '0.0.1-SNAPSHOT'
+version = '1.0.0'
+
+// WAR 플러그인 사용 시 bootJar도 활성화 (EC2 배포용)
+bootJar {
+	enabled = true
+	archiveFileName = 'glvpen.jar'
+}
+
+bootWar {
+	enabled = true
+}
 
 java {
 	toolchain {
