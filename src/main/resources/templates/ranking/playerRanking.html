@@ -54,7 +54,12 @@
                     <option value="DH">DH (지명타자)</option>
                 </select>
             </form>
-            <button id="filterQualifiedBtn" class="btn btn-accent">규정 선수만 보기 / 현재 : 전체선수</button>
+            <select id="qualifiedFilter" class="form-select" style="width: auto;" onchange="filterByQualified()">
+                <option value="0">전체 선수</option>
+                <option value="100">규정 선수</option>
+                <option value="75">규정 75%</option>
+                <option value="50">규정 50%</option>
+            </select>
 
             <!-- 선수 검색 -->
             <div class="d-flex align-items-center">
@@ -97,7 +102,7 @@
 	  });
 	})();
 
-	let isQualifiedFilterOn = false;
+	let qualifiedLevel = 0;
 	let currentTab = 'batter';
 	let currentBatterData = [];
 	let currentPitcherData = [];
@@ -137,9 +142,9 @@
 
 	        // 규정 선수 필터: 타자/투수 탭만 표시
 	        if (tab === 'batter' || tab === 'pitcher') {
-	            $('#filterQualifiedBtn').removeClass('d-none');
+	            $('#qualifiedFilter').removeClass('d-none');
 	        } else {
-	            $('#filterQualifiedBtn').addClass('d-none');
+	            $('#qualifiedFilter').addClass('d-none');
 	        }
 	    }
 
@@ -153,19 +158,7 @@
 	    var selectedValue = getSelectedSeason();
 	    $('select[name="season"]').val(selectedValue);
 
-	 	// 규정 선수 보기
-		$('#filterQualifiedBtn').click(function() {
-		    isQualifiedFilterOn = !isQualifiedFilterOn;
-
-		    if (isQualifiedFilterOn) {
-		        $(this).text('전체 선수 보기 / 현재 : 규정선수');
-		    } else {
-		        $(this).text('규정 선수만 보기 / 현재 : 전체선수');
-		    }
-
-		    const selectedSeason = $('select[name="season"]').val();
-		    fetchPlayerRanking(selectedSeason);
-		});
+	 	// 규정 선수 필터: select 변경 시 자동 조회 (switchTab에서 표시/숨김 처리)
 	});
 
 	// 시즌 변경
@@ -173,6 +166,13 @@
 	    var selectedValue = $(selectElement).val();
 	    $('.season-select').val(selectedValue);
 	    fetchPlayerRanking(selectedValue);
+	}
+
+	// 규정 선수 필터 변경
+	function filterByQualified() {
+	    qualifiedLevel = parseInt($('#qualifiedFilter').val());
+	    const selectedSeason = $('select[name="season"]').val();
+	    fetchPlayerRanking(selectedSeason);
 	}
 
 	// 초기 시즌 값 설정
@@ -240,7 +240,8 @@
 	        	season: season,
 	        	sort: currentSort,
 	        	direction: currentDirection,
-	        	qualified: isQualifiedFilterOn,
+	        	qualified: qualifiedLevel > 0,
+	        	qualifiedLevel: qualifiedLevel,
 	        	},
 	        success: function(data) {
 	            renderTopBatterList(data.topBatters);
@@ -319,7 +320,8 @@
 	            season: season,
 	            sort: sortKey,
 	            direction: newDirection,
-	            qualified: isQualifiedFilterOn
+	            qualified: qualifiedLevel > 0,
+	            qualifiedLevel: qualifiedLevel
 	        },
 	        success: function(data) {
 	            $('#current-sort').val(sortKey);
@@ -446,7 +448,8 @@
 	            sort: sortKey,
 	            direction: newDirection,
 	            type: 'pitcher',
-	            qualified: isQualifiedFilterOn
+	            qualified: qualifiedLevel > 0,
+	            qualifiedLevel: qualifiedLevel
 	        },
 	        success: function(data) {
 	            $('#current-sort').val(sortKey);

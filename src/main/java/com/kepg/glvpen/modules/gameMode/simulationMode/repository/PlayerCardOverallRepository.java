@@ -29,6 +29,15 @@ public interface PlayerCardOverallRepository extends JpaRepository<PlayerCardOve
     	    ORDER BY o.overall DESC
     	    """, nativeQuery = true)
     List<PlayerCardOverall> findPitchersBySeason(@Param("season") Integer season);
+
+    // 특정 시즌의 타자 카드 전체를 오버롤 순으로 조회
+    @Query(value = """
+    	    SELECT o.*
+    	    FROM sim_player_card_overall o
+    	    WHERE o.type = 'BATTER' AND o.season = :season
+    	    ORDER BY o.overall DESC
+    	    """, nativeQuery = true)
+    List<PlayerCardOverall> findBattersBySeason(@Param("season") Integer season);
     
     // 특정 시즌+포지션의 타자 카드 전체를 오버롤 순으로 조회
     @Query(value = """

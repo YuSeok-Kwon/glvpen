@@ -159,33 +159,85 @@
     <div class="row justify-content-center gap-3 mt-3"
          style="margin-left: 0 !important; margin-right: 0 !important;">
 
-      <!-- 오늘 전체 KBO 경기 일정 -->
+      <!-- 오늘 전체 경기 일정 (1군/퓨처스 탭) -->
       <div class="col-12 col-lg-6 col-xl-5 mb-4">
         <div class="card border-0 shadow-sm h-100">
           <div class="card-body py-3" style="padding-left: 10px; padding-right: 10px;">
-            <h5 class="card-title text-center fw-bold fs-5 mb-3">오늘의 KBO 전체 경기</h5>
-            <div th:if="${todayAllGames != null and !todayAllGames.isEmpty()}">
-              <div th:each="game : ${todayAllGames}" class="d-flex align-items-center justify-content-between py-2 border-bottom">
-                <div class="d-flex align-items-center gap-2" style="flex: 1;">
-                  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" alt="" style="width: 28px; height: 28px;">
-                  <span class="small fw-bold" th:text="${game.awayTeamName}">원정팀</span>
+
+            <!-- 탭 -->
+            <ul class="nav nav-tabs mb-3 justify-content-center" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold" id="kbo-tab" data-bs-toggle="tab"
+                        data-bs-target="#kbo-games" type="button" role="tab">
+                  1군
+                  <span class="badge bg-secondary ms-1" th:text="${seriesLabel}">정규시즌</span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold" id="futures-tab" data-bs-toggle="tab"
+                        data-bs-target="#futures-games" type="button" role="tab">
+                  퓨처스
+                </button>
+              </li>
+            </ul>
+
+            <!-- 탭 컨텐츠 -->
+            <div class="tab-content">
+
+              <!-- 1군 경기 -->
+              <div class="tab-pane fade show active" id="kbo-games" role="tabpanel">
+                <div th:if="${todayAllGames != null and !todayAllGames.isEmpty()}">
+                  <div th:each="game : ${todayAllGames}" class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2" style="flex: 1;">
+                      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                      <span class="small fw-bold" th:text="${game.awayTeamName}">원정팀</span>
+                    </div>
+                    <div class="text-center" style="flex: 1;">
+                      <span th:if="${game.status == '종료'}" class="fw-bold">
+                        <span th:text="${game.awayTeamScore}">0</span>
+                        <span class="text-muted mx-1">:</span>
+                        <span th:text="${game.homeTeamScore}">0</span>
+                      </span>
+                      <span th:if="${game.status != '종료'}" class="text-muted small" th:text="${game.matchTime}">14:00</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 justify-content-end" style="flex: 1;">
+                      <span class="small fw-bold" th:text="${game.homeTeamName}">홈팀</span>
+                      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                    </div>
+                  </div>
                 </div>
-                <div class="text-center" style="flex: 1;">
-                  <span th:if="${game.status == '종료'}" class="fw-bold">
-                    <span th:text="${game.awayTeamScore}">0</span>
-                    <span class="text-muted mx-1">:</span>
-                    <span th:text="${game.homeTeamScore}">0</span>
-                  </span>
-                  <span th:if="${game.status != '종료'}" class="text-muted small" th:text="${game.matchTime}">14:00</span>
-                </div>
-                <div class="d-flex align-items-center gap-2 justify-content-end" style="flex: 1;">
-                  <span class="small fw-bold" th:text="${game.homeTeamName}">홈팀</span>
-                  <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                <div th:if="${todayAllGames == null or todayAllGames.isEmpty()}" class="text-center text-muted py-4">
+                  오늘은 예정된 1군 경기가 없습니다.
                 </div>
               </div>
-            </div>
-            <div th:if="${todayAllGames == null or todayAllGames.isEmpty()}" class="text-center text-muted py-4">
-              오늘은 예정된 경기가 없습니다.
+
+              <!-- 퓨처스 경기 -->
+              <div class="tab-pane fade" id="futures-games" role="tabpanel">
+                <div th:if="${todayFuturesGames != null and !todayFuturesGames.isEmpty()}">
+                  <div th:each="game : ${todayFuturesGames}" class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div class="d-flex align-items-center gap-2" style="flex: 1;">
+                      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.awayTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                      <span class="small fw-bold" th:text="${game.awayTeamName}">원정팀</span>
+                    </div>
+                    <div class="text-center" style="flex: 1;">
+                      <span th:if="${game.status == '종료'}" class="fw-bold">
+                        <span th:text="${game.awayTeamScore}">0</span>
+                        <span class="text-muted mx-1">:</span>
+                        <span th:text="${game.homeTeamScore}">0</span>
+                      </span>
+                      <span th:if="${game.status != '종료'}" class="text-muted small" th:text="${game.matchTime}">14:00</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 justify-content-end" style="flex: 1;">
+                      <span class="small fw-bold" th:text="${game.homeTeamName}">홈팀</span>
+                      <img th:src="@{/static/emblems/{logo}.svg(logo=${game.homeTeamLogo})}" alt="" style="width: 28px; height: 28px;">
+                    </div>
+                  </div>
+                </div>
+                <div th:if="${todayFuturesGames == null or todayFuturesGames.isEmpty()}" class="text-center text-muted py-4">
+                  오늘은 예정된 퓨처스 경기가 없습니다.
+                </div>
+              </div>
+
             </div>
           </div>
         </div>

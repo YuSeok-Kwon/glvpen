@@ -26,4 +26,7 @@ public class ScheduleCardView {
     private Boolean isDoubleHeader;      // 더블헤더 여부
     private Integer doubleHeaderSeq;     // 더블헤더 순서 (1, 2)
     private String matchTime;            // 경기 시간 (HH:mm)
+
+    // 상세 기록 존재 여부
+    private Boolean hasDetail;           // 스코어보드 등 상세 기록 존재 여부
 }

@@ -39,19 +39,29 @@ public class PlayerCardService {
     private final UserCardRepository userCardRepository;
     private final PlayerCardOverallRepository playerCardOverallRepository;
 
-    // 포지션 기군으로 무작위 5장 뽑기
+    // 포지션 기준으로 무작위 5장 뽑기
     public List<PlayerCardDTO> drawCardsByPosition(String position) {
         List<PlayerCardDTO> result = new ArrayList<>();
-        boolean isBatter = !"P".equals(position);
+        boolean isAll = "ALL".equals(position) || position == null || position.isEmpty();
+        boolean isBatter = isAll || !"P".equals(position);
 
         List<Integer> seasons = Arrays.asList(2025);
         Collections.shuffle(seasons); // 무작위 순서
 
         List<PlayerCardOverall> allCandidates = new ArrayList<>();
         for (int season : seasons) {
-            List<PlayerCardOverall> candidates = isBatter
-                    ? playerCardOverallRepository.findByBatterPositionAndSeason(position, season)
-                    : playerCardOverallRepository.findPitchersBySeason(season);
+            List<PlayerCardOverall> candidates;
+            if (isAll) {
+                // 전체 포지션: 타자 + 투수 모두 포함
+                candidates = playerCardOverallRepository.findBySeason(season);
+            } else if ("DH".equals(position)) {
+                // 지명타자: 전체 타자 카드에서 뽑기
+                candidates = playerCardOverallRepository.findBattersBySeason(season);
+            } else if (isBatter) {
+                candidates = playerCardOverallRepository.findByBatterPositionAndSeason(position, season);
+            } else {
+                candidates = playerCardOverallRepository.findPitchersBySeason(season);
+            }
 
             if (candidates != null && !candidates.isEmpty()) {
                 allCandidates.addAll(candidates);
@@ -73,8 +83,14 @@ public class PlayerCardService {
             if (player == null) continue;
 
             int season = overall.getSeason();
-            Map<String, Double> statMap = getStatMap(playerId, season, isBatter);
-            String realPosition = getRealPosition(playerId, season, isBatter);
+            // ALL 모드에서는 카드의 type으로 타자/투수 판별
+            boolean cardIsBatter = !"PITCHER".equals(overall.getType());
+            Map<String, Double> statMap = getStatMap(playerId, season, cardIsBatter);
+
+            // 스탯이 비어있는 카드는 제외 (S등급인데 기록 없는 케이스 방지)
+            if (statMap.isEmpty()) continue;
+
+            String realPosition = getRealPosition(playerId, season, cardIsBatter);
 
             PlayerCardDTO cardDTO = buildCardDTO(player, overall, statMap, realPosition, season);
             result.add(cardDTO);

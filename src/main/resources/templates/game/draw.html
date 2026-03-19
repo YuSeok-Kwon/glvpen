@@ -15,13 +15,8 @@
         <select id="positionSelect" class="form-select" style="width: 150px">
           <option value="ALL" selected>전체 포지션</option>
           <option value="P">투수</option>
-          <option value="1B">1루수</option>
-          <option value="2B">2루수</option>
-          <option value="3B">3루수</option>
-          <option value="SS">유격수</option>
-          <option value="LF">좌익수</option>
-          <option value="RF">우익수</option>
-          <option value="CF">중견수</option>
+          <option value="IF">내야수</option>
+          <option value="OF">외야수</option>
           <option value="C">포수</option>
           <option value="DH">지명타자</option>
         </select>
@@ -172,7 +167,7 @@
 
       // 카드 스탯 HTML 생성
       function getCardStatsHTML(card) {
-        var statsHTML = '<p>WAR: ' + card.war + '</p>';
+        var statsHTML = '';
         if (card.position === 'P') {
           statsHTML += '<p>ERA: ' + card.era + '</p>';
           statsHTML += '<p>WHIP: ' + card.whip + '</p>';

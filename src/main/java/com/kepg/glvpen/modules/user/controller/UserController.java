@@ -227,20 +227,71 @@ public class UserController {
         model.addAttribute("topPitcher", homeData.getTopPitcher());
         model.addAttribute("rankingList", homeData.getRankingList());
         model.addAttribute("todayAllGames", homeData.getTodayAllGames());
+        model.addAttribute("todayFuturesGames", homeData.getTodayFuturesGames());
+        model.addAttribute("seriesLabel", homeData.getSeriesLabel());
         model.addAttribute("recentColumns", homeData.getRecentColumns());
 
         return "user/home";
     }
 
-    // 락커룸 페이지
+    // 락커룸 비밀번호 확인 페이지
     @GetMapping("/locker-room")
+    public String lockerRoomGate(HttpSession session) {
+        User user = (User) session.getAttribute("loginUser");
+        if (user == null) {
+            return "redirect:/user/login-view";
+        }
+
+        // 이미 인증된 경우 바로 락커룸으로
+        Boolean verified = (Boolean) session.getAttribute("lockerRoomVerified");
+        if (Boolean.TRUE.equals(verified)) {
+            return "redirect:/user/locker-room-view";
+        }
+
+        return "user/locker-room-gate";
+    }
+
+    // 락커룸 비밀번호 검증
+    @PostMapping("/locker-room-verify")
+    @ResponseBody
+    public Map<String, String> verifyLockerRoom(
+            @RequestParam("password") String password,
+            HttpSession session) {
+
+        Map<String, String> resultMap = new HashMap<>();
+        User user = (User) session.getAttribute("loginUser");
+
+        if (user == null) {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "로그인이 필요합니다.");
+            return resultMap;
+        }
+
+        // DB에서 최신 유저 정보 조회하여 비밀번호 검증
+        boolean valid = userService.verifyPassword(user.getId(), password);
+        if (valid) {
+            session.setAttribute("lockerRoomVerified", true);
+            resultMap.put("result", "success");
+        } else {
+            resultMap.put("result", "fail");
+            resultMap.put("message", "비밀번호가 일치하지 않습니다.");
+        }
+        return resultMap;
+    }
+
+    // 락커룸 메인 페이지 (인증 후)
+    @GetMapping("/locker-room-view")
     public String lockerRoomView(Model model, HttpSession session) {
         User user = (User) session.getAttribute("loginUser");
         if (user == null) {
             return "redirect:/user/login-view";
         }
 
-        // 세션 유저는 LAZY 로딩이 안 될 수 있으므로 DB에서 선호팀 포함 조회
+        Boolean verified = (Boolean) session.getAttribute("lockerRoomVerified");
+        if (!Boolean.TRUE.equals(verified)) {
+            return "redirect:/user/locker-room";
+        }
+
         User freshUser = userService.findByIdWithFavoriteTeam(user.getId());
         model.addAttribute("user", freshUser);
         model.addAttribute("teams", teamRepository.findAll());

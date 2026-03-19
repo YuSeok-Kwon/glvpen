@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.kepg.glvpen.common.validator.SeasonValidator;
 import com.kepg.glvpen.modules.analysis.domain.AnalysisColumn;
 import com.kepg.glvpen.modules.analysis.repository.AnalysisColumnRepository;
+import com.kepg.glvpen.modules.futures.schedule.service.FuturesScheduleService;
 import com.kepg.glvpen.modules.game.schedule.domain.Schedule;
 import com.kepg.glvpen.modules.game.schedule.dto.ScheduleCardView;
 import com.kepg.glvpen.modules.game.schedule.service.ScheduleService;
@@ -34,6 +35,7 @@ public class UserHomeService {
 
     private final TeamService teamService;
     private final ScheduleService scheduleService;
+    private final FuturesScheduleService futuresScheduleService;
     private final GameService gameService;
     private final BatterStatsService batterStatsService;
     private final PitcherStatsService pitcherStatsService;
@@ -102,8 +104,14 @@ public class UserHomeService {
         // 팀 순위 (favoriteTeamId 유무와 관계없이 항상 조회)
         List<TeamRankingCardView> rankingList = gameService.getTeamRankingCardViews(season);
 
-        // 오늘 전체 KBO 경기 일정
-        List<ScheduleCardView> todayAllGames = scheduleService.getSchedulesByDate(LocalDate.now());
+        // 오늘 전체 1군 경기 일정 (시리즈 타입 자동 감지)
+        List<ScheduleCardView> todayAllGames = scheduleService.getTodayGamesAutoDetect();
+
+        // 활성 시리즈 라벨
+        String seriesLabel = scheduleService.getActiveSeriesLabel();
+
+        // 오늘 퓨처스 경기 일정
+        List<ScheduleCardView> todayFuturesGames = futuresScheduleService.getTodaySchedules();
 
         // 최근 분석 컬럼 5개
         List<AnalysisColumn> recentColumns = analysisColumnRepository.findTop5ByOrderByPublishDateDesc();
@@ -111,6 +119,8 @@ public class UserHomeService {
         return builder
                 .rankingList(rankingList)
                 .todayAllGames(todayAllGames)
+                .todayFuturesGames(todayFuturesGames)
+                .seriesLabel(seriesLabel)
                 .recentColumns(recentColumns)
                 .build();
     }

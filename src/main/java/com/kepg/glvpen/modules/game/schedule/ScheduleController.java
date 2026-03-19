@@ -86,7 +86,13 @@ public class ScheduleController {
 
     @GetMapping("/detail-view")
     public String gameDetail(@RequestParam int matchId, Model model) {
-        GameDetailCardView detail = scheduleService.getGameDetail(matchId);
+        GameDetailCardView detail;
+        try {
+            detail = scheduleService.getGameDetail(matchId);
+        } catch (Exception e) {
+            return "redirect:/schedule/result-view";
+        }
+
         if (detail == null) {
             return "redirect:/schedule/result-view";
         }

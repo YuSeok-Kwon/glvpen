@@ -41,21 +41,43 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
     Optional<String> findStatValueByPlayerIdCategoryAndSeason(
             @Param("playerId") int playerId, @Param("category") String category, @Param("season") int season);
 
-    // 포지션별 wOBA 1위 타자 조회 (윈도우 함수 사용)
+    // 포지션별 wOBA 1위 타자 조회 (수비 포지션 기준)
     @Query(value = """
             SELECT
                 position, playerName, teamName, logoName, woba
             FROM (
                 SELECT
-                    bs.position AS position,
+                    COALESCE(d_pos.mainPosition, bs.position, 'DH') AS position,
                     p.name AS playerName,
                     t.name AS teamName,
                     t.logoName AS logoName,
                     COALESCE(bs.value, 0) AS woba,
-                    ROW_NUMBER() OVER (PARTITION BY bs.position ORDER BY COALESCE(bs.value, 0) DESC) AS row_num
+                    ROW_NUMBER() OVER (
+                        PARTITION BY COALESCE(d_pos.mainPosition, bs.position, 'DH')
+                        ORDER BY COALESCE(bs.value, 0) DESC
+                    ) AS row_num
                 FROM player_batter_stats bs
                 JOIN player p ON bs.playerId = p.id
                 JOIN team t ON p.teamId = t.id
+                LEFT JOIN (
+                    SELECT playerId, mainPosition FROM (
+                        SELECT playerId,
+                            CASE position
+                                WHEN '포수' THEN 'C'
+                                WHEN '1루수' THEN '1B'
+                                WHEN '2루수' THEN '2B'
+                                WHEN '3루수' THEN '3B'
+                                WHEN '유격수' THEN 'SS'
+                                WHEN '좌익수' THEN 'LF'
+                                WHEN '우익수' THEN 'RF'
+                                WHEN '중견수' THEN 'CF'
+                                ELSE NULL
+                            END AS mainPosition,
+                            ROW_NUMBER() OVER (PARTITION BY playerId ORDER BY value DESC) AS rn
+                        FROM player_defense_stats
+                        WHERE season = :season AND series = '0' AND category = 'G' AND position != '투수'
+                    ) ranked_d WHERE rn = 1
+                ) d_pos ON d_pos.playerId = p.id
                 WHERE bs.season = :season
                   AND bs.category = 'wOBA'
                   AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
@@ -65,10 +87,10 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
             """, nativeQuery = true)
     List<Object[]> findTopBattersByPosition(@Param("season") int season);
 
-    // 시즌별 전체 타자 스탯 요약
+    // 시즌별 전체 타자 스탯 요약 (수비 포지션 기준)
     @Query(value = """
             SELECT
-                b.position AS position,
+                COALESCE(d_pos.mainPosition, ANY_VALUE(b.position), 'DH') AS position,
                 p.name AS playerName,
                 t.name AS teamName,
                 t.logoName AS logoName,
@@ -107,9 +129,28 @@ public interface BatterStatsRepository extends JpaRepository<BatterStats, Intege
             FROM player_batter_stats b
             JOIN player p ON b.playerId = p.id
             JOIN team t ON p.teamId = t.id
+            LEFT JOIN (
+                SELECT playerId, mainPosition FROM (
+                    SELECT playerId,
+                        CASE position
+                            WHEN '포수' THEN 'C'
+                            WHEN '1루수' THEN '1B'
+                            WHEN '2루수' THEN '2B'
+                            WHEN '3루수' THEN '3B'
+                            WHEN '유격수' THEN 'SS'
+                            WHEN '좌익수' THEN 'LF'
+                            WHEN '우익수' THEN 'RF'
+                            WHEN '중견수' THEN 'CF'
+                            ELSE NULL
+                        END AS mainPosition,
+                        ROW_NUMBER() OVER (PARTITION BY playerId ORDER BY value DESC) AS rn
+                    FROM player_defense_stats
+                    WHERE season = :season AND series = '0' AND category = 'G' AND position != '투수'
+                ) ranked_d WHERE rn = 1
+            ) d_pos ON d_pos.playerId = p.id
             WHERE b.season = :season
               AND b.series = '0' AND b.situationType = '' AND b.situationValue = ''
-            GROUP BY p.id, b.position, t.id
+            GROUP BY p.id, t.id, d_pos.mainPosition
             """, nativeQuery = true)
     List<Object[]> findAllBatters(@Param("season") int season);
 

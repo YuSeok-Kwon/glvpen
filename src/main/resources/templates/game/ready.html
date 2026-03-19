@@ -12,10 +12,7 @@
 	  overflow-x: hidden; /* 좌우 스크롤 방지 */
 	}
 	body {
-	  background-image: url('/static/game/ready.png');
-	  background-size: cover;
-	  background-position: center;
-	  background-repeat: no-repeat;
+	  background: url('/static/game/bg1.png') center center / cover no-repeat fixed;
 	  min-height: 100vh;
 	  width: 100%;
 	}
@@ -41,8 +38,8 @@
 	  top: 0;
 	  left: 0;
 	  width: 100%;
-	  height: 100vh; /* 뷰포트 기준으로 덮음 */
-	  background-color: rgba(0,0,0,0.6);
+	  height: 100vh;
+	  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%);
 	  z-index: 0;
 	}
 
@@ -145,7 +142,14 @@
     <main class="main-wrapper" data-user-id="[[${session.userId}]]">
       <div class="overlay"></div>
 		<div class="content container-fluid">
-		
+
+		  <!-- 페이지 제목 -->
+		  <div class="text-center pt-4 pb-2" style="position:relative; z-index:1;">
+		    <a href="/game/classic-sim-mode" class="text-white text-decoration-none small">&larr; 시뮬레이션 메뉴</a>
+		    <h2 class="text-white fw-bold mt-2 mb-0" style="text-shadow: 0 2px 8px rgba(0,0,0,0.4);">GAME READY</h2>
+		    <p class="text-white-50 small mb-0">라인업을 확인하고 게임을 시작하세요</p>
+		  </div>
+
 		  <!-- 유저 라인업 -->
 		  <div class="pt-3">
 		    <h3 class="text-center text-white mb-2 d-flex justify-content-center align-items-center gap-3">

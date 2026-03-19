@@ -226,6 +226,15 @@ public class UserService {
 		return false;
 	}
 
+	// 비밀번호 검증 (락커룸 진입용)
+	public boolean verifyPassword(Integer userId, String password) {
+		Optional<User> optionalUser = userRepository.findById(userId);
+		if (optionalUser.isPresent()) {
+			return passwordEncoder.matches(password, optionalUser.get().getPassword());
+		}
+		return false;
+	}
+
 	// ID로 유저 조회
 	public User findById(Integer userId) {
 		return userRepository.findById(userId).orElse(null);

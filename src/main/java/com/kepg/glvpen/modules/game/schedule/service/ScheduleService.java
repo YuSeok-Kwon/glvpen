@@ -32,6 +32,7 @@ import com.kepg.glvpen.modules.game.schedule.dto.GameDetailCardView;
 import com.kepg.glvpen.modules.game.schedule.dto.ScheduleCardView;
 import com.kepg.glvpen.modules.game.schedule.repository.ScheduleRepository;
 import com.kepg.glvpen.modules.game.scoreBoard.domain.ScoreBoard;
+import com.kepg.glvpen.modules.game.scoreBoard.repository.ScoreBoardRepository;
 import com.kepg.glvpen.modules.game.scoreBoard.service.ScoreBoardService;
 import com.kepg.glvpen.modules.game.summaryRecord.domain.GameSummaryRecord;
 import com.kepg.glvpen.modules.game.summaryRecord.service.GameSummaryRecordService;
@@ -49,6 +50,7 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final TeamService teamService;
     private final ScoreBoardService scoreBoardService;
+    private final ScoreBoardRepository scoreBoardRepository;
     private final LineupService lineupService;
     private final RecordService recordService;
     private final BatterRecordRepository batterRecordRepository;
@@ -56,6 +58,97 @@ public class ScheduleService {
     private final GameHighlightService gameHighlightService;
     private final GameKeyPlayerService gameKeyPlayerService;
     private final GameSummaryRecordService gameSummaryRecordService;
+
+    /**
+     * 오늘 날짜 기준 활성 시리즈 타입 라벨 반환
+     * 오늘 경기가 있으면 해당 시리즈, 없으면 가장 최근 경기의 시리즈 기준
+     */
+    public String getActiveSeriesLabel() {
+        LocalDate today = LocalDate.now();
+        Timestamp start = Timestamp.valueOf(today.atStartOfDay());
+        Timestamp end = Timestamp.valueOf(today.atTime(23, 59, 59));
+
+        List<Schedule> todayGames = scheduleRepository.findByMatchDateBetweenOrderByMatchDate(start, end);
+
+        String seriesType = null;
+        if (!todayGames.isEmpty()) {
+            // 오늘 경기 우선: 정규(0) > 포스트(9) > 시범(1)
+            for (Schedule g : todayGames) {
+                if ("0".equals(g.getSeriesType())) { seriesType = "0"; break; }
+            }
+            if (seriesType == null) {
+                for (Schedule g : todayGames) {
+                    if ("9".equals(g.getSeriesType())) { seriesType = "9"; break; }
+                }
+            }
+            if (seriesType == null) {
+                seriesType = todayGames.get(0).getSeriesType();
+            }
+        } else {
+            // 오늘 경기 없으면 가장 최근 종료된 경기의 시리즈 타입
+            Timestamp todayStart = Timestamp.valueOf(today.atStartOfDay());
+            List<Schedule> recent = scheduleRepository.findRecentSchedules(0, todayStart);
+            // findRecentSchedules는 teamId 필터가 있으므로 별도 쿼리 필요
+            // 간단하게 현재 월 기준으로 판단
+            int month = today.getMonthValue();
+            if (month >= 4 && month <= 10) {
+                seriesType = "0"; // 정규시즌 (4~10월)
+            } else if (month >= 10) {
+                seriesType = "9"; // 포스트시즌 (10~11월)
+            } else {
+                seriesType = "1"; // 시범경기 (2~3월)
+            }
+        }
+
+        return seriesTypeToLabel(seriesType);
+    }
+
+    /**
+     * 오늘의 1군 경기를 시리즈 타입 자동 감지하여 조회
+     */
+    public List<ScheduleCardView> getTodayGamesAutoDetect() {
+        LocalDate today = LocalDate.now();
+        Timestamp start = Timestamp.valueOf(today.atStartOfDay());
+        Timestamp end = Timestamp.valueOf(today.atTime(23, 59, 59));
+
+        List<Schedule> todayGames = scheduleRepository.findByMatchDateBetweenOrderByMatchDate(start, end);
+
+        if (todayGames.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return todayGames.stream().map(schedule -> {
+            int homeTeamId = schedule.getHomeTeamId();
+            int awayTeamId = schedule.getAwayTeamId();
+
+            String matchTime = schedule.getMatchDate().toLocalDateTime().toLocalTime()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
+            return ScheduleCardView.builder()
+                    .id(schedule.getId())
+                    .externalId(schedule.getExternalId())
+                    .matchDate(schedule.getMatchDate())
+                    .homeTeamName(teamService.getTeamNameById(homeTeamId))
+                    .awayTeamName(teamService.getTeamNameById(awayTeamId))
+                    .homeTeamLogo(teamService.getTeamLogoById(homeTeamId))
+                    .awayTeamLogo(teamService.getTeamLogoById(awayTeamId))
+                    .homeTeamScore(schedule.getHomeTeamScore())
+                    .awayTeamScore(schedule.getAwayTeamScore())
+                    .stadium(schedule.getStadium())
+                    .status(schedule.getStatus())
+                    .matchTime(matchTime)
+                    .build();
+        }).collect(Collectors.toList());
+    }
+
+    private String seriesTypeToLabel(String seriesType) {
+        if (seriesType == null) return "정규시즌";
+        switch (seriesType) {
+            case "1": return "시범경기";
+            case "9": return "포스트시즌";
+            default: return "정규시즌";
+        }
+    }
 
     // 주어진 경기 일정이 존재하면 업데이트, 없으면 새로 저장
     @Transactional
@@ -305,6 +398,9 @@ public class ScheduleService {
             enrichDoubleHeaderInfo(entry.getValue());
         }
 
+        // 상세 기록 존재 여부 설정 (배치 조회)
+        enrichHasDetail(grouped);
+
         return grouped;
     }
 
@@ -339,6 +435,38 @@ public class ScheduleService {
         }
     }
     
+    /**
+     * 종료된 경기 중 스코어보드 데이터가 있는 경기에 hasDetail = true 설정
+     */
+    private void enrichHasDetail(Map<LocalDate, List<ScheduleCardView>> grouped) {
+        // 종료된 경기의 ID 수집
+        List<Integer> finishedIds = new ArrayList<>();
+        for (List<ScheduleCardView> games : grouped.values()) {
+            for (ScheduleCardView game : games) {
+                if ("종료".equals(game.getStatus()) && game.getId() != null) {
+                    finishedIds.add(game.getId());
+                }
+            }
+        }
+
+        if (finishedIds.isEmpty()) return;
+
+        // 배치 조회: 스코어보드가 존재하는 scheduleId 목록
+        List<Integer> withScoreBoard = scoreBoardRepository.findExistingScheduleIds(finishedIds);
+        java.util.Set<Integer> detailSet = new java.util.HashSet<>(withScoreBoard);
+
+        // hasDetail 설정
+        for (List<ScheduleCardView> games : grouped.values()) {
+            for (ScheduleCardView game : games) {
+                if ("종료".equals(game.getStatus())) {
+                    game.setHasDetail(detailSet.contains(game.getId()));
+                } else {
+                    game.setHasDetail(false);
+                }
+            }
+        }
+    }
+
     // 오늘 날짜 우선으로 Map정리
     public Map<LocalDate, List<ScheduleCardView>> sortScheduleWithTodayFirst(Map<LocalDate, List<ScheduleCardView>> originalMap, LocalDate today) {
         // 오늘 없으면 그냥 반환 (정렬하지 않음)

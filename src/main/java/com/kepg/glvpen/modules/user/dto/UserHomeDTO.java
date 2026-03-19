@@ -50,8 +50,14 @@ public class UserHomeDTO {
     // 팀 순위
     private List<TeamRankingCardView> rankingList;
 
-    // 오늘 전체 KBO 경기 일정
+    // 오늘 전체 KBO 경기 일정 (1군)
     private List<ScheduleCardView> todayAllGames;
+
+    // 오늘 퓨처스 경기 일정
+    private List<ScheduleCardView> todayFuturesGames;
+
+    // 현재 활성 시리즈 라벨 (시범경기/정규시즌/포스트시즌)
+    private String seriesLabel;
 
     // 최근 분석 컬럼
     private List<AnalysisColumn> recentColumns;

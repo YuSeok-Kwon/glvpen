@@ -636,7 +636,7 @@ a {
 }
 .card-front.grade-A,
 .card-back.grade-A {
-  background-image: url('/static/textures/gold-fiber.jpg');
+  background-image: url('/static/textures/Atier.jpg');
   background-size: cover;
   background-repeat: no-repeat;
 }
@@ -654,7 +654,7 @@ a {
 }
 .card-front.grade-D,
 .card-back.grade-D {
-  background-image: url('/static/textures/cardboard.jpg');
+  background-image: url('/static/textures/Dtier.png');
   background-size: cover;
   background-repeat: no-repeat;
 }

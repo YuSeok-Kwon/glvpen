@@ -18,6 +18,10 @@ public interface ScoreBoardRepository extends JpaRepository<ScoreBoard, Integer>
     // scheduleId의 스코어보드 데이터가 존재하는지 여부 확인
     boolean existsByScheduleId(Integer scheduleId);
 
+    // 주어진 scheduleId 목록 중 스코어보드가 존재하는 scheduleId 반환
+    @Query("SELECT sb.scheduleId FROM ScoreBoard sb WHERE sb.scheduleId IN :scheduleIds")
+    List<Integer> findExistingScheduleIds(@Param("scheduleIds") List<Integer> scheduleIds);
+
     // 특정 시즌의 종료된 경기 스코어보드 전체 조회
     @Query(value = """
         SELECT sb.* FROM kbo_score_board sb

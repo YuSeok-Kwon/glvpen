@@ -103,6 +103,40 @@ public class FuturesScheduleService {
         return grouped;
     }
 
+    /**
+     * 오늘 퓨처스 경기 일정 반환
+     */
+    @Transactional(readOnly = true)
+    public List<ScheduleCardView> getTodaySchedules() {
+        Timestamp start = Timestamp.valueOf(LocalDate.now().atStartOfDay());
+        Timestamp end = Timestamp.valueOf(LocalDate.now().atTime(23, 59, 59));
+        List<FuturesSchedule> schedules = repository.findByMatchDateBetweenOrderByMatchDateAsc(start, end);
+
+        List<ScheduleCardView> result = new ArrayList<>();
+        for (FuturesSchedule fs : schedules) {
+            if (fs.getMatchDate() == null) continue;
+
+            String matchTime = fs.getMatchDate().toLocalDateTime().toLocalTime()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+            String stadiumDisplay = fs.getNote() != null ? fs.getNote() : "";
+
+            result.add(ScheduleCardView.builder()
+                    .id(fs.getId())
+                    .matchDate(fs.getMatchDate())
+                    .homeTeamName(getTeamName(fs.getHomeTeamId()))
+                    .awayTeamName(getTeamName(fs.getAwayTeamId()))
+                    .homeTeamLogo(getTeamLogo(fs.getHomeTeamId()))
+                    .awayTeamLogo(getTeamLogo(fs.getAwayTeamId()))
+                    .homeTeamScore(fs.getHomeTeamScore())
+                    .awayTeamScore(fs.getAwayTeamScore())
+                    .stadium(stadiumDisplay)
+                    .status(fs.getStatus())
+                    .matchTime(matchTime)
+                    .build());
+        }
+        return result;
+    }
+
     private String getTeamName(Integer teamId) {
         if (teamId == null) return "미정";
         Team team = teamService.getTeamById(teamId);
