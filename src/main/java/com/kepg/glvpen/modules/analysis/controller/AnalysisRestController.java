@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.kepg.glvpen.common.validator.SeasonValidator;
 import com.kepg.glvpen.modules.analysis.domain.AnalysisColumn;
+import com.kepg.glvpen.modules.analysis.dto.AiInsightRequestDTO;
+import com.kepg.glvpen.modules.analysis.dto.AiInsightResponseDTO;
 import com.kepg.glvpen.modules.analysis.dto.ChartDataDTO;
 import com.kepg.glvpen.modules.analysis.dto.DashboardDTO;
 import com.kepg.glvpen.modules.analysis.dto.PlayerAnalysisDTO;
 import com.kepg.glvpen.modules.analysis.dto.TeamAnalysisDTO;
 import com.kepg.glvpen.modules.analysis.service.AiColumnGeneratorService;
+import com.kepg.glvpen.modules.analysis.service.AiInsightService;
 import com.kepg.glvpen.modules.analysis.service.AnalysisService;
 import com.kepg.glvpen.modules.analysis.service.ColumnService;
 
@@ -33,6 +36,7 @@ public class AnalysisRestController {
 
     private final AnalysisService analysisService;
     private final AiColumnGeneratorService aiColumnGeneratorService;
+    private final AiInsightService aiInsightService;
     private final ColumnService columnService;
 
     @GetMapping("/dashboard")
@@ -115,6 +119,11 @@ public class AnalysisRestController {
             @RequestParam(required = false) Integer endYear) {
         int validEndYear = SeasonValidator.validateOrDefault(endYear, SeasonValidator.currentSeason());
         return ResponseEntity.ok(analysisService.getGameEventTrend(startYear, validEndYear));
+    }
+
+    @PostMapping("/ai-insight")
+    public ResponseEntity<AiInsightResponseDTO> generateAiInsight(@RequestBody AiInsightRequestDTO request) {
+        return ResponseEntity.ok(aiInsightService.generateInsight(request));
     }
 
     @PostMapping("/columns/save")

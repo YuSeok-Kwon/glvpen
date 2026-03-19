@@ -1,0 +1,806 @@
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/default}"
+>
+  <head>
+    <title>고급 분석 - BaseBall LOCK</title>
+    <style>
+      .analysis-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .analysis-card:hover {
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      }
+      .chart-container {
+        position: relative;
+        height: 350px;
+      }
+      .tab-content { padding-top: 1.5rem; }
+      .nav-tabs .nav-link.active {
+        font-weight: 700;
+        color: #166534;
+        border-bottom: 3px solid #166534;
+      }
+      .result-table {
+        font-size: 0.9rem;
+      }
+      .result-table th {
+        background: #f0fdf4;
+        font-weight: 600;
+      }
+      .badge-rank {
+        display: inline-block;
+        width: 28px;
+        height: 28px;
+        line-height: 28px;
+        text-align: center;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 0.85rem;
+      }
+      .badge-rank.top3 {
+        background: #166534;
+        color: #fff;
+      }
+      .badge-rank.normal {
+        background: #e5e7eb;
+        color: #374151;
+      }
+      .team-logo {
+        width: 24px;
+        height: 24px;
+        vertical-align: middle;
+        margin-right: 4px;
+      }
+      .probability-bar {
+        height: 40px;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+      }
+      .prob-home {
+        background: #166534;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        transition: width 0.5s;
+      }
+      .prob-away {
+        background: #991b1b;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        transition: width 0.5s;
+      }
+      .stat-delta {
+        font-size: 0.8rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .stat-delta.positive { background: #dcfce7; color: #166534; }
+      .stat-delta.negative { background: #fef2f2; color: #991b1b; }
+      .control-row {
+        display: flex;
+        gap: 0.75rem;
+        align-items: end;
+        flex-wrap: wrap;
+        margin-bottom: 1rem;
+      }
+      .control-row label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+      }
+      .loading-spinner.active { display: block; }
+      .percentile-bar {
+        height: 6px;
+        border-radius: 3px;
+        background: #e5e7eb;
+        overflow: hidden;
+      }
+      .percentile-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: #166534;
+      }
+    </style>
+  </head>
+  <th:block layout:fragment="contents">
+    <div class="container py-4">
+      <h3 class="fw-bold mb-4"><i class="bi bi-graph-up-arrow me-2"></i>고급 분석</h3>
+
+      <!-- 탭 네비게이션 -->
+      <ul class="nav nav-tabs" id="analysisTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="win-tab" data-bs-toggle="tab" data-bs-target="#win-panel" type="button">
+            <i class="bi bi-trophy me-1"></i>승리 예측
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="projection-tab" data-bs-toggle="tab" data-bs-target="#projection-panel" type="button">
+            <i class="bi bi-graph-up me-1"></i>성적 예측
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="similarity-tab" data-bs-toggle="tab" data-bs-target="#similarity-panel" type="button">
+            <i class="bi bi-people me-1"></i>선수 유사도
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="clutch-tab" data-bs-toggle="tab" data-bs-target="#clutch-panel" type="button">
+            <i class="bi bi-fire me-1"></i>클러치 지수
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="fatigue-tab" data-bs-toggle="tab" data-bs-target="#fatigue-panel" type="button">
+            <i class="bi bi-activity me-1"></i>피로도 분석
+          </button>
+        </li>
+      </ul>
+
+      <!-- 탭 콘텐츠 -->
+      <div class="tab-content" id="analysisTabContent">
+
+        <!-- 1. 승리 예측 -->
+        <div class="tab-pane fade show active" id="win-panel" role="tabpanel">
+          <div class="analysis-card">
+            <h5><i class="bi bi-trophy me-2"></i>승리 확률 예측 (로지스틱 회귀)</h5>
+            <div class="control-row">
+              <div>
+                <label>홈팀</label>
+                <select id="homeTeamSelect" class="form-select form-select-sm"></select>
+              </div>
+              <div class="align-self-end"><span class="fw-bold fs-5">VS</span></div>
+              <div>
+                <label>원정팀</label>
+                <select id="awayTeamSelect" class="form-select form-select-sm"></select>
+              </div>
+              <div>
+                <label>시즌</label>
+                <select id="winSeason" class="form-select form-select-sm">
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+              </div>
+              <div>
+                <button class="btn btn-sm btn-success" onclick="predictWin()">예측</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="trainModel()">모델 학습</button>
+              </div>
+            </div>
+            <div id="winLoading" class="loading-spinner"><div class="spinner-border text-success"></div><p class="mt-2">분석 중...</p></div>
+            <div id="winResult" style="display:none">
+              <div class="probability-bar mb-3">
+                <div class="prob-home" id="probHome"></div>
+                <div class="prob-away" id="probAway"></div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="chart-container"><canvas id="winRadarChart"></canvas></div>
+                </div>
+                <div class="col-md-6">
+                  <table class="table result-table" id="winDeltaTable">
+                    <thead><tr><th>지표</th><th>차이값</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                  <p class="text-muted small" id="winAccuracy"></p>
+                </div>
+              </div>
+              <div id="win-prediction-ai-insight"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 성적 예측 -->
+        <div class="tab-pane fade" id="projection-panel" role="tabpanel">
+          <div class="analysis-card">
+            <h5><i class="bi bi-graph-up me-2"></i>Marcel 성적 예측</h5>
+            <div class="control-row">
+              <div>
+                <label>선수 ID</label>
+                <input type="number" id="projPlayerId" class="form-control form-control-sm" placeholder="선수 ID">
+              </div>
+              <div>
+                <label>유형</label>
+                <select id="projType" class="form-select form-select-sm">
+                  <option value="batter">타자</option>
+                  <option value="pitcher">투수</option>
+                </select>
+              </div>
+              <div>
+                <label>예측 시즌</label>
+                <select id="projSeason" class="form-select form-select-sm">
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+              <div><button class="btn btn-sm btn-success" onclick="projectPlayer()">예측</button></div>
+              <div><button class="btn btn-sm btn-outline-success" onclick="loadProjectionRanking()">전체 타자 랭킹</button></div>
+            </div>
+            <div id="projLoading" class="loading-spinner"><div class="spinner-border text-success"></div></div>
+            <div id="projResult" style="display:none">
+              <h6 id="projPlayerInfo" class="fw-bold mb-3"></h6>
+              <div class="row">
+                <div class="col-md-7">
+                  <table class="table result-table" id="projTable">
+                    <thead><tr><th>지표</th><th>예측값</th><th>지난 시즌</th><th>리그 평균</th><th>변화율</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div class="col-md-5">
+                  <div class="chart-container"><canvas id="projChart"></canvas></div>
+                </div>
+              </div>
+            </div>
+            <div id="projRankingResult" style="display:none">
+              <table class="table result-table" id="projRankingTable">
+                <thead><tr><th>#</th><th>선수</th><th>팀</th><th>예측 wOBA</th><th>작년 wOBA</th><th>신뢰도</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="marcel-projection-ai-insight"></div>
+          </div>
+        </div>
+
+        <!-- 3. 선수 유사도 -->
+        <div class="tab-pane fade" id="similarity-panel" role="tabpanel">
+          <div class="analysis-card">
+            <h5><i class="bi bi-people me-2"></i>선수 유사도 분석 (코사인 유사도)</h5>
+            <div class="control-row">
+              <div>
+                <label>선수 ID</label>
+                <input type="number" id="simPlayerId" class="form-control form-control-sm" placeholder="선수 ID">
+              </div>
+              <div>
+                <label>시즌</label>
+                <select id="simSeason" class="form-select form-select-sm">
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
+              <div>
+                <label>결과 수</label>
+                <input type="number" id="simTopN" class="form-control form-control-sm" value="10" min="1" max="30">
+              </div>
+              <div><button class="btn btn-sm btn-success" onclick="findSimilar()">검색</button></div>
+            </div>
+            <div id="simLoading" class="loading-spinner"><div class="spinner-border text-success"></div></div>
+            <div id="simResult" style="display:none">
+              <div class="row">
+                <div class="col-md-5">
+                  <div class="chart-container"><canvas id="simRadarChart"></canvas></div>
+                </div>
+                <div class="col-md-7">
+                  <table class="table result-table" id="simTable">
+                    <thead><tr><th>#</th><th>선수</th><th>팀</th><th>유사도</th><th>wOBA</th><th>AVG</th><th>OPS</th><th>HR</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div id="similarity-ai-insight"></div>
+          </div>
+        </div>
+
+        <!-- 4. 클러치 지수 -->
+        <div class="tab-pane fade" id="clutch-panel" role="tabpanel">
+          <div class="analysis-card">
+            <h5><i class="bi bi-fire me-2"></i>클러치 지수 랭킹</h5>
+            <div class="control-row">
+              <div>
+                <label>시즌</label>
+                <select id="clutchSeason" class="form-select form-select-sm">
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                </select>
+              </div>
+              <div><button class="btn btn-sm btn-success" onclick="loadClutch()">조회</button></div>
+            </div>
+            <div id="clutchLoading" class="loading-spinner"><div class="spinner-border text-success"></div></div>
+            <div id="clutchResult" style="display:none">
+              <div class="row">
+                <div class="col-md-7">
+                  <table class="table result-table" id="clutchTable">
+                    <thead><tr><th>#</th><th>선수</th><th>팀</th><th>RBI</th><th>HR</th><th>OPS</th><th>클러치 지수</th><th>백분위</th></tr></thead>
+                    <tbody></tbody>
+                  </table>
+                </div>
+                <div class="col-md-5">
+                  <div class="chart-container"><canvas id="clutchChart"></canvas></div>
+                </div>
+              </div>
+            </div>
+            <div id="clutch-index-ai-insight"></div>
+          </div>
+        </div>
+
+        <!-- 5. 피로도 분석 -->
+        <div class="tab-pane fade" id="fatigue-panel" role="tabpanel">
+          <div class="analysis-card">
+            <h5><i class="bi bi-activity me-2"></i>투수 피로도 분석</h5>
+            <div class="control-row">
+              <div>
+                <label>투수 ID</label>
+                <input type="number" id="fatiguePlayerId" class="form-control form-control-sm" placeholder="선수 ID">
+              </div>
+              <div>
+                <label>시즌</label>
+                <select id="fatigueSeason" class="form-select form-select-sm">
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                </select>
+              </div>
+              <div><button class="btn btn-sm btn-success" onclick="loadFatigue()">분석</button></div>
+              <div><button class="btn btn-sm btn-outline-success" onclick="loadFatigueRanking()">피로도 랭킹</button></div>
+            </div>
+            <div id="fatigueLoading" class="loading-spinner"><div class="spinner-border text-success"></div></div>
+            <div id="fatigueResult" style="display:none">
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background:#f0fdf4">
+                    <div class="small text-muted">총 등판</div>
+                    <div class="fs-4 fw-bold" id="fatigueTotalApp"></div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background:#f0fdf4">
+                    <div class="small text-muted">시즌 ERA</div>
+                    <div class="fs-4 fw-bold" id="fatigueSeasonEra"></div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background:#fef2f2">
+                    <div class="small text-muted">피로도 지수</div>
+                    <div class="fs-4 fw-bold" id="fatigueFatigueIdx"></div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="text-center p-3 rounded" style="background:#eff6ff">
+                    <div class="small text-muted">전/후반 ERA</div>
+                    <div class="fs-5 fw-bold" id="fatigueHalf"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="row">
+                <div class="col-md-6">
+                  <h6 class="fw-bold">휴식일별 ERA</h6>
+                  <div class="chart-container"><canvas id="fatigueBarChart"></canvas></div>
+                </div>
+                <div class="col-md-6">
+                  <h6 class="fw-bold">전반기 vs 후반기</h6>
+                  <div class="chart-container"><canvas id="fatigueHalfChart"></canvas></div>
+                </div>
+              </div>
+            </div>
+            <div id="fatigueRankingResult" style="display:none">
+              <table class="table result-table" id="fatigueRankingTable">
+                <thead><tr><th>#</th><th>선수</th><th>팀</th><th>등판</th><th>ERA</th><th>피로도 지수</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+            <div id="fatigue-analysis-ai-insight"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </th:block>
+
+  <th:block layout:fragment="script">
+    <script>
+      const API = '/api/analysis/advanced';
+      let charts = {};
+
+      function destroyChart(key) {
+        if (charts[key]) { charts[key].destroy(); delete charts[key]; }
+      }
+
+      // ====== 승리 예측 ======
+      (function loadTeams() {
+        fetch('/api/team-ranking?season=2025')
+          .then(r => r.json()).then(data => {
+            const teams = data || [];
+            ['homeTeamSelect','awayTeamSelect'].forEach(id => {
+              const sel = document.getElementById(id);
+              sel.innerHTML = '';
+              teams.forEach(t => {
+                sel.innerHTML += `<option value="${t.teamId}">${t.teamName}</option>`;
+              });
+            });
+            if (teams.length > 1) document.getElementById('awayTeamSelect').selectedIndex = 1;
+          }).catch(() => {});
+      })();
+
+      function predictWin() {
+        const home = document.getElementById('homeTeamSelect').value;
+        const away = document.getElementById('awayTeamSelect').value;
+        const season = document.getElementById('winSeason').value;
+        document.getElementById('winResult').style.display = 'none';
+        document.getElementById('winLoading').classList.add('active');
+
+        fetch(`${API}/win-prediction?homeTeamId=${home}&awayTeamId=${away}&season=${season}`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('winLoading').classList.remove('active');
+            document.getElementById('winResult').style.display = 'block';
+
+            const hp = Math.round(data.homeWinProbability * 100);
+            const ap = 100 - hp;
+            document.getElementById('probHome').style.width = hp + '%';
+            document.getElementById('probHome').textContent = data.homeTeamName + ' ' + hp + '%';
+            document.getElementById('probAway').style.width = ap + '%';
+            document.getElementById('probAway').textContent = data.awayTeamName + ' ' + ap + '%';
+            document.getElementById('winAccuracy').textContent = '모델 정확도: ' + Math.round((data.modelAccuracy||0)*100) + '%';
+
+            const tbody = document.querySelector('#winDeltaTable tbody');
+            tbody.innerHTML = '';
+            if (data.featureDeltas) {
+              Object.entries(data.featureDeltas).forEach(([k, v]) => {
+                const cls = v >= 0 ? 'positive' : 'negative';
+                tbody.innerHTML += `<tr><td>${k}</td><td><span class="stat-delta ${cls}">${v > 0 ? '+' : ''}${v}</span></td></tr>`;
+              });
+            }
+
+            // AI 인사이트
+            const homeTeamName = data.homeTeamName || '홈팀';
+            const awayTeamName = data.awayTeamName || '원정팀';
+            AiInsight.requestInsight({
+              chartType: 'win-prediction', title: '승리 확률 예측',
+              labels: data.featureDeltas ? Object.keys(data.featureDeltas) : [],
+              datasets: [{ label: '지표 차이', data: data.featureDeltas ? Object.values(data.featureDeltas) : [] }],
+              extra: { homeTeam: homeTeamName, awayTeam: awayTeamName, homeWinProb: hp + '%' },
+              targetDivId: 'win-prediction-ai-insight'
+            });
+
+            // 레이더 차트
+            if (data.featureDeltas) {
+              destroyChart('winRadar');
+              const labels = Object.keys(data.featureDeltas);
+              const values = Object.values(data.featureDeltas);
+              charts.winRadar = new Chart(document.getElementById('winRadarChart'), {
+                type: 'radar',
+                data: {
+                  labels: labels,
+                  datasets: [{
+                    label: '홈팀 우위 (양수=홈팀 유리)',
+                    data: values,
+                    borderColor: '#166534',
+                    backgroundColor: 'rgba(22,101,52,0.15)',
+                    pointBackgroundColor: '#166534'
+                  }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+              });
+            }
+          }).catch(() => document.getElementById('winLoading').classList.remove('active'));
+      }
+
+      function trainModel() {
+        document.getElementById('winLoading').classList.add('active');
+        fetch(`${API}/win-prediction/train?startSeason=2020&endSeason=2025`, {method:'POST'})
+          .then(r => r.json()).then(data => {
+            document.getElementById('winLoading').classList.remove('active');
+            alert(`학습 완료: ${data.trainingSamples}경기, 정확도 ${Math.round(data.accuracy*100)}%`);
+          }).catch(() => document.getElementById('winLoading').classList.remove('active'));
+      }
+
+      // ====== 성적 예측 ======
+      function projectPlayer() {
+        const pid = document.getElementById('projPlayerId').value;
+        const type = document.getElementById('projType').value;
+        const season = document.getElementById('projSeason').value;
+        if (!pid) return;
+
+        document.getElementById('projResult').style.display = 'none';
+        document.getElementById('projRankingResult').style.display = 'none';
+        document.getElementById('projLoading').classList.add('active');
+
+        fetch(`${API}/projection/${type}/${pid}?targetSeason=${season}`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('projLoading').classList.remove('active');
+            document.getElementById('projResult').style.display = 'block';
+            document.getElementById('projPlayerInfo').textContent =
+              `${data.playerName} (${data.teamName}) - ${data.targetSeason}시즌 예측 (신뢰도: ${Math.round(data.confidence*100)}%)`;
+
+            const tbody = document.querySelector('#projTable tbody');
+            tbody.innerHTML = '';
+            const labels = [], projected = [], lastSeason = [];
+            data.projections.forEach(p => {
+              const cr = p.changeRate != null ? (p.changeRate > 0 ? '+' : '') + p.changeRate + '%' : '-';
+              const cls = p.changeRate > 0 ? 'positive' : (p.changeRate < 0 ? 'negative' : '');
+              tbody.innerHTML += `<tr><td class="fw-bold">${p.category}</td><td>${p.projected}</td><td>${p.lastSeason ?? '-'}</td><td>${p.leagueAvg ?? '-'}</td><td><span class="stat-delta ${cls}">${cr}</span></td></tr>`;
+              labels.push(p.category);
+              projected.push(p.projected);
+              lastSeason.push(p.lastSeason);
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'marcel-projection', title: 'Marcel 성적 예측',
+              labels: labels,
+              datasets: [
+                { label: '예측값', data: projected },
+                { label: '지난 시즌', data: lastSeason }
+              ],
+              extra: { playerName: data.playerName, targetSeason: data.targetSeason },
+              targetDivId: 'marcel-projection-ai-insight'
+            });
+
+            destroyChart('proj');
+            charts.proj = new Chart(document.getElementById('projChart'), {
+              type: 'bar',
+              data: {
+                labels: labels,
+                datasets: [
+                  { label: '예측값', data: projected, backgroundColor: '#166534' },
+                  { label: '지난 시즌', data: lastSeason, backgroundColor: '#9ca3af' }
+                ]
+              },
+              options: { responsive: true, maintainAspectRatio: false }
+            });
+          }).catch(() => document.getElementById('projLoading').classList.remove('active'));
+      }
+
+      function loadProjectionRanking() {
+        const season = document.getElementById('projSeason').value;
+        document.getElementById('projResult').style.display = 'none';
+        document.getElementById('projRankingResult').style.display = 'none';
+        document.getElementById('projLoading').classList.add('active');
+
+        fetch(`${API}/projection/batters?targetSeason=${season}&limit=30`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('projLoading').classList.remove('active');
+            document.getElementById('projRankingResult').style.display = 'block';
+            const tbody = document.querySelector('#projRankingTable tbody');
+            tbody.innerHTML = '';
+            data.forEach(p => {
+              tbody.innerHTML += `<tr>
+                <td><span class="badge-rank ${p.rank<=3?'top3':'normal'}">${p.rank}</span></td>
+                <td class="fw-bold">${p.playerName}</td>
+                <td>${p.teamName}</td>
+                <td>${p.projectedWar}</td>
+                <td>${p.lastSeasonWar ?? '-'}</td>
+                <td>${Math.round(p.confidence*100)}%</td>
+              </tr>`;
+            });
+          }).catch(() => document.getElementById('projLoading').classList.remove('active'));
+      }
+
+      // ====== 선수 유사도 ======
+      function findSimilar() {
+        const pid = document.getElementById('simPlayerId').value;
+        const season = document.getElementById('simSeason').value;
+        const topN = document.getElementById('simTopN').value;
+        if (!pid) return;
+
+        document.getElementById('simResult').style.display = 'none';
+        document.getElementById('simLoading').classList.add('active');
+
+        fetch(`${API}/similarity/${pid}?season=${season}&topN=${topN}`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('simLoading').classList.remove('active');
+            document.getElementById('simResult').style.display = 'block';
+
+            const tbody = document.querySelector('#simTable tbody');
+            tbody.innerHTML = '';
+            data.similarPlayers.forEach((p, i) => {
+              tbody.innerHTML += `<tr>
+                <td>${i+1}</td>
+                <td class="fw-bold">${p.playerName}</td>
+                <td>${p.teamName}</td>
+                <td>${(p.similarity*100).toFixed(1)}%</td>
+                <td>${p.stats?.wOBA ?? '-'}</td>
+                <td>${p.stats?.AVG ?? '-'}</td>
+                <td>${p.stats?.OPS ?? '-'}</td>
+                <td>${p.stats?.HR ?? '-'}</td>
+              </tr>`;
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'similarity', title: '선수 유사도 분석',
+              labels: data.radarLabels || [],
+              datasets: data.similarPlayers ? data.similarPlayers.slice(0, 5).map(p => ({
+                label: p.playerName, data: (data.radarLabels || []).map(l => p.stats?.[l] ?? 0)
+              })) : [],
+              extra: { basePlayer: data.basePlayer?.playerName },
+              targetDivId: 'similarity-ai-insight'
+            });
+
+            // 레이더 차트 (기준 선수 + 상위 3명)
+            if (data.radarLabels && data.basePlayer) {
+              destroyChart('simRadar');
+              const datasets = [{
+                label: data.basePlayer.playerName,
+                data: data.radarLabels.map(l => data.basePlayer.stats?.[l] ?? 0),
+                borderColor: '#166534',
+                backgroundColor: 'rgba(22,101,52,0.1)',
+                pointBackgroundColor: '#166534'
+              }];
+              const colors = ['#991b1b', '#1e40af', '#ca8a04'];
+              data.similarPlayers.slice(0, 3).forEach((p, i) => {
+                datasets.push({
+                  label: p.playerName,
+                  data: data.radarLabels.map(l => p.stats?.[l] ?? 0),
+                  borderColor: colors[i],
+                  backgroundColor: 'transparent',
+                  pointBackgroundColor: colors[i]
+                });
+              });
+              charts.simRadar = new Chart(document.getElementById('simRadarChart'), {
+                type: 'radar',
+                data: { labels: data.radarLabels, datasets: datasets },
+                options: { responsive: true, maintainAspectRatio: false }
+              });
+            }
+          }).catch(() => document.getElementById('simLoading').classList.remove('active'));
+      }
+
+      // ====== 클러치 지수 ======
+      function loadClutch() {
+        const season = document.getElementById('clutchSeason').value;
+        document.getElementById('clutchResult').style.display = 'none';
+        document.getElementById('clutchLoading').classList.add('active');
+
+        fetch(`${API}/clutch?season=${season}&limit=30`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('clutchLoading').classList.remove('active');
+            document.getElementById('clutchResult').style.display = 'block';
+
+            const tbody = document.querySelector('#clutchTable tbody');
+            tbody.innerHTML = '';
+            const names = [], indices = [];
+            (data.rankings || []).forEach(p => {
+              tbody.innerHTML += `<tr>
+                <td><span class="badge-rank ${p.rank<=3?'top3':'normal'}">${p.rank}</span></td>
+                <td class="fw-bold">${p.playerName}</td>
+                <td>${p.teamName}</td>
+                <td>${p.rbi ?? '-'}</td>
+                <td>${p.hr ?? '-'}</td>
+                <td>${p.ops ?? '-'}</td>
+                <td class="fw-bold">${p.clutchIndex}</td>
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="percentile-bar flex-grow-1"><div class="percentile-fill" style="width:${p.percentile}%"></div></div>
+                    <span class="small">${p.percentile}%</span>
+                  </div>
+                </td>
+              </tr>`;
+              if (names.length < 15) { names.push(p.playerName); indices.push(p.clutchIndex); }
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'clutch-index', title: '클러치 지수 랭킹',
+              labels: names,
+              datasets: [{ label: '클러치 지수', data: indices }],
+              extra: { season: season },
+              targetDivId: 'clutch-index-ai-insight'
+            });
+
+            destroyChart('clutch');
+            charts.clutch = new Chart(document.getElementById('clutchChart'), {
+              type: 'bar',
+              data: {
+                labels: names,
+                datasets: [{ label: '클러치 지수', data: indices, backgroundColor: indices.map(v => v >= 0 ? '#166534' : '#991b1b') }]
+              },
+              options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+            });
+          }).catch(() => document.getElementById('clutchLoading').classList.remove('active'));
+      }
+
+      // ====== 피로도 분석 ======
+      function loadFatigue() {
+        const pid = document.getElementById('fatiguePlayerId').value;
+        const season = document.getElementById('fatigueSeason').value;
+        if (!pid) return;
+
+        document.getElementById('fatigueResult').style.display = 'none';
+        document.getElementById('fatigueRankingResult').style.display = 'none';
+        document.getElementById('fatigueLoading').classList.add('active');
+
+        fetch(`${API}/fatigue/${pid}?season=${season}`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('fatigueLoading').classList.remove('active');
+            document.getElementById('fatigueResult').style.display = 'block';
+
+            document.getElementById('fatigueTotalApp').textContent = data.totalAppearances + '회';
+            document.getElementById('fatigueSeasonEra').textContent = data.seasonEra;
+            document.getElementById('fatigueFatigueIdx').textContent = data.fatigueIndex;
+            const hs = data.halfSeason || {};
+            document.getElementById('fatigueHalf').textContent = (hs.firstHalfEra||'-') + ' → ' + (hs.secondHalfEra||'-');
+
+            AiInsight.requestInsight({
+              chartType: 'fatigue-analysis', title: '투수 피로도 분석',
+              labels: (data.restGroups || []).map(g => g.label),
+              datasets: [
+                { label: 'ERA', data: (data.restGroups || []).map(g => g.era) },
+                { label: '등판 수', data: (data.restGroups || []).map(g => g.appearances) }
+              ],
+              extra: { playerName: data.playerName, season: season, fatigueIndex: data.fatigueIndex },
+              targetDivId: 'fatigue-analysis-ai-insight'
+            });
+
+            // 휴식일별 ERA 차트
+            destroyChart('fatigueBar');
+            const groups = data.restGroups || [];
+            charts.fatigueBar = new Chart(document.getElementById('fatigueBarChart'), {
+              type: 'bar',
+              data: {
+                labels: groups.map(g => g.label),
+                datasets: [
+                  { label: 'ERA', data: groups.map(g => g.era), backgroundColor: '#166534' },
+                  { label: '등판 수', data: groups.map(g => g.appearances), backgroundColor: '#9ca3af', yAxisID: 'y1' }
+                ]
+              },
+              options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                  y: { position: 'left', title: { display: true, text: 'ERA' } },
+                  y1: { position: 'right', title: { display: true, text: '등판 수' }, grid: { drawOnChartArea: false } }
+                }
+              }
+            });
+
+            // 전반기 vs 후반기 차트
+            destroyChart('fatigueHalf');
+            charts.fatigueHalf = new Chart(document.getElementById('fatigueHalfChart'), {
+              type: 'bar',
+              data: {
+                labels: ['전반기', '후반기'],
+                datasets: [
+                  { label: 'ERA', data: [hs.firstHalfEra||0, hs.secondHalfEra||0], backgroundColor: ['#166534', '#991b1b'] },
+                  { label: '등판 수', data: [hs.firstHalfAppearances||0, hs.secondHalfAppearances||0], backgroundColor: ['#86efac', '#fca5a5'], yAxisID: 'y1' }
+                ]
+              },
+              options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                  y: { position: 'left', title: { display: true, text: 'ERA' } },
+                  y1: { position: 'right', title: { display: true, text: '등판 수' }, grid: { drawOnChartArea: false } }
+                }
+              }
+            });
+          }).catch(() => document.getElementById('fatigueLoading').classList.remove('active'));
+      }
+
+      function loadFatigueRanking() {
+        const season = document.getElementById('fatigueSeason').value;
+        document.getElementById('fatigueResult').style.display = 'none';
+        document.getElementById('fatigueRankingResult').style.display = 'none';
+        document.getElementById('fatigueLoading').classList.add('active');
+
+        fetch(`${API}/fatigue/ranking?season=${season}&limit=30`)
+          .then(r => r.json()).then(data => {
+            document.getElementById('fatigueLoading').classList.remove('active');
+            document.getElementById('fatigueRankingResult').style.display = 'block';
+            const tbody = document.querySelector('#fatigueRankingTable tbody');
+            tbody.innerHTML = '';
+            data.forEach(p => {
+              const color = p.fatigueIndex > 1.3 ? '#991b1b' : (p.fatigueIndex > 1.1 ? '#ca8a04' : '#166534');
+              tbody.innerHTML += `<tr>
+                <td><span class="badge-rank ${p.rank<=3?'top3':'normal'}">${p.rank}</span></td>
+                <td class="fw-bold">${p.playerName}</td>
+                <td>${p.teamName}</td>
+                <td>${p.totalAppearances}</td>
+                <td>${p.seasonEra}</td>
+                <td style="color:${color}" class="fw-bold">${p.fatigueIndex}</td>
+              </tr>`;
+            });
+          }).catch(() => document.getElementById('fatigueLoading').classList.remove('active'));
+      }
+    </script>
+  </th:block>
+</html>

@@ -1,0 +1,190 @@
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/default}"
+>
+  <head>
+    <title>데이터 분석 - glvpen</title>
+    <style>
+      .stat-card {
+        background: linear-gradient(135deg, #166534, #14532d);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+      }
+      .stat-card h3 { font-size: 2rem; margin: 0; color: #86EFAC; }
+      .stat-card p { margin: 0.3rem 0 0; font-size: 0.9rem; color: rgba(255,255,255,0.7); }
+      .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+      }
+      .section-title {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #22C55E;
+      }
+      .column-card {
+        background: #FAF7F2;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: background 0.2s;
+      }
+      .column-card:hover { background: #F0FDF4; }
+      .column-card a { text-decoration: none; color: inherit; }
+    </style>
+  </head>
+  <th:block layout:fragment="contents">
+    <div class="container my-4">
+      <h2 class="mb-4 fw-bold">📊 데이터 분석 대시보드
+        <small class="text-muted fs-6" th:text="'(' + ${season} + ' 시즌)'"></small>
+      </h2>
+
+      <!-- 지표 카드 -->
+      <div class="row g-3 mb-4">
+        <div class="col-md-3">
+          <div class="stat-card">
+            <h3 th:text="${dashboard.totalBatters}">150</h3>
+            <p>등록 타자</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <h3 th:text="${dashboard.totalPitchers}">120</h3>
+            <p>등록 투수</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <h3 th:text="${dashboard.totalTeams}">10</h3>
+            <p>KBO 구단</p>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="stat-card">
+            <h3 th:text="${season}">2025</h3>
+            <p>분석 시즌</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 차트 영역 -->
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="chart-container">
+            <div class="section-title">포지션별 wOBA 분포</div>
+            <canvas id="warDistChart" height="300"></canvas>
+            <div id="warDist-ai-insight"></div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="chart-container">
+            <div class="section-title">팀별 타투 밸런스</div>
+            <canvas id="teamBalanceChart" height="300"></canvas>
+            <div id="teamBalance-ai-insight"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 최근 분석 컬럼 -->
+      <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="section-title mb-0" style="border-bottom: none;">최근 분석 컬럼</div>
+          <a href="/analysis/columns" class="btn btn-outline-dark btn-sm">전체 보기</a>
+        </div>
+        <div th:each="col : ${dashboard.recentColumns}" class="column-card">
+          <a th:href="@{'/analysis/columns/' + ${col.id}}">
+            <div class="d-flex justify-content-between">
+              <strong th:text="${col.title}">컬럼 제목</strong>
+              <span class="badge bg-secondary" th:text="${col.category}">player</span>
+            </div>
+            <small class="text-muted" th:text="${col.publishDate}">2025-01-01</small>
+            <small class="text-muted ms-2" th:text="'조회 ' + ${col.viewCount}">조회 0</small>
+          </a>
+        </div>
+        <div th:if="${#lists.isEmpty(dashboard.recentColumns)}" class="text-center text-muted py-3">
+          아직 작성된 분석 컬럼이 없습니다.
+        </div>
+      </div>
+    </div>
+  </th:block>
+
+  <th:block layout:fragment="script">
+    <script th:inline="javascript">
+      const season = /*[[${season}]]*/ 2025;
+
+      // 포지션별 wOBA 분포 차트
+      fetch(`/api/analysis/war-distribution?season=${season}`)
+        .then(res => res.json())
+        .then(data => {
+          new Chart(document.getElementById('warDistChart'), {
+            type: 'bar',
+            data: {
+              labels: data.labels,
+              datasets: data.datasets.map(ds => ({
+                label: ds.label,
+                data: ds.data,
+                backgroundColor: ds.backgroundColor,
+                borderColor: ds.borderColor,
+                borderWidth: 1
+              }))
+            },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+          });
+
+          AiInsight.requestInsight({
+            chartType: 'woba-distribution', title: '포지션별 wOBA 분포',
+            labels: data.labels,
+            datasets: data.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+            extra: { season: season }, targetDivId: 'warDist-ai-insight'
+          });
+        });
+
+      // 팀별 타투 밸런스 차트
+      fetch(`/api/analysis/team-comparison?season=${season}`)
+        .then(res => res.json())
+        .then(teams => {
+          const labels = teams.map(t => `팀${t.teamId}`);
+          new Chart(document.getElementById('teamBalanceChart'), {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  label: '타자 wOBA',
+                  data: teams.map(t => t.totalBatterWar),
+                  backgroundColor: 'rgba(34, 197, 94, 0.6)'
+                },
+                {
+                  label: '투수 FIP',
+                  data: teams.map(t => t.totalPitcherWar),
+                  backgroundColor: 'rgba(22, 101, 52, 0.6)'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              scales: { x: { stacked: true }, y: { stacked: true } }
+            }
+          });
+
+          AiInsight.requestInsight({
+            chartType: 'team-balance', title: '팀별 타투 밸런스',
+            labels: labels,
+            datasets: [
+              { label: '타자 wOBA', data: teams.map(t => t.totalBatterWar) },
+              { label: '투수 FIP', data: teams.map(t => t.totalPitcherWar) }
+            ],
+            extra: { season: season }, targetDivId: 'teamBalance-ai-insight'
+          });
+        });
+    </script>
+  </th:block>
+</html>
