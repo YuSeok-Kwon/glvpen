@@ -1,7 +1,7 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/reviewDefault}">
+      layout:decorate="~{layouts/userDefault}">
 <head>
     <title>내 보유 카드</title>
 </head>
@@ -32,7 +32,7 @@
 			</div>
 			
 			<!-- 선수카드 -->
-            <div class="col-md-3 mb-4"
+            <div class="col-12 col-sm-6 col-md-3 mb-4"
 			     th:each="card : ${cards}"
 			     th:attr="data-grade=${card.grade}, data-position=${card.position}">
 			    

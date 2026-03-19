@@ -1,20 +1,63 @@
-<header class="position-relative d-flex align-items-end px-5" style="width: 100%;">
-  <div class="flex-grow-1" style="flex-basis: 33%;">
-    <a href="/user/home" style="text-decoration: none;">
-      <div class="full-logo-default display-1">BB LOCK</div>
+<header class="d-flex align-items-center px-3 px-md-4" style="width: 100%;">
+
+  <!-- 로고 -->
+  <div class="d-flex align-items-center me-auto">
+    <a href="/user/home" class="text-decoration-none d-flex flex-column">
+      <span class="logo-main">glvpen</span>
+      <span class="logo-sub d-none d-sm-inline">글러브와 펜</span>
     </a>
   </div>
 
-  <nav class="flex-grow-2 d-flex justify-content-end fs-3 gap-4 mb-3" style="flex-basis: 67%;">
+  <!-- 데스크탑 네비게이션 -->
+  <nav class="d-none d-md-flex align-items-center gap-4 fs-6 me-4">
     <a href="/schedule/result-view" class="nav-outline">일정/결과</a>
     <a href="/ranking/teamranking-view" class="nav-outline">랭킹</a>
-    <a href="/review/calendar-view" class="nav-outline">데일리 리뷰</a>
-    <a href="/game/home-view" class="nav-outline">시뮬레이션</a>
-    <a href="#" class="nav-outline">락커룸</a>
+    <a href="/analysis" class="nav-outline">분석</a>
+    <a href="/game/classic-sim-mode" class="nav-outline">시뮬레이션</a>
+    <a href="/user/locker-room" class="nav-outline">락커룸</a>
   </nav>
 
-  <div class="position-absolute top-0 end-0 mt-2 me-4 d-flex align-items-center gap-1">
-    <span class="text-dark small fw-bold" th:text="${session.userNickname + ' 님'}">권유석 님</span>
-    <a href="/user/logout" class="small text-warning">로그아웃</a>
+  <!-- 유저 정보 -->
+  <div class="d-none d-md-flex align-items-center gap-2">
+    <span class="small text-white opacity-75"
+          th:text="${session.loginUser != null ? session.loginUser.nickname + ' 님' : '게스트 님'}"
+          >권유석 님</span>
+    <a href="/user/logout" class="small" style="color: var(--color-accent-light);">로그아웃</a>
   </div>
+
+  <!-- 모바일 햄버거 메뉴 버튼 -->
+  <button class="d-md-none btn p-1" type="button"
+          data-bs-toggle="offcanvas" data-bs-target="#mobileMenu"
+          aria-controls="mobileMenu"
+          style="border: none; color: white; font-size: 1.5rem;">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <!-- 모바일 오프캔버스 메뉴 -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="mobileMenu"
+       aria-labelledby="mobileMenuLabel"
+       style="background-color: var(--color-primary); max-width: 280px;">
+    <div class="offcanvas-header border-bottom" style="border-color: rgba(255,255,255,0.15) !important;">
+      <div>
+        <span class="logo-main" id="mobileMenuLabel">glvpen</span>
+        <div class="logo-sub">글러브와 펜</div>
+      </div>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column gap-1 pt-3">
+      <a href="/schedule/result-view" class="nav-outline d-block py-2 px-3 rounded" style="font-size: 1.1rem;">일정/결과</a>
+      <a href="/ranking/teamranking-view" class="nav-outline d-block py-2 px-3 rounded" style="font-size: 1.1rem;">랭킹</a>
+      <a href="/analysis" class="nav-outline d-block py-2 px-3 rounded" style="font-size: 1.1rem;">분석</a>
+      <a href="/game/classic-sim-mode" class="nav-outline d-block py-2 px-3 rounded" style="font-size: 1.1rem;">시뮬레이션</a>
+      <a href="/user/locker-room" class="nav-outline d-block py-2 px-3 rounded" style="font-size: 1.1rem;">락커룸</a>
+      <hr style="border-color: rgba(255,255,255,0.15);">
+      <div class="px-3">
+        <span class="small text-white opacity-75"
+              th:text="${session.loginUser != null ? session.loginUser.nickname + ' 님' : '게스트 님'}"
+              >권유석 님</span>
+        <a href="/user/logout" class="small d-block mt-1" style="color: var(--color-accent-light);">로그아웃</a>
+      </div>
+    </div>
+  </div>
+
 </header>

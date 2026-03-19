@@ -1,0 +1,623 @@
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/default}"
+>
+  <head>
+    <title>시즌/트렌드 분석 - BaseBall LOCK</title>
+    <style>
+      .chart-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: box-shadow 0.3s;
+      }
+      .chart-card:hover {
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      }
+      .chart-card h5 {
+        font-weight: 700;
+        color: #166534;
+        margin-bottom: 1rem;
+        font-size: 1.05rem;
+      }
+      .chart-container {
+        position: relative;
+        height: 300px;
+      }
+      .controls-bar {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+        padding: 1rem 1.5rem;
+        background: #f8f9fa;
+        border-radius: 12px;
+      }
+      .controls-bar label {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #333;
+        margin-bottom: 0;
+      }
+      .controls-bar select {
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.9rem;
+      }
+      .page-title {
+        font-weight: 800;
+        color: #166534;
+        margin-bottom: 0.25rem;
+      }
+      .page-subtitle {
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+      }
+      .rookie-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.88rem;
+      }
+      .rookie-table th {
+        background: #166534;
+        color: #fff;
+        padding: 0.5rem 0.75rem;
+        text-align: center;
+        font-weight: 600;
+      }
+      .rookie-table td {
+        padding: 0.45rem 0.75rem;
+        text-align: center;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .rookie-table tr:hover {
+        background: #f0fdf4;
+      }
+      .rookie-table .logo-img {
+        width: 20px;
+        height: 20px;
+        vertical-align: middle;
+        margin-right: 4px;
+      }
+      .no-data {
+        text-align: center;
+        color: #9ca3af;
+        padding: 3rem;
+        font-size: 0.95rem;
+      }
+      .tab-btn {
+        padding: 0.4rem 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        font-size: 0.88rem;
+        transition: all 0.2s;
+      }
+      .tab-btn.active {
+        background: #166534;
+        color: #fff;
+        border-color: #166534;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div layout:fragment="contents">
+      <div class="container py-4">
+        <h2 class="page-title">시즌/트렌드 분석</h2>
+        <p class="page-subtitle">KBO 리그 시즌별 데이터 트렌드를 한눈에 확인하세요</p>
+
+        <!-- 컨트롤 바 -->
+        <div class="controls-bar">
+          <div>
+            <label for="startYear">시작 연도</label>
+            <select id="startYear">
+              <option value="2018">2018</option>
+              <option value="2019">2019</option>
+              <option value="2020" selected>2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+            </select>
+          </div>
+          <div>
+            <label for="endYear">종료 연도</label>
+            <select id="endYear">
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+          <div>
+            <label for="singleSeason">시즌 선택</label>
+            <select id="singleSeason">
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+          <div>
+            <label for="rookieYear">신인 연도</label>
+            <select id="rookieYear">
+              <option value="2020">2020</option>
+              <option value="2021">2021</option>
+              <option value="2022">2022</option>
+              <option value="2023">2023</option>
+              <option value="2024">2024</option>
+              <option value="2025">2025</option>
+              <option value="2026" selected>2026</option>
+            </select>
+          </div>
+          <button class="btn btn-sm btn-success" onclick="loadAllCharts()" style="margin-left:auto;">
+            <i class="bi bi-arrow-clockwise"></i> 갱신
+          </button>
+        </div>
+
+        <!-- 차트 그리드: 2열 3행 -->
+        <div class="row">
+          <!-- 1. 리그 타고투저 추이 -->
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="bi bi-graph-up"></i> 리그 평균 ERA / OPS 추이</h5>
+              <div class="chart-container">
+                <canvas id="leagueTrendChart"></canvas>
+              </div>
+              <div id="leagueTrend-ai-insight"></div>
+            </div>
+          </div>
+
+          <!-- 2. 홈런 트렌드 -->
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="bi bi-bar-chart"></i> 시즌별 리그 총 홈런 수</h5>
+              <div class="chart-container">
+                <canvas id="homerunChart"></canvas>
+              </div>
+              <div id="homerun-ai-insight"></div>
+            </div>
+          </div>
+
+          <!-- 3. 정규시즌 vs 포스트시즌 -->
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="bi bi-trophy"></i> 정규시즌 vs 포스트시즌</h5>
+              <div class="chart-container">
+                <canvas id="seriesChart"></canvas>
+              </div>
+              <div id="series-ai-insight"></div>
+            </div>
+          </div>
+
+          <!-- 4. 신인 임팩트 -->
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="bi bi-star"></i> 신인 wOBA/FIP TOP</h5>
+              <div class="chart-container">
+                <canvas id="rookieChart"></canvas>
+              </div>
+              <div id="rookie-ai-insight"></div>
+            </div>
+          </div>
+
+          <!-- 5. 출신교 분류 -->
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="bi bi-mortarboard"></i> 출신교별 선수 분포</h5>
+              <div class="chart-container">
+                <canvas id="schoolChart"></canvas>
+              </div>
+              <div id="school-ai-insight"></div>
+            </div>
+          </div>
+
+          <!-- 6. 경기 이벤트 트렌드 -->
+          <div class="col-md-6">
+            <div class="chart-card">
+              <h5><i class="bi bi-lightning"></i> 경기 이벤트 발생 추이</h5>
+              <div class="chart-container">
+                <canvas id="eventChart"></canvas>
+              </div>
+              <div id="event-ai-insight"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 신인 상세 테이블 -->
+        <div class="chart-card mt-3">
+          <h5><i class="bi bi-table"></i> 신인 상세 기록</h5>
+          <div class="mb-3">
+            <button class="tab-btn active" onclick="showRookieTab('batter', this)">타자</button>
+            <button class="tab-btn" onclick="showRookieTab('pitcher', this)">투수</button>
+          </div>
+          <div id="rookieBatterTable">
+            <table class="rookie-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>선수</th><th>팀</th><th>wOBA</th><th>AVG</th><th>HR</th><th>OPS</th>
+                </tr>
+              </thead>
+              <tbody id="rookieBatterBody">
+                <tr><td colspan="7" class="no-data">데이터를 불러오는 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="rookiePitcherTable" style="display:none;">
+            <table class="rookie-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>선수</th><th>팀</th><th>FIP</th><th>ERA</th><th>승</th><th>탈삼진</th>
+                </tr>
+              </thead>
+              <tbody id="rookiePitcherBody">
+                <tr><td colspan="7" class="no-data">데이터를 불러오는 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <th:block layout:fragment="script">
+    <script>
+      // 차트 인스턴스 관리
+      const charts = {};
+
+      function destroyChart(id) {
+        if (charts[id]) {
+          charts[id].destroy();
+          delete charts[id];
+        }
+      }
+
+      function getParams() {
+        return {
+          startYear: document.getElementById('startYear').value,
+          endYear: document.getElementById('endYear').value,
+          season: document.getElementById('singleSeason').value,
+          rookieYear: document.getElementById('rookieYear').value
+        };
+      }
+
+      // 1. 리그 타고투저 추이 (이중 Y축)
+      function loadLeagueTrend() {
+        const p = getParams();
+        fetch(`/api/analysis/league-trend?startYear=${p.startYear}&endYear=${p.endYear}`)
+          .then(r => r.json())
+          .then(data => {
+            destroyChart('leagueTrendChart');
+            const ctx = document.getElementById('leagueTrendChart').getContext('2d');
+            charts['leagueTrendChart'] = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: data.labels,
+                datasets: data.datasets.map(ds => ({
+                  label: ds.label,
+                  data: ds.data,
+                  backgroundColor: ds.backgroundColor,
+                  borderColor: ds.borderColor,
+                  borderWidth: 2,
+                  tension: 0.3,
+                  fill: true,
+                  yAxisID: ds.yAxisID || 'y'
+                }))
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                  y: {
+                    type: 'linear',
+                    position: 'left',
+                    title: { display: true, text: 'ERA' }
+                  },
+                  y1: {
+                    type: 'linear',
+                    position: 'right',
+                    title: { display: true, text: 'OPS' },
+                    grid: { drawOnChartArea: false }
+                  }
+                }
+              }
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'league-trend', title: '리그 평균 ERA / OPS 추이',
+              labels: data.labels,
+              datasets: data.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+              extra: { startYear: p.startYear, endYear: p.endYear },
+              targetDivId: 'leagueTrend-ai-insight'
+            });
+          })
+          .catch(() => showNoData('leagueTrendChart'));
+      }
+
+      // 2. 홈런 트렌드
+      function loadHomerunTrend() {
+        const p = getParams();
+        fetch(`/api/analysis/homerun-trend?startYear=${p.startYear}&endYear=${p.endYear}`)
+          .then(r => r.json())
+          .then(data => {
+            destroyChart('homerunChart');
+            const ctx = document.getElementById('homerunChart').getContext('2d');
+            charts['homerunChart'] = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: data.datasets.map(ds => ({
+                  label: ds.label,
+                  data: ds.data,
+                  backgroundColor: ds.backgroundColor,
+                  borderColor: ds.borderColor,
+                  borderWidth: 1,
+                  borderRadius: 4
+                }))
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'homerun-trend', title: '시즌별 리그 총 홈런 수',
+              labels: data.labels,
+              datasets: data.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+              extra: { startYear: p.startYear, endYear: p.endYear },
+              targetDivId: 'homerun-ai-insight'
+            });
+          })
+          .catch(() => showNoData('homerunChart'));
+      }
+
+      // 3. 정규시즌 vs 포스트시즌
+      function loadSeriesComparison() {
+        const p = getParams();
+        fetch(`/api/analysis/series-comparison?season=${p.season}`)
+          .then(r => r.json())
+          .then(data => {
+            destroyChart('seriesChart');
+            const ctx = document.getElementById('seriesChart').getContext('2d');
+            charts['seriesChart'] = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: data.datasets.map(ds => ({
+                  label: ds.label,
+                  data: ds.data,
+                  backgroundColor: ds.backgroundColor,
+                  borderColor: ds.borderColor,
+                  borderWidth: 1,
+                  borderRadius: 4
+                }))
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'series-comparison', title: '정규시즌 vs 포스트시즌',
+              labels: data.labels,
+              datasets: data.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+              extra: { season: p.season },
+              targetDivId: 'series-ai-insight'
+            });
+          })
+          .catch(() => showNoData('seriesChart'));
+      }
+
+      // 4. 신인 임팩트
+      function loadRookieImpact() {
+        const p = getParams();
+        fetch(`/api/analysis/rookie-impact?debutYear=${p.rookieYear}`)
+          .then(r => r.json())
+          .then(data => {
+            // 차트
+            const chartData = data.chart;
+            destroyChart('rookieChart');
+            const ctx = document.getElementById('rookieChart').getContext('2d');
+            charts['rookieChart'] = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: chartData.labels,
+                datasets: chartData.datasets.map(ds => ({
+                  label: ds.label,
+                  data: ds.data,
+                  backgroundColor: ds.backgroundColor,
+                  borderColor: ds.borderColor,
+                  borderWidth: 1,
+                  borderRadius: 4
+                }))
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: { x: { beginAtZero: true } }
+              }
+            });
+
+            // 타자 테이블
+            const batterBody = document.getElementById('rookieBatterBody');
+            if (data.batters && data.batters.length > 0) {
+              batterBody.innerHTML = data.batters.map((b, i) =>
+                `<tr>
+                  <td>${i + 1}</td>
+                  <td>${b.name}</td>
+                  <td><img class="logo-img" src="/static/logos/${b.logoName}.png" alt="" onerror="this.style.display='none'">${b.teamName}</td>
+                  <td><b>${(b.woba ?? 0).toFixed(3)}</b></td>
+                  <td>${b.avg.toFixed(3)}</td>
+                  <td>${Math.round(b.hr)}</td>
+                  <td>${b.ops.toFixed(3)}</td>
+                </tr>`
+              ).join('');
+            } else {
+              batterBody.innerHTML = '<tr><td colspan="7" class="no-data">해당 연도 신인 타자 데이터가 없습니다</td></tr>';
+            }
+
+            AiInsight.requestInsight({
+              chartType: 'rookie-impact', title: '신인 wOBA/FIP TOP',
+              labels: chartData.labels,
+              datasets: chartData.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+              extra: { rookieYear: p.rookieYear },
+              targetDivId: 'rookie-ai-insight'
+            });
+
+            // 투수 테이블
+            const pitcherBody = document.getElementById('rookiePitcherBody');
+            if (data.pitchers && data.pitchers.length > 0) {
+              pitcherBody.innerHTML = data.pitchers.map((p, i) =>
+                `<tr>
+                  <td>${i + 1}</td>
+                  <td>${p.name}</td>
+                  <td><img class="logo-img" src="/static/logos/${p.logoName}.png" alt="" onerror="this.style.display='none'">${p.teamName}</td>
+                  <td><b>${(p.fip ?? 0).toFixed(2)}</b></td>
+                  <td>${p.era.toFixed(2)}</td>
+                  <td>${Math.round(p.wins)}</td>
+                  <td>${Math.round(p.so)}</td>
+                </tr>`
+              ).join('');
+            } else {
+              pitcherBody.innerHTML = '<tr><td colspan="7" class="no-data">해당 연도 신인 투수 데이터가 없습니다</td></tr>';
+            }
+          })
+          .catch(() => {
+            showNoData('rookieChart');
+            document.getElementById('rookieBatterBody').innerHTML = '<tr><td colspan="7" class="no-data">데이터 로드 실패</td></tr>';
+            document.getElementById('rookiePitcherBody').innerHTML = '<tr><td colspan="7" class="no-data">데이터 로드 실패</td></tr>';
+          });
+      }
+
+      // 5. 출신교 분류 (stacked bar)
+      function loadSchoolType() {
+        const p = getParams();
+        fetch(`/api/analysis/school-type?startYear=${p.startYear}&endYear=${p.endYear}`)
+          .then(r => r.json())
+          .then(data => {
+            destroyChart('schoolChart');
+            const ctx = document.getElementById('schoolChart').getContext('2d');
+            charts['schoolChart'] = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: data.datasets.map(ds => ({
+                  label: ds.label,
+                  data: ds.data,
+                  backgroundColor: ds.backgroundColor,
+                  borderColor: ds.borderColor,
+                  borderWidth: 1
+                }))
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  x: { stacked: true },
+                  y: { stacked: true, beginAtZero: true }
+                }
+              }
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'school-type', title: '출신교별 선수 분포',
+              labels: data.labels,
+              datasets: data.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+              extra: { startYear: p.startYear, endYear: p.endYear },
+              targetDivId: 'school-ai-insight'
+            });
+          })
+          .catch(() => showNoData('schoolChart'));
+      }
+
+      // 6. 경기 이벤트 트렌드
+      function loadGameEventTrend() {
+        const p = getParams();
+        fetch(`/api/analysis/game-event-trend?startYear=${p.startYear}&endYear=${p.endYear}`)
+          .then(r => r.json())
+          .then(data => {
+            destroyChart('eventChart');
+            const ctx = document.getElementById('eventChart').getContext('2d');
+            charts['eventChart'] = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: data.labels,
+                datasets: data.datasets.map(ds => ({
+                  label: ds.label,
+                  data: ds.data,
+                  backgroundColor: ds.backgroundColor,
+                  borderColor: ds.borderColor,
+                  borderWidth: 2,
+                  tension: 0.3,
+                  fill: false
+                }))
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: { y: { beginAtZero: true } }
+              }
+            });
+
+            AiInsight.requestInsight({
+              chartType: 'game-event-trend', title: '경기 이벤트 발생 추이',
+              labels: data.labels,
+              datasets: data.datasets.map(ds => ({ label: ds.label, data: ds.data })),
+              extra: { startYear: p.startYear, endYear: p.endYear },
+              targetDivId: 'event-ai-insight'
+            });
+          })
+          .catch(() => showNoData('eventChart'));
+      }
+
+      // 데이터 없음 표시
+      function showNoData(canvasId) {
+        destroyChart(canvasId);
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.font = '14px Pretendard';
+        ctx.fillStyle = '#9ca3af';
+        ctx.textAlign = 'center';
+        ctx.fillText('데이터가 없습니다', ctx.canvas.width / 2, ctx.canvas.height / 2);
+      }
+
+      // 신인 테이블 탭 전환
+      function showRookieTab(type, btn) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('rookieBatterTable').style.display = type === 'batter' ? '' : 'none';
+        document.getElementById('rookiePitcherTable').style.display = type === 'pitcher' ? '' : 'none';
+      }
+
+      // 전체 차트 로드
+      function loadAllCharts() {
+        loadLeagueTrend();
+        loadHomerunTrend();
+        loadSeriesComparison();
+        loadRookieImpact();
+        loadSchoolType();
+        loadGameEventTrend();
+      }
+
+      // 페이지 로드 시 실행
+      document.addEventListener('DOMContentLoaded', loadAllCharts);
+    </script>
+    </th:block>
+  </body>
+</html>

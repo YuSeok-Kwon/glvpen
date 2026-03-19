@@ -1,269 +1,301 @@
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/reviewDefault}">
-<head>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/userDefault}"
+>
+  <head>
     <title>카드 뽑기</title>
-</head>
+  </head>
 
-<th:block layout:fragment="contents">
+  <th:block layout:fragment="contents">
     <div class="container mt-4 text-center py-5">
-          <h2 class="mb-4">카드 뽑기</h2>
-          <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
-            <select id="positionSelect" class="form-select" style="width: 150px;">
-                <option value="ALL" disabled selected>전체 포지션</option>
-                <option value="P">투수</option>
-                <option value="1B">1루수</option>
-                <option value="2B">2루수</option>
-                <option value="3B">3루수</option>
-                <option value="SS">유격수</option>
-                <option value="LF">좌익수</option>
-                <option value="RF">우익수</option>
-                <option value="CF">중견수</option>
-                <option value="C">포수</option>
-                <option value="DH">지명타자</option>
-            </select>
-            <button id="drawBtn" class="btn btn-primary">카드 뽑기</button>
-        </div>
+      <h2 class="mb-4">카드 뽑기</h2>
+      <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
+        <select id="positionSelect" class="form-select" style="width: 150px">
+          <option value="ALL" selected>전체 포지션</option>
+          <option value="P">투수</option>
+          <option value="C">포수</option>
+          <option value="1B">1루수</option>
+          <option value="2B">2루수</option>
+          <option value="3B">3루수</option>
+          <option value="SS">유격수</option>
+          <option value="LF">좌익수</option>
+          <option value="CF">중견수</option>
+          <option value="RF">우익수</option>
+          <option value="DH">지명타자</option>
+        </select>
+        <button id="drawBtn" class="btn btn-primary">카드 뽑기</button>
+      </div>
     </div>
     <!-- 카드 출력 영역 -->
     <div class="d-flex justify-content-center">
-        <div id="drawArea"
-             class="d-flex gap-4 flex-nowrap overflow-x-auto mb-5"
-             style="min-height: 400px; padding: 1rem;">
-        </div>
+      <div
+        id="drawArea"
+        class="d-flex gap-4 flex-nowrap overflow-x-auto mb-5"
+        style="min-height: 400px; padding: 1rem"
+      ></div>
     </div>
-</th:block>
+  </th:block>
 
-<th:block layout:fragment="script">
-<script>
-//카드 한 장을 생성하는 함수
-function createCardElement(card) {
-    const cardWrapper = document.createElement('div');
-    cardWrapper.className = 'd-flex flex-column align-items-center';
-    cardWrapper.style.minWidth = '200px';
+  <th:block layout:fragment="script">
+    <script>
+      //카드 한 장을 생성하는 함수
+      function createCardElement(card) {
+        const cardWrapper = document.createElement('div');
+        cardWrapper.className = 'd-flex flex-column align-items-center';
+        cardWrapper.style.minWidth = '200px';
 
-    const existingWrapper = document.querySelector('.pokemon-card[data-player-id="' + card.playerId + '"]');
-    if (existingWrapper !== null) {
-        existingWrapper.remove();
-    }
+        const existingWrapper = document.querySelector(
+          '.pokemon-card[data-player-id="' + card.playerId + '"]'
+        );
+        if (existingWrapper !== null) {
+          existingWrapper.remove();
+        }
 
-    const flipWrapper = document.createElement('div');
-    flipWrapper.className = 'pokemon-card card card-flip card-fade-in';
-    flipWrapper.setAttribute('data-position', card.position);
-    flipWrapper.setAttribute('data-player-id', card.playerId);
+        const flipWrapper = document.createElement('div');
+        flipWrapper.className = 'pokemon-card card card-flip card-fade-in';
+        flipWrapper.setAttribute('data-position', card.position);
+        flipWrapper.setAttribute('data-player-id', card.playerId);
 
-    const cardInner = document.createElement('div');
-    cardInner.className = 'card-inner';
+        const cardInner = document.createElement('div');
+        cardInner.className = 'card-inner';
 
-    const front = createCardFront(card);
-    const back = createCardBack(card);
-    addFlipEvent(flipWrapper, cardInner);
+        const front = createCardFront(card);
+        const back = createCardBack(card);
+        addFlipEvent(flipWrapper, cardInner);
 
-    cardInner.appendChild(front);
-    cardInner.appendChild(back);
-    flipWrapper.appendChild(cardInner);
-    cardWrapper.appendChild(flipWrapper);
+        cardInner.appendChild(front);
+        cardInner.appendChild(back);
+        flipWrapper.appendChild(cardInner);
+        cardWrapper.appendChild(flipWrapper);
 
-    const saveButton = createSaveButton(card);
-    cardWrapper.appendChild(saveButton);
+        const saveButton = createSaveButton(card);
+        cardWrapper.appendChild(saveButton);
 
-    return cardWrapper;
-}
+        return cardWrapper;
+      }
 
-// 카드 앞면을 생성
-function createCardFront(card) {
-    const front = document.createElement('div');
-    front.className = 'card-front grade-' + card.grade;
+      // 카드 앞면을 생성
+      function createCardFront(card) {
+        const front = document.createElement('div');
+        front.className = 'card-front grade-' + card.grade;
 
-    const banner = document.createElement('div');
-    banner.className = 'card-banner';
-    banner.innerHTML = '<span class="grade-label">' + card.grade + ' 등급</span><span class="season">' + card.season + '</span>';
-    front.appendChild(banner);
+        const banner = document.createElement('div');
+        banner.className = 'card-banner';
+        banner.innerHTML =
+          '<span class="grade-label">' +
+          card.grade +
+          ' 등급</span><span class="season">' +
+          card.season +
+          '</span>';
+        front.appendChild(banner);
 
-    const overallEl = document.createElement('div');
-    overallEl.className = 'overall-score';
-    overallEl.innerHTML = '<span><strong>Overall : ' + card.overall + '</strong></span>';
-    overallEl.style.fontSize = '1.1rem';
-    overallEl.style.marginTop = '10px';
-    overallEl.style.fontWeight = 'bold';
-    front.appendChild(overallEl);
+        const overallEl = document.createElement('div');
+        overallEl.className = 'overall-score';
+        overallEl.innerHTML =
+          '<span><strong>Overall : ' + card.overall + '</strong></span>';
+        overallEl.style.fontSize = '1.1rem';
+        overallEl.style.marginTop = '10px';
+        overallEl.style.fontWeight = 'bold';
+        front.appendChild(overallEl);
 
-    if (card.grade === 'S' && card.imagePath) {
-        const imageWrapper = document.createElement('div');
-        imageWrapper.className = 'card-image-wrapper';
-        imageWrapper.innerHTML = '<img src="/' + card.imagePath + '" alt="' + card.playerName + '" class="card-image hologram">';
-        front.appendChild(imageWrapper);
-    }
+        if (card.grade === 'S' && card.imagePath) {
+          const imageWrapper = document.createElement('div');
+          imageWrapper.className = 'card-image-wrapper';
+          const img = document.createElement('img');
+          img.src = '/' + card.imagePath;
+          img.alt = card.playerName;
+          img.className = 'card-image hologram';
+          img.onerror = function() { imageWrapper.style.display = 'none'; };
+          imageWrapper.appendChild(img);
+          front.appendChild(imageWrapper);
+        }
 
-    const info = document.createElement('div');
-    info.className = 'card-info';
+        const info = document.createElement('div');
+        info.className = 'card-info';
 
-    const nameEl = document.createElement('h5');
-    nameEl.className = 'player-name mt-5';
-    nameEl.innerText = card.playerName;
+        const nameEl = document.createElement('h5');
+        nameEl.className = 'player-name mt-5';
+        nameEl.innerText = card.playerName;
 
-    const teamEl = document.createElement('p');
-    teamEl.className = 'position-team';
+        const teamEl = document.createElement('p');
+        teamEl.className = 'position-team';
 
-    if (card.teamLogo) {
-        const logoImg = document.createElement('img');
-        logoImg.src = '/static/emblems/' + card.teamLogo + '.svg';
-        logoImg.alt = card.teamName + ' 로고';
-        logoImg.style.height = '40px';
-        logoImg.style.width = '40px';
-        logoImg.style.objectFit = 'contain';
-        logoImg.style.verticalAlign = 'middle';
-        logoImg.style.marginRight = '4px';
-        teamEl.appendChild(logoImg);
-    }
+        if (card.teamLogo) {
+          const logoImg = document.createElement('img');
+          logoImg.src = '/static/emblems/' + card.teamLogo + '.svg';
+          logoImg.alt = card.teamName + ' 로고';
+          logoImg.style.height = '40px';
+          logoImg.style.width = '40px';
+          logoImg.style.objectFit = 'contain';
+          logoImg.style.verticalAlign = 'middle';
+          logoImg.style.marginRight = '4px';
+          teamEl.appendChild(logoImg);
+        }
 
-    teamEl.appendChild(document.createTextNode(card.teamName));
-    info.appendChild(nameEl);
-    info.appendChild(teamEl);
-    front.appendChild(info);
+        teamEl.appendChild(document.createTextNode(card.teamName));
+        info.appendChild(nameEl);
+        info.appendChild(teamEl);
+        front.appendChild(info);
 
-    const stats = document.createElement('div');
-    stats.className = 'card-stats';
-    stats.innerHTML = getCardStatsHTML(card);
-    front.appendChild(stats);
+        const stats = document.createElement('div');
+        stats.className = 'card-stats';
+        stats.innerHTML = getCardStatsHTML(card);
+        front.appendChild(stats);
 
-    return front;
-}
+        return front;
+      }
 
-// 카드 뒷면을 생성
-function createCardBack(card) {
-    const back = document.createElement('div');
-    back.className = 'card-back grade-' + card.grade;
+      // 카드 뒷면을 생성
+      function createCardBack(card) {
+        const back = document.createElement('div');
+        back.className = 'card-back grade-' + card.grade;
 
-    var backHTML = '<h6>능력치 요약</h6>';
-    if (card.position === 'P') {
-        backHTML += '<p>컨트롤: ' + card.control + '</p>';
-        backHTML += '<p>구위: ' + card.stuff + '</p>';
-        backHTML += '<p>지구력: ' + card.stamina + '</p>';
-        backHTML += '<p><strong>Overall: ' + card.overall + '</strong></p>';
-    } else {
-        backHTML += '<p>파워: ' + card.power + '</p>';
-        backHTML += '<p>컨택: ' + card.contact + '</p>';
-        backHTML += '<p>선구: ' + card.discipline + '</p>';
-        backHTML += '<p>스피드: ' + card.speed + '</p>';
-        backHTML += '<p><strong>종합: ' + card.overall + '</strong></p>';
-    }
+        var backHTML = '<h6>능력치 요약</h6>';
+        if (card.position === 'P') {
+          backHTML += '<p>컨트롤: ' + card.control + '</p>';
+          backHTML += '<p>구위: ' + card.stuff + '</p>';
+          backHTML += '<p>지구력: ' + card.stamina + '</p>';
+          backHTML += '<p><strong>Overall: ' + card.overall + '</strong></p>';
+        } else {
+          backHTML += '<p>파워: ' + card.power + '</p>';
+          backHTML += '<p>컨택: ' + card.contact + '</p>';
+          backHTML += '<p>선구: ' + card.discipline + '</p>';
+          backHTML += '<p>스피드: ' + card.speed + '</p>';
+          backHTML += '<p><strong>종합: ' + card.overall + '</strong></p>';
+        }
 
-    back.innerHTML = backHTML;
-    return back;
-}
+        back.innerHTML = backHTML;
+        return back;
+      }
 
-// 카드 스탯 HTML 생성
-function getCardStatsHTML(card) {
-    var statsHTML = '<p>WAR: ' + card.war + '</p>';
-    if (card.position === 'P') {
-        statsHTML += '<p>ERA: ' + card.era + '</p>';
-        statsHTML += '<p>WHIP: ' + card.whip + '</p>';
-        if (card.wins >= card.saves && card.wins >= card.holds && card.wins > 0) {
+      // 카드 스탯 HTML 생성
+      function getCardStatsHTML(card) {
+        var statsHTML = '';
+        if (card.position === 'P') {
+          statsHTML += '<p>ERA: ' + card.era + '</p>';
+          statsHTML += '<p>WHIP: ' + card.whip + '</p>';
+          if (
+            card.wins >= card.saves &&
+            card.wins >= card.holds &&
+            card.wins > 0
+          ) {
             statsHTML += '<p>' + card.wins + '승</p>';
-        } else if (card.saves >= card.wins && card.saves >= card.holds && card.saves > 0) {
+          } else if (
+            card.saves >= card.wins &&
+            card.saves >= card.holds &&
+            card.saves > 0
+          ) {
             statsHTML += '<p>' + card.saves + '세이브</p>';
-        } else if (card.holds > 0) {
+          } else if (card.holds > 0) {
             statsHTML += '<p>' + card.holds + '홀드</p>';
-        }
-    } else {
-        statsHTML += '<p>AVG: ' + card.avg + '</p>';
-        statsHTML += '<p>OPS: ' + card.ops + '</p>';
-        if (card.hr >= card.sb && card.hr > 0) {
+          }
+        } else {
+          statsHTML += '<p>AVG: ' + card.avg + '</p>';
+          statsHTML += '<p>OPS: ' + card.ops + '</p>';
+          if (card.hr >= card.sb && card.hr > 0) {
             statsHTML += '<p>' + card.hr + '홈런</p>';
-        } else if (card.sb > 0) {
+          } else if (card.sb > 0) {
             statsHTML += '<p>' + card.sb + '도루</p>';
+          }
         }
-    }
-    return statsHTML;
-}
+        return statsHTML;
+      }
 
-// 카드 회전 이벤트 설정
-function addFlipEvent(wrapper, inner) {
-    wrapper.addEventListener('mousemove', function (event) {
-        const rect = wrapper.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const rotateY = (x < rect.width / 2) ? 0 : 180;
-        inner.style.transform = 'rotateY(' + rotateY + 'deg)';
-    });
+      // 카드 회전 이벤트 설정
+      function addFlipEvent(wrapper, inner) {
+        wrapper.addEventListener('mousemove', function (event) {
+          const rect = wrapper.getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const rotateY = x < rect.width / 2 ? 0 : 180;
+          inner.style.transform = 'rotateY(' + rotateY + 'deg)';
+        });
 
-    wrapper.addEventListener('mouseleave', function () {
-        inner.style.transform = 'rotateY(0deg)';
-    });
-}
+        wrapper.addEventListener('mouseleave', function () {
+          inner.style.transform = 'rotateY(0deg)';
+        });
+      }
 
-// 카드 저장 버튼 생성
-function createSaveButton(card) {
-    const button = document.createElement('button');
-    button.className = 'btn btn-outline-light btn-sm mt-2';
-    button.innerText = '보관함에 추가';
+      // 카드 저장 버튼 생성
+      function createSaveButton(card) {
+        const button = document.createElement('button');
+        button.className = 'btn btn-outline-light btn-sm mt-2';
+        button.innerText = '보관함에 추가';
 
-    button.onclick = function () {
-        $.ajax({
-            url: '/game/save',
+        button.onclick = function () {
+          $.ajax({
+            url: '/api/game/save',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({
-                playerId: card.playerId,
-                season: card.season,
-                grade: card.grade,
-                position: card.position
+              playerId: card.playerId,
+              season: card.season,
+              grade: card.grade,
+              position: card.position,
             }),
             success: function () {
-                button.innerText = '저장 완료';
-                button.disabled = true;
-                button.style.color = 'black';
-            }
-        });
-    };
+              button.innerText = '저장 완료';
+              button.disabled = true;
+              button.style.color = 'black';
+            },
+          });
+        };
 
-    return button;
-}
+        return button;
+      }
 
-// 페이지 로드 시 draw 버튼에 이벤트 연결
-document.addEventListener('DOMContentLoaded', function () {
-    const drawButton = document.getElementById('drawBtn');
-    const positionSelect = document.getElementById('positionSelect');
-    const drawArea = document.getElementById('drawArea');
+      // 페이지 로드 시 draw 버튼에 이벤트 연결
+      document.addEventListener('DOMContentLoaded', function () {
+        const drawButton = document.getElementById('drawBtn');
+        const positionSelect = document.getElementById('positionSelect');
+        const drawArea = document.getElementById('drawArea');
 
-    drawButton.addEventListener('click', function () {
-        const position = positionSelect.value || '';
-        drawButton.disabled = true;
-        drawArea.innerHTML = '';
+        drawButton.addEventListener('click', function () {
+          const position = positionSelect.value || '';
+          drawButton.disabled = true;
+          drawArea.innerHTML = '';
 
-        const saveArea = document.getElementById('saveArea');
-        if (saveArea !== null) {
+          const saveArea = document.getElementById('saveArea');
+          if (saveArea !== null) {
             saveArea.remove();
-        }
+          }
 
-        $.ajax({
-            url: '/game/draw?position=' + position,
+          $.ajax({
+            url: '/api/game/draw?position=' + position,
             method: 'GET',
-            success: function (cards) {
-                for (var i = 0; i < cards.length; i++) {
-                    (function (index) {
-                        const card = cards[index];
-                        const cardElement = createCardElement(card);
+            success: function (response) {
+              var cards = response.cards || [];
+              if (cards.length === 0) {
+                drawButton.disabled = false;
+                return;
+              }
+              for (var i = 0; i < cards.length; i++) {
+                (function (index) {
+                  const card = cards[index];
+                  const cardElement = createCardElement(card);
 
-                        if (card.grade === 'S' && index === 0) {
-                            const audio = new Audio('/static/soundEffect/s-tier.mp3');
-                            audio.play();
-                        }
+                  if (card.grade === 'S' && index === 0) {
+                    const audio = new Audio('/static/soundEffect/s-tier.mp3');
+                    audio.play();
+                  }
 
-                        setTimeout(function () {
-                            drawArea.appendChild(cardElement);
-                            if (index === cards.length - 1) {
-                                drawButton.disabled = false;
-                            }
-                        }, index * 500);
-                    })(i);
-                }
+                  setTimeout(function () {
+                    drawArea.appendChild(cardElement);
+                    if (index === cards.length - 1) {
+                      drawButton.disabled = false;
+                    }
+                  }, index * 500);
+                })(i);
+              }
+            },
+            error: function() {
+              drawButton.disabled = false;
+              alert('카드 뽑기에 실패했습니다.');
             }
+          });
         });
-    });
-});
-
-</script>
-</th:block>
+      });
+    </script>
+  </th:block>
 </html>

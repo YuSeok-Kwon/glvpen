@@ -1,0 +1,261 @@
+package com.kepg.glvpen.modules.player.repository;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.kepg.glvpen.modules.player.domain.Player;
+
+public interface PlayerRepository extends JpaRepository<Player, Integer> {
+
+    // 팀별 최고 wOBA 타자 조회 (규정타석 충족 선수만)
+    // 규정타석 = 팀 최다 출전 경기수 × 3.1
+    @Query(value = """
+            SELECT p.name, s.position, s.value AS woba, s.ranking, p.id
+            FROM player_batter_stats s
+            JOIN player p ON s.playerId = p.id
+            WHERE s.category = 'wOBA'
+              AND s.season = :season
+              AND p.teamId = :teamId
+              AND s.position != 'P'
+              AND s.series = '0' AND s.situationType = '' AND s.situationValue = ''
+              AND EXISTS (
+                SELECT 1 FROM player_batter_stats pa_c
+                WHERE pa_c.playerId = s.playerId AND pa_c.season = :season
+                  AND pa_c.category = 'PA' AND pa_c.series = '0'
+                  AND pa_c.situationType = '' AND pa_c.situationValue = ''
+                  AND pa_c.value >= (
+                    SELECT COALESCE(MAX(g_m.value), 100) * 3.1
+                    FROM player_batter_stats g_m
+                    JOIN player p_t ON g_m.playerId = p_t.id
+                    WHERE g_m.season = :season AND g_m.category = 'G'
+                      AND g_m.series = '0' AND g_m.situationType = '' AND g_m.situationValue = ''
+                      AND p_t.teamId = :teamId
+                  )
+              )
+            ORDER BY s.value DESC
+            LIMIT 1
+            """, nativeQuery = true)
+    List<Object[]> findTopHitterByTeamIdAndSeason(@Param("teamId") int teamId, @Param("season") int season);
+
+    // 팀별 최고 ERA 투수 조회 (규정이닝 50% 이상 OR 팀내 경기수 상위 20%)
+    @Query(value = """
+            SELECT p.name, s.position, s.value AS era, s.ranking, p.id
+            FROM player_pitcher_stats s
+            JOIN player p ON s.playerId = p.id
+            WHERE s.category = 'ERA'
+              AND s.season = :season
+              AND p.teamId = :teamId
+              AND s.series = '0' AND s.situationType = '' AND s.situationValue = ''
+              AND s.value > 0
+              AND (
+                EXISTS (
+                  SELECT 1 FROM player_pitcher_stats ip_c
+                  WHERE ip_c.playerId = s.playerId AND ip_c.season = :season
+                    AND ip_c.category = 'IP' AND ip_c.series = '0'
+                    AND ip_c.situationType = '' AND ip_c.situationValue = ''
+                    AND ip_c.value >= (
+                      SELECT COALESCE(MAX(g_m.value), 30) * 0.5
+                      FROM player_pitcher_stats g_m
+                      JOIN player p_t ON g_m.playerId = p_t.id
+                      WHERE g_m.season = :season AND g_m.category = 'G'
+                        AND g_m.series = '0' AND g_m.situationType = '' AND g_m.situationValue = ''
+                        AND p_t.teamId = :teamId
+                    )
+                )
+                OR EXISTS (
+                  SELECT 1 FROM player_pitcher_stats g_c
+                  WHERE g_c.playerId = s.playerId AND g_c.season = :season
+                    AND g_c.category = 'G' AND g_c.series = '0'
+                    AND g_c.situationType = '' AND g_c.situationValue = ''
+                    AND g_c.value >= 20
+                )
+              )
+            ORDER BY s.value ASC
+            LIMIT 1
+            """, nativeQuery = true)
+    List<Object[]> findTopPitcherByTeamIdAndSeason(@Param("teamId") int teamId, @Param("season") int season);
+
+    // 특정 선수의 시즌/카테고리별 스탯 값 조회 (ex. WAR, AVG 등)
+    @Query(value = """
+            SELECT value
+            FROM player_batter_stats
+            WHERE playerId = :playerId
+              AND category = :category
+              AND season = :season
+              AND series = '0' AND situationType = '' AND situationValue = ''
+            """, nativeQuery = true)
+    Optional<String> findStatValueByPlayerIdCategoryAndSeason(
+            @Param("playerId") int playerId, @Param("category") String category, @Param("season") int season);
+
+    // 이름 + 팀 ID로 선수 정보 조회
+    Optional<Player> findByNameAndTeamId(String name, int teamId);
+
+    // KBO 사이트 고유 ID로 선수 조회
+    Optional<Player> findByKboPlayerId(String kboPlayerId);
+
+    // 프로필 미수집 선수 목록 (kboPlayerId가 있지만 프로필이 아직 없는 선수)
+    List<Player> findByKboPlayerIdIsNotNullAndProfileUpdatedAtIsNull();
+
+    // 프로필 전체 미수집 선수 (kboPlayerId가 null인 선수)
+    List<Player> findByKboPlayerIdIsNull();
+
+    // 포지션별 최고 wOBA 타자 리스트 조회 (페이징 포함)
+    @Query(value = """
+            SELECT p.*
+            FROM player p
+            JOIN player_batter_stats b ON p.id = b.playerId
+            WHERE b.position = :position
+              AND b.season = :season
+              AND b.category = 'wOBA'
+              AND b.series = '0' AND b.situationType = '' AND b.situationValue = ''
+            ORDER BY b.value DESC
+            """, nativeQuery = true)
+    List<Player> findTopBattersByPositionAndSeason(
+            @Param("position") String position,
+            @Param("season") int season,
+            Pageable pageable);
+
+    // 포지션별 최고 FIP 투수 리스트 조회 (페이징 포함, FIP 낮을수록 좋음)
+    @Query(value = """
+            SELECT p.*
+            FROM player p
+            JOIN player_pitcher_stats ps ON p.id = ps.playerId
+            WHERE ps.position = :position
+              AND ps.season = :season
+              AND ps.category = 'FIP'
+              AND ps.series = '0' AND ps.situationType = '' AND ps.situationValue = ''
+            ORDER BY ps.value ASC
+            """, nativeQuery = true)
+    List<Player> findTopPitchersByPositionAndSeason(
+            @Param("position") String position,
+            @Param("season") int season,
+            Pageable pageable);
+
+    // 해당 시즌에 G 기록이 있는 타자 수 조회
+    @Query(value = """
+            SELECT COUNT(DISTINCT playerId)
+            FROM player_batter_stats
+            WHERE season = :season
+              AND category = 'G'
+              AND series = '0' AND situationType = '' AND situationValue = ''
+            """, nativeQuery = true)
+    int countBattersInSeason(@Param("season") int season);
+
+    // 해당 시즌에 G 기록이 있는 투수 수 조회
+    @Query(value = """
+            SELECT COUNT(DISTINCT playerId)
+            FROM player_pitcher_stats
+            WHERE season = :season
+              AND category = 'G'
+              AND series = '0' AND situationType = '' AND situationValue = ''
+            """, nativeQuery = true)
+    int countPitchersInSeason(@Param("season") int season);
+
+    // 데뷔 연도 기준 신인 타자 TOP 20 (wOBA 내림차순)
+    @Query(value = """
+            SELECT
+                p.id, p.name, p.debutYear, t.name AS teamName, t.logoName,
+                MAX(CASE WHEN bs.category = 'wOBA' THEN bs.value END) AS woba,
+                MAX(CASE WHEN bs.category = 'AVG' THEN bs.value END) AS avg,
+                MAX(CASE WHEN bs.category = 'HR' THEN bs.value END) AS hr,
+                MAX(CASE WHEN bs.category = 'OPS' THEN bs.value END) AS ops
+            FROM player p
+            JOIN team t ON p.teamId = t.id
+            JOIN player_batter_stats bs ON bs.playerId = p.id
+                AND bs.season = p.debutYear
+                AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
+            WHERE p.debutYear = :debutYear AND p.position != 'P'
+            GROUP BY p.id, p.name, p.debutYear, t.name, t.logoName
+            HAVING woba IS NOT NULL
+            ORDER BY woba DESC
+            LIMIT 20
+            """, nativeQuery = true)
+    List<Object[]> findRookieBattersByDebutYear(@Param("debutYear") int debutYear);
+
+    // 데뷔 연도 기준 신인 투수 TOP 20 (FIP 오름차순 — 낮을수록 좋음)
+    @Query(value = """
+            SELECT
+                p.id, p.name, p.debutYear, t.name AS teamName, t.logoName,
+                MAX(CASE WHEN ps.category = 'FIP' THEN ps.value END) AS fip,
+                MAX(CASE WHEN ps.category = 'ERA' THEN ps.value END) AS era,
+                MAX(CASE WHEN ps.category = 'W' THEN ps.value END) AS wins,
+                MAX(CASE WHEN ps.category = 'SO' THEN ps.value END) AS so
+            FROM player p
+            JOIN team t ON p.teamId = t.id
+            JOIN player_pitcher_stats ps ON ps.playerId = p.id
+                AND ps.season = p.debutYear
+                AND ps.series = '0' AND ps.situationType = '' AND ps.situationValue = ''
+            WHERE p.debutYear = :debutYear AND p.position = 'P'
+            GROUP BY p.id, p.name, p.debutYear, t.name, t.logoName
+            HAVING fip IS NOT NULL
+            ORDER BY fip ASC
+            LIMIT 20
+            """, nativeQuery = true)
+    List<Object[]> findRookiePitchersByDebutYear(@Param("debutYear") int debutYear);
+
+    // 출신교 분류별 시즌별 선수 수
+    @Query(value = """
+            SELECT
+                bs.season AS season,
+                CASE
+                    WHEN p.school LIKE '%고등학교%' OR p.school LIKE '%고%' THEN '고졸'
+                    WHEN p.school LIKE '%대학교%' OR p.school LIKE '%대%' THEN '대졸'
+                    ELSE '기타'
+                END AS schoolType,
+                COUNT(DISTINCT p.id) AS playerCount
+            FROM player p
+            JOIN player_batter_stats bs ON bs.playerId = p.id
+                AND bs.category = 'G'
+                AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
+            WHERE bs.season BETWEEN :startYear AND :endYear
+              AND p.school IS NOT NULL AND p.school != ''
+            GROUP BY bs.season, schoolType
+            ORDER BY bs.season, schoolType
+            """, nativeQuery = true)
+    List<Object[]> findSchoolTypeDistribution(@Param("startYear") int startYear, @Param("endYear") int endYear);
+
+    // 전체 시즌별 선수 수 (투수 포함, 출신교 분류)
+    @Query(value = """
+            SELECT
+                sub.season, sub.schoolType, SUM(sub.cnt) AS playerCount
+            FROM (
+                SELECT bs.season AS season,
+                    CASE
+                        WHEN p.school LIKE '%고등학교%' OR p.school LIKE '%고%' THEN '고졸'
+                        WHEN p.school LIKE '%대학교%' OR p.school LIKE '%대%' THEN '대졸'
+                        ELSE '기타'
+                    END AS schoolType,
+                    COUNT(DISTINCT p.id) AS cnt
+                FROM player p
+                JOIN player_batter_stats bs ON bs.playerId = p.id
+                    AND bs.category = 'G'
+                    AND bs.series = '0' AND bs.situationType = '' AND bs.situationValue = ''
+                WHERE bs.season BETWEEN :startYear AND :endYear
+                  AND p.school IS NOT NULL AND p.school != ''
+                GROUP BY bs.season, schoolType
+                UNION ALL
+                SELECT ps.season AS season,
+                    CASE
+                        WHEN p.school LIKE '%고등학교%' OR p.school LIKE '%고%' THEN '고졸'
+                        WHEN p.school LIKE '%대학교%' OR p.school LIKE '%대%' THEN '대졸'
+                        ELSE '기타'
+                    END AS schoolType,
+                    COUNT(DISTINCT p.id) AS cnt
+                FROM player p
+                JOIN player_pitcher_stats ps ON ps.playerId = p.id
+                    AND ps.category = 'G'
+                    AND ps.series = '0' AND ps.situationType = '' AND ps.situationValue = ''
+                WHERE ps.season BETWEEN :startYear AND :endYear
+                  AND p.school IS NOT NULL AND p.school != ''
+                GROUP BY ps.season, schoolType
+            ) sub
+            GROUP BY sub.season, sub.schoolType
+            ORDER BY sub.season, sub.schoolType
+            """, nativeQuery = true)
+    List<Object[]> findSchoolTypeDistributionAll(@Param("startYear") int startYear, @Param("endYear") int endYear);
+}

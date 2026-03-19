@@ -1,272 +1,328 @@
 <!DOCTYPE html>
-<html lang="ko"
-      xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/reviewDefault}">
-<head>
+<html
+  lang="ko"
+  xmlns:th="http://www.thymeleaf.org"
+  xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+  layout:decorate="~{layouts/userDefault}"
+>
+  <head>
     <style>
-  .score-box {
-    background-color: #343a40;
-    color: white;
-    border: 2px solid #ffc107;
-  }
+      .score-box {
+        background-color: #343a40;
+        color: white;
+        border: 2px solid #ffc107;
+      }
 
-  .highlight-box {
-    background-color: #212529;
-    color: white;
-    border: 1px solid #6c757d;
-  }
+      .highlight-box {
+        background-color: #212529;
+        color: white;
+        border: 1px solid #6c757d;
+      }
 
-  .bg-gradient {
-    background: linear-gradient(145deg, #2c3e50, #1a252f);
-  }
-  .score {
-    font-weight: bold;
-  }
-</style>
-</head>
-<th:block layout:fragment="contents">
-  <div class="container mt-5 text-white text-center">
-    <h2 class="mb-4 text-black">⚾ 경기 결과</h2>
+      .bg-gradient {
+        background: linear-gradient(145deg, #2c3e50, #1a252f);
+      }
+      .score {
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <th:block layout:fragment="contents">
+    <div class="container mt-5 text-white text-center">
+      <h2 class="mb-4 text-black">⚾ 경기 결과</h2>
 
-    <!-- 최종 점수 박스 -->
-	<div id="final-score" class="mb-4 p-4 rounded shadow-sm border bg-light text-dark">
-	  <h4 class="mb-2 fw-bold text-primary">🏁 최종 점수</h4>
-	  <p class="score display-5"><span id="user-score">0</span> : <span id="bot-score">0</span></p>
-	</div>
-    
-    <div class="d-flex justify-content-between align-items-start">
-	    <div id="mvp-area" class="p-4 me-2 rounded shadow-lg bg-gradient text-center w-50">
-		  <h4 class="mb-4 text-warning">🏆 MVP</h4>
-		  <div id="mvp-card" class="d-flex justify-content-center flex-wrap text-black"></div>
-	      <div id="difficultyValue" data-value="[[${difficulty}]]" style="display: none;"></div>
-		</div>
-		
-		<div id="highlight-logs" class="mb-4 p-4 rounded shadow-sm border bg-white text-dark w-50">
-		  <h4 class="mb-3 fw-bold text-success">📢 하이라이트</h4>
-		  <ul id="game-log-list" class="list-group list-group-flush">
-		    <!-- 여기에 로그 추가됨 -->
-		  </ul>
-		</div>
-	</div>
-    
-    <div class="my-4 text-center">
-	  <a href="/game/ready-view" class="btn btn-warning btn-lg px-4">
-	    🔁 다시 하기
-	  </a>
-	</div>
-  </div>
-</th:block>
-<th:block layout:fragment="script">
-<script>
-  //URL 파라미터 추출
-  var scheduleId, userId;
-  var difficulty = $('#difficultyValue').data('value');
-  console.log("difficulty:", difficulty);
+      <!-- 최종 점수 박스 -->
+      <div
+        id="final-score"
+        class="mb-4 p-4 rounded shadow-sm border bg-light text-dark"
+      >
+        <h4 class="mb-2 fw-bold text-primary">🏁 최종 점수</h4>
+        <p class="score display-5">
+          <span id="user-score">0</span> : <span id="bot-score">0</span>
+        </p>
+      </div>
 
-  $(document).ready(function () {
-    var urlParams = new URLSearchParams(window.location.search);
-    scheduleId = urlParams.get("scheduleId");
-    userId = urlParams.get("userId");
+      <div class="d-flex justify-content-between align-items-start">
+        <div
+          id="mvp-area"
+          class="p-4 me-2 rounded shadow-lg bg-gradient text-center w-50"
+        >
+          <h4 class="mb-4 text-warning">🏆 MVP</h4>
+          <div
+            id="mvp-card"
+            class="d-flex justify-content-center flex-wrap text-black"
+          ></div>
+          <div
+            id="difficultyValue"
+            data-value="[[${difficulty}]]"
+            style="display: none"
+          ></div>
+        </div>
 
-    console.log("받은 scheduleId:", scheduleId);
-    console.log("받은 userId:", userId);
+        <div
+          id="highlight-logs"
+          class="mb-4 p-4 rounded shadow-sm border bg-white text-dark w-50"
+        >
+          <h4 class="mb-3 fw-bold text-success">📢 하이라이트</h4>
+          <ul id="game-log-list" class="list-group list-group-flush">
+            <!-- 여기에 로그 추가됨 -->
+          </ul>
+        </div>
+      </div>
 
-    if (!scheduleId || !userId) {
-      console.error("scheduleId 또는 userId가 누락되었습니다.");
-      return;
-    }
+      <div class="my-4 text-center">
+        <a href="/game/ready-view" class="btn btn-warning btn-lg px-4">
+          🔁 다시 하기
+        </a>
+      </div>
+    </div>
+  </th:block>
+  <th:block layout:fragment="script">
+    <script>
+      //URL 파라미터 추출
+      var scheduleId, userId;
+      var difficulty = $('#difficultyValue').data('value');
+      console.log('difficulty:', difficulty);
 
-    // 게임 요약 정보 조회
-    $.ajax({
-      url: '/game/result/summary',
-      method: 'GET',
-      data: { scheduleId: scheduleId, userId: userId },
-      success: function (data) {
-        $('#user-score').text(data.userScore);
-        $('#bot-score').text(data.botScore);
-        var mvpName = data.mvp;
+      $(document).ready(function () {
+        var urlParams = new URLSearchParams(window.location.search);
+        scheduleId = urlParams.get('scheduleId');
+        userId = urlParams.get('userId');
 
-        // 로그 출력
-        var logList = $('#game-log-list');
-        if (Array.isArray(data.gameLog)) {
-          data.gameLog.forEach(function (log) {
-       	    var li = $('<li>').addClass('list-group-item bg-light text-dark').text(log);
-       	    logList.append(li);
-          });
+        console.log('받은 scheduleId:', scheduleId);
+        console.log('받은 userId:', userId);
+
+        if (!scheduleId || !userId) {
+          console.error('scheduleId 또는 userId가 누락되었습니다.');
+          return;
         }
 
-        // MVP 카드 생성
+        // 게임 요약 정보 조회
         $.ajax({
-          url: '/game/user/lineup-list',
+          url: '/api/game-results/summary',
           method: 'GET',
-          data: { userId: userId },
-          success: function (lineup) {
-            var mvpPlayer = lineup.find(function (player) {
-              return player.playerName.trim() === mvpName.trim();
-            });
+          data: { scheduleId: scheduleId, userId: userId },
+          success: function (data) {
+            $('#user-score').text(data.userScore);
+            $('#bot-score').text(data.botScore);
+            var mvpName = data.mvp;
 
-            if (mvpPlayer) {
-              var card = createCardElement(mvpPlayer);
-              $('#mvp-card').append(card);
-            } else if (data.botLineup && Array.isArray(data.botLineup)) {
-              var botMvp = null;
-
-              data.botLineup.forEach(function (player) {
-                if (player.playerName && player.playerName.trim() === mvpName.trim()) {
-                  botMvp = player;
-                }
+            // 로그 출력
+            var logList = $('#game-log-list');
+            if (Array.isArray(data.gameLog)) {
+              data.gameLog.forEach(function (log) {
+                var li = $('<li>')
+                  .addClass('list-group-item bg-light text-dark')
+                  .text(log);
+                logList.append(li);
               });
-
-              if (botMvp) {
-                var card = createCardElement(botMvp);
-                $('#mvp-card').append(card);
-              } else {
-                console.warn("MVP를 어디서도 못 찾음:", mvpName);
-              }
             }
+
+            // MVP 카드 생성
+            $.ajax({
+              url: '/game/user/lineup-list',
+              method: 'GET',
+              data: { userId: userId },
+              success: function (lineup) {
+                var mvpPlayer = lineup.find(function (player) {
+                  return player.playerName.trim() === mvpName.trim();
+                });
+
+                if (mvpPlayer) {
+                  var card = createCardElement(mvpPlayer);
+                  $('#mvp-card').append(card);
+                } else if (data.botLineup && Array.isArray(data.botLineup)) {
+                  var botMvp = null;
+
+                  data.botLineup.forEach(function (player) {
+                    if (
+                      player.playerName &&
+                      player.playerName.trim() === mvpName.trim()
+                    ) {
+                      botMvp = player;
+                    }
+                  });
+
+                  if (botMvp) {
+                    var card = createCardElement(botMvp);
+                    $('#mvp-card').append(card);
+                  } else {
+                    console.warn('MVP를 어디서도 못 찾음:', mvpName);
+                  }
+                }
+              },
+              error: function (err) {
+                console.error('유저 라인업 조회 실패:', err);
+              },
+            }); // MVP 내부 ajax 끝
           },
           error: function (err) {
-            console.error('유저 라인업 조회 실패:', err);
-          }
-        }); // MVP 내부 ajax 끝
-      },
-      error: function (err) {
-        console.error('결과 조회 중 오류:', err);
+            console.error('결과 조회 중 오류:', err);
+          },
+        });
+      });
+
+      // 카드 컴포넌트 생성
+      function createCardElement(card) {
+        console.log('card 확인:', card);
+        var cardWrapper = $('<div>')
+          .addClass('d-flex flex-column align-items-center')
+          .css('min-width', '200px');
+        $('.pokemon-card[data-player-id="' + card.playerId + '"]').remove();
+
+        var flipWrapper = $('<div>')
+          .addClass('pokemon-card card card-flip card-fade-in')
+          .attr('data-position', card.position)
+          .attr('data-player-id', card.playerId);
+
+        var cardInner = $('<div>').addClass('card-inner');
+        var front = createCardFront(card);
+        var back = createCardBack(card);
+        addFlipEvent(flipWrapper[0], cardInner[0]);
+
+        cardInner.append(front).append(back);
+        flipWrapper.append(cardInner);
+        cardWrapper.append(flipWrapper);
+
+        return cardWrapper[0];
       }
-    });
-  }); 
 
-// 카드 컴포넌트 생성
-function createCardElement(card) {
-	console.log('card 확인:', card);
-  var cardWrapper = $('<div>').addClass('d-flex flex-column align-items-center').css('min-width', '200px');
-  $('.pokemon-card[data-player-id="' + card.playerId + '"]').remove();
+      // 카드 앞면 생성
+      function createCardFront(card) {
+        var front = $('<div>').addClass('card-front grade-' + card.grade);
 
-  var flipWrapper = $('<div>').addClass('pokemon-card card card-flip card-fade-in')
-    .attr('data-position', card.position)
-    .attr('data-player-id', card.playerId);
+        var banner = $('<div>')
+          .addClass('card-banner')
+          .html(
+            '<span class="grade-label">' +
+              card.grade +
+              ' 등급</span><span class="season">' +
+              card.season +
+              '</span>'
+          );
+        front.append(banner);
 
-  var cardInner = $('<div>').addClass('card-inner');
-  var front = createCardFront(card);
-  var back = createCardBack(card);
-  addFlipEvent(flipWrapper[0], cardInner[0]);
+        var overallEl = $('<div>')
+          .addClass('overall-score')
+          .html('<span><strong>Overall : ' + card.overall + '</strong></span>')
+          .css({ fontSize: '1.1rem', marginTop: '10px', fontWeight: 'bold' });
+        front.append(overallEl);
 
-  cardInner.append(front).append(back);
-  flipWrapper.append(cardInner);
-  cardWrapper.append(flipWrapper);
+        if (card.grade === 'S' && card.imagePath) {
+          var imageWrapper = $('<div>')
+            .addClass('card-image-wrapper')
+            .html(
+              '<img src="/' +
+                card.imagePath +
+                '" alt="' +
+                card.playerName +
+                '" class="card-image hologram">'
+            );
+          front.append(imageWrapper);
+        }
 
-  return cardWrapper[0];
-}
+        var info = $('<div>').addClass('card-info');
+        var nameEl = $('<h5>')
+          .addClass('player-name mt-5')
+          .text(card.playerName);
+        var teamEl = $('<p>').addClass('position-team');
 
-// 카드 앞면 생성
-function createCardFront(card) {
-  var front = $('<div>').addClass('card-front grade-' + card.grade);
+        if (card.logoName) {
+          var logoImg = $('<img>')
+            .attr({
+              src: '/static/emblems/' + card.logoName + '.svg',
+              alt: card.teamName + ' 로고',
+            })
+            .css({
+              height: '40px',
+              width: '40px',
+              objectFit: 'contain',
+              verticalAlign: 'middle',
+              marginRight: '4px',
+            });
+          teamEl.append(logoImg);
+        }
+        teamEl.append(document.createTextNode(card.teamName));
 
-  var banner = $('<div>').addClass('card-banner').html(
-    '<span class="grade-label">' + card.grade + ' 등급</span><span class="season">' + card.season + '</span>'
-  );
-  front.append(banner);
+        info.append(nameEl).append(teamEl);
+        front.append(info);
 
-  var overallEl = $('<div>').addClass('overall-score').html('<span><strong>Overall : ' + card.overall + '</strong></span>')
-    .css({ fontSize: '1.1rem', marginTop: '10px', fontWeight: 'bold' });
-  front.append(overallEl);
+        var stats = $('<div>')
+          .addClass('card-stats')
+          .html(getCardStatsHTML(card));
+        front.append(stats);
 
-  if (card.grade === 'S' && card.imagePath) {
-    var imageWrapper = $('<div>').addClass('card-image-wrapper')
-      .html('<img src="/' + card.imagePath + '" alt="' + card.playerName + '" class="card-image hologram">');
-    front.append(imageWrapper);
-  }
+        return front[0];
+      }
 
-  var info = $('<div>').addClass('card-info');
-  var nameEl = $('<h5>').addClass('player-name mt-5').text(card.playerName);
-  var teamEl = $('<p>').addClass('position-team');
+      // 카드 뒷면 생성
+      function createCardBack(card) {
+        var back = $('<div>').addClass('card-back grade-' + card.grade);
+        var backHTML = '<h6>능력치 요약</h6>';
 
-  if (card.logoName) {
-	  var logoImg = $('<img>').attr({
-	    src: '/static/emblems/' + card.logoName + '.svg',
-	    alt: card.teamName + ' 로고'
-	  }).css({
-	    height: '40px',
-	    width: '40px',
-	    objectFit: 'contain',
-	    verticalAlign: 'middle',
-	    marginRight: '4px'
-	  });
-	  teamEl.append(logoImg);
-	}
-  teamEl.append(document.createTextNode(card.teamName));
+        if (card.position === 'P') {
+          backHTML += '<p>컨트롤: ' + card.control + '</p>';
+          backHTML += '<p>구위: ' + card.stuff + '</p>';
+          backHTML += '<p>지구력: ' + card.stamina + '</p>';
+          backHTML += '<p><strong>Overall: ' + card.overall + '</strong></p>';
+        } else {
+          backHTML += '<p>파워: ' + card.power + '</p>';
+          backHTML += '<p>컨택: ' + card.contact + '</p>';
+          backHTML += '<p>선구: ' + card.discipline + '</p>';
+          backHTML += '<p>스피드: ' + card.speed + '</p>';
+          backHTML += '<p><strong>종합: ' + card.overall + '</strong></p>';
+        }
 
-  info.append(nameEl).append(teamEl);
-  front.append(info);
+        back.html(backHTML);
+        return back[0];
+      }
 
-  var stats = $('<div>').addClass('card-stats').html(getCardStatsHTML(card));
-  front.append(stats);
+      // 카드 스탯 HTML 생성
+      function getCardStatsHTML(card) {
+        var statsHTML = '<p>WAR: ' + card.war + '</p>';
+        if (card.position === 'P') {
+          statsHTML += '<p>ERA: ' + card.era + '</p>';
+          statsHTML += '<p>WHIP: ' + card.whip + '</p>';
+          if (
+            card.wins >= card.saves &&
+            card.wins >= card.holds &&
+            card.wins > 0
+          ) {
+            statsHTML += '<p>' + card.wins + '승</p>';
+          } else if (
+            card.saves >= card.wins &&
+            card.saves >= card.holds &&
+            card.saves > 0
+          ) {
+            statsHTML += '<p>' + card.saves + '세이브</p>';
+          } else if (card.holds > 0) {
+            statsHTML += '<p>' + card.holds + '홀드</p>';
+          }
+        } else {
+          statsHTML += '<p>AVG: ' + card.avg + '</p>';
+          statsHTML += '<p>OPS: ' + card.ops + '</p>';
+          if (card.hr >= card.sb && card.hr > 0) {
+            statsHTML += '<p>' + card.hr + '홈런</p>';
+          } else if (card.sb > 0) {
+            statsHTML += '<p>' + card.sb + '도루</p>';
+          }
+        }
+        return statsHTML;
+      }
 
-  return front[0];
-}
+      // 카드 회전 이벤트 등록
+      function addFlipEvent(wrapper, inner) {
+        wrapper.addEventListener('mousemove', function (event) {
+          var rect = wrapper.getBoundingClientRect();
+          var x = event.clientX - rect.left;
+          var rotateY = x < rect.width / 2 ? 0 : 180;
+          inner.style.transform = 'rotateY(' + rotateY + 'deg)';
+        });
 
-// 카드 뒷면 생성
-function createCardBack(card) {
-  var back = $('<div>').addClass('card-back grade-' + card.grade);
-  var backHTML = '<h6>능력치 요약</h6>';
-
-  if (card.position === 'P') {
-    backHTML += '<p>컨트롤: ' + card.control + '</p>';
-    backHTML += '<p>구위: ' + card.stuff + '</p>';
-    backHTML += '<p>지구력: ' + card.stamina + '</p>';
-    backHTML += '<p><strong>Overall: ' + card.overall + '</strong></p>';
-  } else {
-    backHTML += '<p>파워: ' + card.power + '</p>';
-    backHTML += '<p>컨택: ' + card.contact + '</p>';
-    backHTML += '<p>선구: ' + card.discipline + '</p>';
-    backHTML += '<p>스피드: ' + card.speed + '</p>';
-    backHTML += '<p><strong>종합: ' + card.overall + '</strong></p>';
-  }
-
-  back.html(backHTML);
-  return back[0];
-}
-
-// 카드 스탯 HTML 생성
-function getCardStatsHTML(card) {
-  var statsHTML = '<p>WAR: ' + card.war + '</p>';
-  if (card.position === 'P') {
-    statsHTML += '<p>ERA: ' + card.era + '</p>';
-    statsHTML += '<p>WHIP: ' + card.whip + '</p>';
-    if (card.wins >= card.saves && card.wins >= card.holds && card.wins > 0) {
-      statsHTML += '<p>' + card.wins + '승</p>';
-    } else if (card.saves >= card.wins && card.saves >= card.holds && card.saves > 0) {
-      statsHTML += '<p>' + card.saves + '세이브</p>';
-    } else if (card.holds > 0) {
-      statsHTML += '<p>' + card.holds + '홀드</p>';
-    }
-  } else {
-    statsHTML += '<p>AVG: ' + card.avg + '</p>';
-    statsHTML += '<p>OPS: ' + card.ops + '</p>';
-    if (card.hr >= card.sb && card.hr > 0) {
-      statsHTML += '<p>' + card.hr + '홈런</p>';
-    } else if (card.sb > 0) {
-      statsHTML += '<p>' + card.sb + '도루</p>';
-    }
-  }
-  return statsHTML;
-}
-
-// 카드 회전 이벤트 등록
-function addFlipEvent(wrapper, inner) {
-  wrapper.addEventListener('mousemove', function (event) {
-    var rect = wrapper.getBoundingClientRect();
-    var x = event.clientX - rect.left;
-    var rotateY = (x < rect.width / 2) ? 0 : 180;
-    inner.style.transform = 'rotateY(' + rotateY + 'deg)';
-  });
-
-  wrapper.addEventListener('mouseleave', function () {
-    inner.style.transform = 'rotateY(0deg)';
-  });
-}
-
-</script>
-</th:block>
+        wrapper.addEventListener('mouseleave', function () {
+          inner.style.transform = 'rotateY(0deg)';
+        });
+      }
+    </script>
+  </th:block>
 </html>

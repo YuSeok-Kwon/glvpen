@@ -1,7 +1,7 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/noheader}">
+      layout:decorate="~{layouts/noheadefooter}">
 <head>
   <style>
     html, body {
@@ -9,13 +9,9 @@
 	  padding: 0;
 	  width: 100%;
 	  height: 100%;
-	  overflow-x: hidden; /* 좌우 스크롤 방지 */
 	}
 	body {
-	  background-image: url('/static/game/ready.png');
-	  background-size: cover;
-	  background-position: center;
-	  background-repeat: no-repeat;
+	  background: url('/static/game/bg1.png') center center / cover no-repeat fixed;
 	  min-height: 100vh;
 	  width: 100%;
 	}
@@ -29,26 +25,23 @@
 	
 	.main-wrapper {
 	  flex: 1;
-      display: flex;
-	  position: relative;
+	  display: flex;
 	  flex-direction: column;
-      justify-content: space-between;
-	  width: 100%;
-	  min-height: 100%;
-	  overflow: hidden;
-	  padding-bottom: 80px;
+	  justify-content: space-between;
+	  min-height: 100vh;
+	  position: relative;
 	}
 	
 	.overlay {
-	  position: absolute;
+	  position: fixed;
 	  top: 0;
 	  left: 0;
 	  width: 100%;
-	  height: 100%;
-	  background-color: rgba(0,0,0,0.6);
+	  height: 100vh;
+	  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.3) 100%);
 	  z-index: 0;
 	}
-	
+
 	.content.container,
 	.content.container-fluid {
 	  padding-left: 0 !important;
@@ -63,26 +56,16 @@
 	  z-index: 1;
 	}
 	
-	#user-lineup > div,
-	#bot-lineup > div {
-	  min-width: unset;
-	  max-width: 10%;
-	  box-sizing: border-box;
-	}
-	
-	footer {
-  flex-shrink: 0;
-}
-	/* 크기를 줄인 카드 레이아웃 */
+	/* 카드 레이아웃 */
 	.pokemon-card {
-	  width: 100%;
-	  max-width: 130px;
-	  height: 220px;    
+	  width: 150px;
+	  height: 260px;
 	  perspective: 1000px;
 	  margin: 0 !important;
-	  font-size: 0.65rem; 
+	  font-size: 0.75rem;
 	  border-radius: 10px;
 	  overflow: hidden;
+	  flex-shrink: 0;
 	}
 	
 	.card-banner {
@@ -118,53 +101,62 @@
 	}
 	
 	.card-front {
-	  background-color: #ffffff10;
-	  color: white;
+	  background-color: rgba(255, 255, 255, 0.9);
+	  color: #222;
 	}
 	.card-stats{
 	  font-size: 0.8rem;
-	  color: black;
+	  color: #333;
 	}
 	.card-back {
-	  background-color: #000000cc;
+	  background-color: rgba(0, 0, 0, 0.88);
 	  color: white;
 	  transform: rotateY(180deg);
 	}
 	#user-lineup,
 	#bot-lineup {
-	  display: grid !important;
-	  grid-template-columns: repeat(10, 1fr);
-	  gap: 1px;
-	  justify-items: center;
+	  display: flex !important;
+	  flex-wrap: nowrap !important;
+	  justify-content: center;
+	  gap: 20px;
+	  width: 100%;
+	  padding: 0 24px;
 	}
-	
+
 	#user-lineup > div,
 	#bot-lineup > div {
-	  flex: 1 1 10%;
-	  max-width: 10%; 
-	  min-width: 100px; 
-}
+	  flex: 0 0 auto;
+	  min-width: 150px;
+	  max-width: 160px;
+	}
   </style>
 </head>
 <th:block layout:fragment="contents">
-    <main class="main-wrapper" data-user-id="[[${session.userId}]]">
+    <main class="main-wrapper" data-user-id="[[${userId}]]">
       <div class="overlay"></div>
 		<div class="content container-fluid">
-		
+
+		  <!-- 페이지 제목 -->
+		  <div class="text-center pt-4 pb-2" style="position:relative; z-index:1;">
+		    <a href="/game/classic-sim-mode" class="text-white text-decoration-none small">&larr; 시뮬레이션 메뉴</a>
+		    <h2 class="text-white fw-bold mt-2 mb-0" style="text-shadow: 0 2px 8px rgba(0,0,0,0.4); background: rgba(0,0,0,0.5); display: inline-block; padding: 6px 24px; border-radius: 8px;">GAME READY</h2>
+		    <p class="text-white-50 small mb-0">라인업을 확인하고 게임을 시작하세요</p>
+		  </div>
+
 		  <!-- 유저 라인업 -->
 		  <div class="pt-3">
 		    <h3 class="text-center text-white mb-2 d-flex justify-content-center align-items-center gap-3">
-			  내 라인업
+			  <span style="background: rgba(0,0,0,0.5); padding: 4px 16px; border-radius: 6px;">내 라인업</span>
                 <a href="/game/lineup-view" class="btn btn-light btn-sm ms-3">라인업 구성하러가기</a>
             </h3>
-		    <div class="text-white text-center mb-1" id="user-summary"></div>
-            <div class="d-flex flex-wrap justify-content-center" id="user-lineup"></div>
+		    <div class="text-white text-center mb-1" id="user-summary" style="background: rgba(0,0,0,0.4); display: inline-block; padding: 4px 16px; border-radius: 6px; margin: 0 auto;"></div>
+            <div id="user-lineup"></div>
 		  </div>
 		
 		  <!-- 봇 라인업 -->
 		  <div class="">
 		    <div class="d-flex justify-content-center align-items-center text-center text-white mb-2">
-		    <h3 class="text-center text-white mb-2">BOT 라인업</h3>
+		    <h3 class="text-center text-white mb-2"><span style="background: rgba(0,0,0,0.5); padding: 4px 16px; border-radius: 6px;">BOT 라인업</span></h3>
 			  <label for="difficulty-select" class="mx-2">난이도</label>
 			  <select id="difficulty-select" class="form-select d-inline-block w-auto">
 			    <option value="easy">쉬움</option>
@@ -172,13 +164,13 @@
 			    <option value="hard">어려움</option>
 			  </select>
 			</div>
-		    <div class="text-white text-center mb-1" id="bot-summary"></div>
-            <div class="d-flex flex-wrap justify-content-center" id="bot-lineup"></div>
+		    <div class="text-white text-center mb-1" id="bot-summary" style="background: rgba(0,0,0,0.4); display: inline-block; padding: 4px 16px; border-radius: 6px; margin: 0 auto;"></div>
+            <div id="bot-lineup"></div>
 		  </div>
 		
 		  <!-- 시작 버튼 -->
 		  <div class="text-center mt-2 mb-5">
-		    <a href="/game/play-view" class="btn btn-light btn-sm ms-3">게임 시작</a>
+            <button id="start-game" class="btn btn-light btn-sm ms-3">게임 시작</button>
 		  </div>
 		  
 		</div>
@@ -187,50 +179,53 @@
 
 <th:block layout:fragment="script">
 <script th:inline="javascript">
-    const userId = [[${session.userId}]];
+    const userId = [[${userId}]];
 </script>
 <script>
-	//페이지 로드 시 실행: 난이도 선택 및 라인업 초기 로드
-	$(document).ready(function () {
-	  var difficulty = $('#difficulty-select').val();
-	
-	  // 서버에서 라인업을 불러오고 봇 팀과 함께 구성
-	  function loadLineups() {
-	    $.ajax({
-	      url: '/game/user/lineup',
-	      method: 'GET',
-	      data: { userId: userId },
-	      success: function (userLineup) {
-	        $.ajax({
-	          url: '/game/ready?difficulty=' + encodeURIComponent(difficulty),
-	          method: 'POST',
-	          contentType: 'application/json',
-	          data: JSON.stringify(userLineup),
-	          success: function (data) {
-	            renderCardLineup(data.user, $('#user-lineup')[0]);
-	            renderCardLineup(data.bot, $('#bot-lineup')[0]);
-	            renderSummaryStats(data.user, $('#user-summary')[0]);
-	            renderSummaryStats(data.bot, $('#bot-summary')[0]);
-	          },
-	          error: function () {
-	            console.error('상대 라인업 생성 실패');
-	          }
-	        });
-	      },
-	      error: function () {
-	        console.error('유저 라인업 불러오기 실패');
-	      }
-	    });
-	  }
-	
-	  // 난이도 선택 변경 시 라인업 재로딩
-	  $('#difficulty-select').on('change', function () {
-	    difficulty = $(this).val();
-	    loadLineups();
+  let selectedDifficulty = 'normal';
+
+  //페이지 로드 시 실행: 난이도 선택 및 라인업 초기 로드
+  $(document).ready(function () {
+    selectedDifficulty = $('#difficulty-select').val();
+    loadLineups();
+  });
+
+  $('#difficulty-select').on('change', function () {
+    selectedDifficulty = $(this).val();
+    loadLineups();
+  });
+
+  $('#start-game').click(function () {
+    window.location.href = '/simulations/play-view?difficulty=' + encodeURIComponent(selectedDifficulty);
+  });
+
+  function loadLineups() {
+	  $.ajax({
+	    url: '/api/games/user/lineup',
+	    method: 'GET',
+	    data: { userId: userId },
+	    success: function (userLineup) {
+	      $.ajax({
+	        url: '/api/games/ready?difficulty=' + encodeURIComponent(selectedDifficulty),
+	        method: 'POST',
+	        contentType: 'application/json',
+	        data: JSON.stringify(userLineup),
+	        success: function (data) {
+	          renderCardLineup(data.user, $('#user-lineup')[0]);
+	          renderCardLineup(data.bot, $('#bot-lineup')[0]);
+	          renderSummaryStats(data.user, $('#user-summary')[0]);
+	          renderSummaryStats(data.bot, $('#bot-summary')[0]);
+	        },
+	        error: function () {
+	          console.error('봇 라인업 생성 실패');
+	        }
+	      });
+	    },
+	    error: function () {
+	      console.error('유저 라인업 불러오기 실패');
+	    }
 	  });
-	
-	  loadLineups();
-	});
+	}
 	
 	
 	// 라인업 카드 리스트를 화면에 출력
@@ -252,7 +247,7 @@
 	function createCardElement(card, orderNum) {
 	  var wrapper = document.createElement('div');
 	  wrapper.className = 'd-flex flex-column align-items-center mb-3';
-	  wrapper.style.minWidth = '180px';
+	  wrapper.style.minWidth = '150px';
 	
 	  var flipWrapper = document.createElement('div');
 	  flipWrapper.className = 'pokemon-card card card-flip';
@@ -278,12 +273,12 @@
 	  }
 	
 	  var info = document.createElement('div');
-	  info.className = 'card-info text-center text-black mt-5';
+	  info.className = 'card-info text-center mt-5';
 	  info.innerHTML = '<h5 class="player-name">' + card.playerName + '</h5>';
 	  front.appendChild(info);
 	
 	  var overall = document.createElement('div');
-	  overall.className = 'text-center fw-bold text-black fs-6';
+	  overall.className = 'text-center fw-bold fs-6';
 	  overall.innerHTML = '<strong>Overall: ' + card.overall + '</strong>';
 	  front.appendChild(overall);
 	
@@ -294,7 +289,7 @@
 	
 	  // 뒷면 구성
 	  var back = document.createElement('div');
-	  back.className = 'card-back grade-' + card.grade;
+	  back.className = 'card-back grade-' + card.grade ;
 	  back.innerHTML = getBackStatHTML(card);
 	
 	  // 마우스 방향에 따라 카드 회전
@@ -319,7 +314,7 @@
 	
 	  var orderLabel = document.createElement('div');
 	  orderLabel.className = 'mt-2 text-white fw-bold';
-	  orderLabel.innerText = orderNum === '10' ? '투수' : orderNum + '번 타자';
+	  orderLabel.innerText = (orderNum == 10) ? '투수' : orderNum + '번 타자';
 	  wrapper.appendChild(orderLabel);
 	
 	  return wrapper;
@@ -420,5 +415,7 @@
 	    '<p class="mb-3">투수 → 컨트롤 ' + avg.control + ' / 구위 ' + avg.stuff +
 	    ' / 지구력 ' + avg.stamina + '</p>';
 	}
+	
+	// 시작 버튼 클릭 시 (중복 핸들러 제거 — 상단에서 처리)
 </script>
 </th:block>

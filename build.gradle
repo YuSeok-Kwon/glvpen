@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.10'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'war'
 }
 
 processResources {
@@ -50,14 +51,68 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	
+
+	// Flyway (DB 마이그레이션 관리)
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-mysql'
+
+	// Spring Security Crypto (BCrypt 암호화를 위해 필요)
+	implementation 'org.springframework.security:spring-security-crypto:6.3.0'
+
 	implementation 'org.jsoup:jsoup:1.15.3'
 	
     implementation 'org.seleniumhq.selenium:selenium-java:4.20.0'
 	
 	implementation 'com.google.code.gson:gson:2.10.1'
+
+	// Playwright (KBO 크롤링용)
+	implementation 'com.microsoft.playwright:playwright:1.49.0'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+// KBO 크롤러 실행 태스크
+tasks.register('crawl', JavaExec) {
+	mainClass = 'com.kepg.glvpen.crawler.CrawlersManualRunner'
+	classpath = sourceSets.main.runtimeClasspath
+	// DevTools 자동 재시작 비활성화 (Playwright 세션 보호)
+	systemProperty 'spring.devtools.restart.enabled', 'false'
+	// 웹 서버 비활성화 (포트 충돌 방지 — 크롤링은 웹 서버 불필요)
+	systemProperty 'spring.main.web-application-type', 'none'
+	// 크롤링 시즌 범위 및 세이버메트릭스 프로퍼티 전달
+	// 사용법: ./gradlew crawl -Dcrawl.seasonStart=2022 -Dcrawl.seasonEnd=2023 -Dcrawl.sabermetrics=false
+	['crawl.schedule', 'crawl.seasonStart', 'crawl.seasonEnd', 'crawl.sabermetrics', 'crawl.player', 'crawl.team', 'crawl.batterOnly', 'crawl.batterBasic2', 'crawl.pitcherOnly', 'crawl.defenseOnly', 'crawl.runnerOnly', 'crawl.gameCenter', 'crawl.futures', 'crawl.forceRecrawl', 'crawl.recrawlKeyPlayers', 'crawl.lineup', 'crawl.exhibition', 'crawl.situationOnly', 'spring.flyway.enabled', 'spring.jpa.hibernate.ddl-auto'].each { prop ->
+		if (System.getProperty(prop) != null) {
+			systemProperty prop, System.getProperty(prop)
+		}
+	}
+}
+
+// PostBack 수정 검증 테스트
+tasks.register('testPostBack', JavaExec) {
+	mainClass = 'com.kepg.glvpen.crawler.PostBackFixTest'
+	classpath = sourceSets.main.runtimeClasspath
+	systemProperty 'spring.devtools.restart.enabled', 'false'
+}
+
+// Basic2 PostBack 진단 테스트
+tasks.register('diagBasic2', JavaExec) {
+	mainClass = 'com.kepg.glvpen.crawler.Basic2DiagnosticTest'
+	classpath = sourceSets.main.runtimeClasspath
+	systemProperty 'spring.devtools.restart.enabled', 'false'
+}
+
+// Basic2 독립 크롤러 (Spring Boot 없이 JDBC 직접 사용)
+// 사용법: ./gradlew crawlBasic2 -Dcrawl.seasonStart=2020 -Dcrawl.seasonEnd=2025
+tasks.register('crawlBasic2', JavaExec) {
+	mainClass = 'com.kepg.glvpen.crawler.Basic2StandaloneCrawler'
+	classpath = sourceSets.main.runtimeClasspath
+	systemProperty 'spring.devtools.restart.enabled', 'false'
+	['crawl.seasonStart', 'crawl.seasonEnd'].each { prop ->
+		if (System.getProperty(prop) != null) {
+			systemProperty prop, System.getProperty(prop)
+		}
+	}
 }

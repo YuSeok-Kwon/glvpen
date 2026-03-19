@@ -1,7 +1,7 @@
 <html lang="ko"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layouts/reviewDefault}">
+      layout:decorate="~{layouts/userDefault}">
 <head>
   <style>
     input[type="checkbox"][disabled] + label {
@@ -122,7 +122,7 @@
 	  <button id="saveLineupBtn" class="btn btn-success btn-lg px-5 mb-5">
 	    💾 라인업 저장
 	  </button>
-	  <a href="/game/ready-view" class="btn btn-primary btn-lg px-5 mb-5">
+	  <a href="/simulations/ready-view" class="btn btn-primary btn-lg px-5 mb-5">
 	    🎮 게임하러 가기
 	  </a>
     </div>
@@ -279,7 +279,7 @@
 	// 저장된 카드 목록을 서버에서 불러오는 함수
 	function loadMyCards() {
 	  $.ajax({
-	    url: '/game/lineup/my-cards',
+	    url: '/api/user-lineups/my-cards',
 	    method: 'GET',
 	    success: function(cards) {
 	      allMyCards = cards;
@@ -311,12 +311,13 @@
 	// 저장된 라인업 정보를 서버에서 불러오는 함수
 	function loadExistingLineup() {
 	  $.ajax({
-	    url: '/game/lineup/my-lineup',
+	    url: '/api/user-lineups/my-lineup',
 	    method: 'GET',
 	    success: function(lineup) {
 	      for (var i = 0; i < lineup.length; i++) {
 	        var p = lineup[i];
-	        var slot = $('.lineup-slot[data-position="' + p.orderNum + '"]');
+	        var slotKey = p.orderNum === 10 ? 'P' : String(p.orderNum);
+	        var slot = $('.lineup-slot[data-position="' + slotKey + '"]');
 
 	        if (slot.length > 0) {
 	          slot.text(p.playerName + ' (' + p.position + ')');
@@ -430,8 +431,9 @@
     		  return;
     		}
     	  
+    	  var numericOrderNum = orderNum === 'P' ? 10 : parseInt(orderNum);
     	  for (let i = 0; i < selectedLineup.length; i++) {
-    	    if (selectedLineup[i].orderNum === orderNum) {
+    	    if (selectedLineup[i].orderNum === numericOrderNum) {
     	      selectedLineup.splice(i, 1);
     	      break;
     	    }
@@ -440,7 +442,7 @@
     	  selectedLineup.push({
     	    playerId: playerId,
     	    position: position,
-    	    orderNum: orderNum,
+    	    orderNum: orderNum === 'P' ? 10 : parseInt(orderNum),
     	    season: season
     	  });
 
@@ -477,11 +479,11 @@
 	    if (!isValidLineup()) return;
 
 	    $.ajax({
-	      url: '/game/lineup/clear',
+	      url: '/api/user-lineups/clear',
 	      method: 'DELETE',
 	      success: function() {
 	        $.ajax({
-	          url: '/game/lineup/save-all',
+	          url: '/api/user-lineups/save-all',
 	          method: 'POST',
 	          contentType: 'application/json',
 	          data: JSON.stringify(selectedLineup),

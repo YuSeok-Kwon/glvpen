@@ -1,67 +1,208 @@
 @charset "UTF-8";
 
-/* 전체 레이아웃 wrapper */
-#wrap {
-  width: 1200px;
-  margin: 0 auto;
+/* ============================================ */
+/* glvpen 디자인 시스템 - 야구장 그라운드 컨셉    */
+/* ============================================ */
+
+/* --- CSS 변수 --- */
+:root {
+  --color-primary: #166534;
+  --color-accent: #22C55E;
+  --color-accent-hover: #16A34A;
+  --color-accent-light: #86EFAC;
+  --color-accent-subtle: #F0FAF3;
+  --color-bg: #FAF7F2;
+  --color-card: #FFFFFF;
+  --color-border: #E7E2D9;
+  --color-text: #1C1917;
+  --color-text-secondary: #78716C;
+  --color-text-muted: #A8A29E;
+  --color-hover-row: #F0FDF4;
+  --color-win: #22C55E;
+  --color-loss: #EF4444;
+  --color-draw: #A8A29E;
+  --color-warning: #F59E0B;
 }
 
+/* 전체 레이아웃 wrapper */
+#wrap {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 15px;
+}
 
-/* 헤더 영역에 하단 경계선 */
+/* 반응형 컨테이너 */
+.container-responsive {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+/* 1200px 이하에서는 모든 페이지 10px 여백으로 통일 */
+@media (max-width: 1200px) {
+  .container-fluid,
+  .bg-light-gray .container-fluid,
+  .container,
+  div[class*='container'] {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .row.gap-3,
+  .row[class*='gap'] {
+    gap: 10px !important;
+  }
+
+  .card-body {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+}
+
+/* 1201px 이상에서만 넓은 여백 적용 */
+@media (min-width: 1201px) {
+  .container-fluid {
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
+  }
+
+  .bg-light-gray .container-fluid {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+
+  .card-body {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+}
+
+/* 글자 줄바꿈 방지 */
+.text-nowrap-custom {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 테이블 셀 줄바꿈 방지 */
+.table td,
+.table th {
+  white-space: nowrap;
+}
+
+/* 주요 선수 카드에서 줄바꿈 방지 */
+.flex-fill.bg-light {
+  min-width: 140px;
+}
+
+.flex-fill.bg-light .fs-4 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flex-fill.bg-light .text-muted.small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+}
+
+/* 홈 페이지 테이블 반응형 최적화 */
+@media (max-width: 1199px) {
+  .table td,
+  .table th {
+    padding: 0.3rem 0.2rem;
+    font-size: 0.85rem;
+  }
+
+  .table-team-logo {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* ============================================ */
+/* 헤더                                         */
+/* ============================================ */
 header {
-  background-color: #f5f5f5;
-  border-bottom: 2px solid #FACC15;
+  background-color: var(--color-primary);
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  height: 64px;
 }
 
 /* 전체 기본 글꼴 및 폰트 크기 */
 body {
   font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
-  font-size: 1.1rem;
-  background-color: #f5f5f5;
+  font-size: 1rem;
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
 
-/* 로고 텍스트 */
+/* ============================================ */
+/* 로고                                         */
+/* ============================================ */
+.logo-main {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #FFFFFF;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.logo-sub {
+  font-family: 'Pretendard', sans-serif;
+  font-size: 12px;
+  color: var(--color-accent-light);
+  line-height: 1;
+}
+
+/* 로그인 페이지용 로고 */
 .full-logo-noheader {
-  font-family: 'Dokdo', cursive;
-  font-size: 90px;
-  font-weight: 900;
-  color: #FACC15;
-  text-shadow:
-    -2px -2px 0 black,
-     2px -2px 0 black,
-    -2px  2px 0 black,
-     2px  2px 0 black;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 60px;
+  font-weight: 400;
+  color: var(--color-primary);
 }
 
 .full-logo-default {
-  font-family: 'Dokdo', cursive;
-  font-size: 100px;
-  font-weight: 900;
-  color: #FACC15;
-  text-shadow:
-    -2px -2px 0 black,
-     2px -2px 0 black,
-    -2px  2px 0 black,
-     2px  2px 0 black;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 28px;
+  font-weight: 400;
+  color: #FFFFFF;
 }
 
-/* 달력 스타일 */
+/* ============================================ */
+/* 달력 스타일                                   */
+/* ============================================ */
 .month-title {
   position: relative;
   display: inline-block;
   padding: 0.3rem 0.6rem;
   border-radius: 8px;
   background-color: #fff;
-  color: #1f2937;
+  color: var(--color-text);
   cursor: pointer;
   transition: background-color 0.2s, box-shadow 0.2s;
-  border-bottom: 3px solid #FACC15;
-  border-right: 3px solid #FACC15;
+  border-bottom: 3px solid var(--color-accent);
+  border-right: 3px solid var(--color-accent);
 }
 
 .month-title:hover {
-  background-color: #FEF08A;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  background-color: var(--color-accent-subtle);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .month-title::after {
@@ -71,7 +212,7 @@ body {
   left: 0;
   height: 3px;
   width: 100%;
-  background-color: #FACC15; /* 노란색 밑줄 */
+  background-color: var(--color-accent);
   transition: transform 0.3s ease;
   transform: scaleX(0);
   transform-origin: left;
@@ -80,24 +221,24 @@ body {
 .month-title:hover::after {
   transform: scaleX(1);
 }
-/* 팀별 배경색 */
-.team-bg-1 { background-color: #ED1C24; } /* KIA */
+
+/* ============================================ */
+/* 팀별 배경색 (실제 팀 컬러 유지)               */
+/* ============================================ */
+.team-bg-1 { background-color: #ed1c24; } /* KIA */
 .team-bg-2 { background-color: #042071; } /* 두산 */
-.team-bg-3 { background-color: #0061AA; } /* 삼성 */
-.team-bg-4 { background-color: #CF152D; } /* SSG */
-.team-bg-5 { background-color: #FC1CAD; } /* LG */
-.team-bg-6 { background-color: #F37321; } /* 한화 */
-.team-bg-7 { background-color: #002B69; } /* NC */
+.team-bg-3 { background-color: #0061aa; } /* 삼성 */
+.team-bg-4 { background-color: #cf152d; } /* SSG */
+.team-bg-5 { background-color: #fc1cad; } /* LG */
+.team-bg-6 { background-color: #f37321; } /* 한화 */
+.team-bg-7 { background-color: #002b69; } /* NC */
 .team-bg-8 { background-color: #000000; } /* KT */
 .team-bg-9 { background-color: #888888; } /* 롯데 */
-.team-bg-10 { background-color: #86001F; } /* 키움 */
+.team-bg-10 { background-color: #86001f; } /* 키움 */
 
-/* 팀별 기본 텍스트색 */
-.team-text {
-  color: white;
-}
+.team-text { color: white; }
 
-/* 리뷰 버튼 스타일 */
+/* 버튼 스타일 */
 .btn-outline-light {
   color: white;
   border-color: white;
@@ -105,14 +246,17 @@ body {
 
 .btn-outline-light:hover {
   background-color: white;
-  color: black;
+  color: var(--color-primary);
 }
 
-/* 리뷰 달력 제목*/
+/* 달력 제목 */
 #calendar-title {
   font-weight: bold;
 }
-/* 경기 로고 이미지 */
+
+/* ============================================ */
+/* 이미지                                       */
+/* ============================================ */
 .team-logo-box {
   width: 60px;
   height: 60px;
@@ -129,20 +273,42 @@ body {
   height: 48px;
 }
 
-/* 순위 로고 이미지 */
 .table-team-logo {
   width: 24px;
   height: 24px;
   object-fit: contain;
 }
 
-/* 메뉴 텍스트 외곽선 */
+/* ============================================ */
+/* 네비게이션                                    */
+/* ============================================ */
 .nav-outline {
-  color: #111;
-  font-weight: bold;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
   text-decoration: none;
-  text-shadow:
-    0 0 2px #FACC15;
+  padding: 0.25rem 0;
+  position: relative;
+  transition: color 0.2s;
+}
+
+.nav-outline:hover {
+  color: #FFFFFF;
+}
+
+.nav-outline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--color-accent);
+  transform: scaleX(0);
+  transition: transform 0.2s ease;
+}
+
+.nav-outline:hover::after {
+  transform: scaleX(1);
 }
 
 /* 추가 마진 정렬용 */
@@ -157,18 +323,18 @@ body {
   color: white;
   font-weight: bold;
   text-decoration: none;
-  text-shadow:
-    0 0 4px #FACC15;
 }
 
 .team-nav-link:hover {
-  color: #FFD700; /* hover 시 금색 */
+  color: var(--color-accent-light);
   text-decoration: underline;
 }
 
-/* 로그인 섹션 */
+/* ============================================ */
+/* 로그인 섹션                                   */
+/* ============================================ */
 .login-section {
-  background-color: #f0f0f0;
+  background-color: var(--color-bg);
   min-height: calc(100vh - 70px);
   width: 100%;
   display: flex;
@@ -179,7 +345,6 @@ body {
   box-sizing: border-box;
 }
 
-/* 로그인 박스 스타일 */
 .user-box {
   width: 100%;
   max-width: 700px;
@@ -189,31 +354,46 @@ body {
   padding: 40px;
 }
 
-/* 커스텀 버튼 */
+/* ============================================ */
+/* 버튼                                         */
+/* ============================================ */
 .btn {
-  color: black;
-  border: 1px solid black;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.btn-accent {
+  background-color: var(--color-accent) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  font-weight: 600;
+}
+
+.btn-accent:hover {
+  background-color: var(--color-accent-hover) !important;
+  color: #FFFFFF !important;
 }
 
 /* 링크 공통 처리 */
 a {
-  color: #333;
+  color: var(--color-text);
   text-decoration: none;
 }
 
-/* 콘텐츠 박스 (별도 지정할 경우 사용) */
+/* 콘텐츠 박스 */
 .contents-box {
   width: 800px;
 }
 
-/* 임시 box 클래스 (이전 호환용) */
+/* 임시 box 클래스 */
 .box {
   background-color: white;
   border-radius: 12px;
   padding: 24px;
   min-height: 250px;
   box-sizing: border-box;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* 팀 순위 테이블 높이 조절 */
@@ -223,24 +403,25 @@ a {
 
 /* 승/패 표시 */
 .record {
-  color: green;
+  color: var(--color-win);
   font-weight: bold;
   margin-right: 5px;
 }
 .record.loss {
-  color: red;
+  color: var(--color-loss);
 }
 
-/* 애니메이션 카드 */
+/* ============================================ */
+/* 카드                                         */
+/* ============================================ */
 .card {
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.3s ease;
 }
 .card:hover {
-  transform: scale(1.01);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .table-team-logo {
@@ -259,23 +440,25 @@ a {
 }
 
 .card-body .d-flex:hover {
-  background-color: #f8f9fa;
+  background-color: var(--color-hover-row);
   transition: background-color 0.2s ease-in-out;
 }
 
-/* 포인트 색*/  
+/* ============================================ */
+/* 포인트 색                                     */
+/* ============================================ */
 .text-point {
-  color: #FFD700 !important;
+  color: var(--color-primary) !important;
 }
 
 .bg-point {
-  background-color: #FFD700 !important;
+  background-color: var(--color-accent) !important;
 }
 
 .border-point {
-  border-color: #FFD700;
+  border-color: var(--color-accent) !important;
   border-width: 2px;
-  border-style: solid; 
+  border-style: solid;
 }
 
 #top-batter-list .list-group-item {
@@ -286,24 +469,20 @@ a {
   border: none;
 }
 
-/* 
-#top-waa-list .list-group-item {
-  border: none;
-} */
-
-/* 전체 테이블 스타일 */
+/* ============================================ */
+/* 랭킹 테이블                                  */
+/* ============================================ */
 .ranking-table {
   background-color: #fff;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); /* 테이블에 황금빛 그림자 */
-  border: 1px solid #FFD700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--color-border);
 }
 
-/* 헤더 */
 .ranking-table thead {
-  background-color: #FFD700; /* 헤더 배경 골드 */
-  color: #212529; /* 글자는 어두운 색 */
+  background-color: var(--color-primary);
+  color: #FFFFFF;
   font-weight: bold;
 }
 
@@ -313,24 +492,22 @@ a {
   padding: 12px;
 }
 
-/* 헤더 안에 링크 스타일 */
 .ranking-table thead th a {
-  color: #212529;
+  color: #FFFFFF;
   text-decoration: none;
 }
 
 .ranking-table thead th a:hover {
-  color: #000;
+  color: var(--color-accent-light);
   text-decoration: underline;
 }
 
-/* tbody */
 .ranking-table tbody tr {
   transition: background-color 0.2s ease-in-out;
 }
 
 .ranking-table tbody tr:hover {
-  background-color: #fff8dc; /* 밝은 골드톤으로 hover 효과 */
+  background-color: var(--color-hover-row);
 }
 
 .ranking-table tbody td {
@@ -343,7 +520,7 @@ a {
 .ranking-table tbody tr:nth-child(1) td:first-child,
 .ranking-table tbody tr:nth-child(2) td:first-child,
 .ranking-table tbody tr:nth-child(3) td:first-child {
-  color: #FFD700;
+  color: var(--color-accent);
   font-weight: bold;
 }
 
@@ -353,172 +530,447 @@ a {
   font-size: 1rem;
 }
 
-
-/* 카드 전체 */
+/* ============================================ */
+/* 시뮬레이션 카드                               */
+/* ============================================ */
 .pokemon-card {
-    perspective: 1000px;
-    margin: 0;
-    padding: 0;
+  perspective: 1000px;
+  margin: 0;
+  padding: 0;
 }
 
-/* 카드 내부 3D 회전 구조 */
 .card-inner {
-    width: 300px;
-    height: 400px;
-    position: relative;
-    transform-style: preserve-3d;
-    transition: transform 0.8s;
+  width: 300px;
+  height: 400px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.8s;
 }
 
-/* 앞면/뒷면 공통 */
-.card-front, .card-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    backface-visibility: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border-radius: 1rem;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
-    padding: 0;
-    box-sizing: border-box;
+.card-front,
+.card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 1rem;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .card-front {
-    justify-content: flex-start; /* 앞면은 계속 위쪽 정렬 */
+  justify-content: flex-start;
 }
 
-/* 카드 뒷면 */
 .card-back {
-    transform: rotateY(180deg);
-    justify-content: center;
+  transform: rotateY(180deg);
+  justify-content: center;
 }
 
-/* 카드 등장 애니메이션 */
 .card-fade-in {
-    animation: fadeIn 0.5s ease-in-out forwards;
-    opacity: 0;
+  animation: fadeIn 0.5s ease-in-out forwards;
+  opacity: 0;
 }
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.8);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-/* 상단 배너 */
 .card-banner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    width: 100%;
-    height: 36px;
-    padding: 0 1rem;
-    background-color: rgba(0, 0, 0, 0.75);
-    color: white;
-    font-size: 0.9rem;
-    font-weight: bold;
-    border-top-left-radius: 1rem;
-    border-top-right-radius: 1rem;
-    box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 0 1rem;
+  background-color: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  box-sizing: border-box;
 }
 
-/* 이미지 영역 */
 .card-image-wrapper {
-    display: flex;
-    justify-content: center;
-    margin: 8px 0;
+  display: flex;
+  justify-content: center;
+  margin: 8px 0;
 }
 .card-image {
-    max-width: 100%;
-    max-height: 140px;
-    object-fit: cover;
-    border-radius: 0.5rem;
+  max-width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 0.5rem;
 }
 
-/* 이름 + 팀 */
 .card-info {
-    text-align: center;
-    margin-top: 0.25rem;
+  text-align: center;
+  margin-top: 0.25rem;
 }
 .card-info .player-name {
-    font-size: 1.3rem;
-    font-weight: bold;
+  font-size: 1.3rem;
+  font-weight: bold;
 }
 .position-team {
-    font-size: 1rem;
-    color: #444;
+  font-size: 1rem;
+  color: #444;
 }
 
-/* 스탯 */
 .card-stats {
-    font-size: 1rem;
-    margin-top: 0.5rem;
-    text-align: center;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+  text-align: center;
 }
 
 /* 텍스처 배경 */
 .card-front.grade-S,
 .card-back.grade-S {
-    background-image: url('/static/textures/hologram.jpg');
-    background-size: cover;
-    background-repeat: no-repeat;
+  background-image: url('/static/textures/hologram.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .card-front.grade-A,
 .card-back.grade-A {
-    background-image: url('/static/textures/gold-fiber.jpg');
-    background-size: cover;
-    background-repeat: no-repeat;
+  background-image: url('/static/textures/Atier.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .card-front.grade-B,
 .card-back.grade-B {
-    background-image: url('/static/textures/silver-fiber.jpg');
-    background-size: cover;
-    background-repeat: no-repeat;
+  background-image: url('/static/textures/silver-fiber.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 .card-front.grade-C,
 .card-back.grade-C {
-    background-image: url('/static/textures/linen.jpg');
-    background-size: cover;
-    background-repeat: no-repeat;
+  background-image: url('/static/textures/linen.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
 }
-
 .card-front.grade-D,
-.card-back.grade-D{
-	background-image: url('/static/textures/cardboard.jpg');
-    background-size: cover;
-    background-repeat: no-repeat;
+.card-back.grade-D {
+  background-image: url('/static/textures/Dtier.png');
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
- /* 삭제 버튼 */
- .delete-btn {
-  background: transparent;   
-  border: none;              
-  outline: none;              
-  font-size: 1.4rem;          
-  cursor: pointer;            
-  padding: 0;                 
+/* 삭제 버튼 */
+.delete-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  padding: 0;
   line-height: 1;
   z-index: 10;
 }
 
 .delete-btn:hover {
-  transform: scale(1.2);     
+  transform: scale(1.2);
   transition: transform 0.2s;
 }
 
+/* ============================================ */
+/* flatpickr 커스텀                              */
+/* ============================================ */
+.flatpickr-months {
+  background-color: #FFFFFF;
+  border-bottom: 2px solid var(--color-accent);
+}
 
-/* 푸터 */
+.flatpickr-months .flatpickr-month {
+  color: var(--color-text);
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  color: var(--color-text);
+  fill: var(--color-text);
+}
+
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover {
+  color: var(--color-accent);
+  fill: var(--color-accent);
+}
+
+/* ============================================ */
+/* 푸터                                         */
+/* ============================================ */
 footer {
   height: 70px;
-  background-color: #eaeaea;
+  background-color: var(--color-primary);
   text-align: center;
   line-height: 70px;
   font-size: 0.95rem;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ============================================ */
+/* 반응형 미디어 쿼리                            */
+/* ============================================ */
+
+.text-responsive {
+  font-size: clamp(0.8rem, 2vw, 1.2rem);
+}
+
+.container-responsive {
+  padding: 0 clamp(10px, 3vw, 25px);
+}
+
+.flex-mobile-column {
+  display: flex;
+}
+
+@media (max-width: 768px) {
+  .flex-mobile-column {
+    flex-direction: column;
+  }
+}
+
+/* 대형 태블릿 및 작은 데스크톱 (1024px 이하) */
+@media (max-width: 1024px) {
+  #wrap {
+    padding: 0 20px;
+  }
+
+  .full-logo-noheader {
+    font-size: 50px;
+  }
+}
+
+/* 태블릿 (768px 이하) */
+@media (max-width: 768px) {
+  #wrap {
+    padding: 0 15px;
+  }
+
+  body {
+    font-size: 0.95rem;
+  }
+
+  .full-logo-noheader {
+    font-size: 40px;
+  }
+
+  /* 테이블 반응형 */
+  .table-responsive {
+    overflow-x: auto;
+  }
+
+  .table-responsive-xl {
+    overflow-x: auto;
+  }
+
+  .ranking-table {
+    overflow-x: auto !important;
+    width: 100% !important;
+  }
+
+  .table {
+    font-size: 0.8rem;
+  }
+
+  .table-responsive td,
+  .table-responsive th,
+  .table-responsive-xl td,
+  .table-responsive-xl th,
+  .ranking-table td,
+  .ranking-table th {
+    white-space: nowrap;
+  }
+
+  .ranking-table table {
+    min-width: 1000px !important;
+  }
+
+  .table-team-logo {
+    width: 24px;
+    height: 24px;
+  }
+
+  .team-logo-box {
+    width: 60px;
+    height: 60px;
+  }
+
+  .card {
+    margin-bottom: 15px;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* 모바일 (480px 이하) */
+@media (max-width: 480px) {
+  #wrap {
+    padding: 0 10px;
+  }
+
+  .full-logo-noheader {
+    font-size: 35px;
+  }
+
+  body {
+    font-size: 0.9rem;
+  }
+
+  .btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .card {
+    font-size: 0.9rem;
+  }
+
+  .table {
+    font-size: 0.75rem;
+  }
+
+  .table-team-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .team-logo-box {
+    width: 50px;
+    height: 50px;
+  }
+
+  footer {
+    height: 60px;
+    line-height: 60px;
+    font-size: 0.8rem;
+  }
+}
+
+/* 매우 작은 모바일 (360px 이하) */
+@media (max-width: 360px) {
+  #wrap {
+    padding: 0 5px;
+  }
+
+  .full-logo-noheader {
+    font-size: 28px;
+  }
+}
+
+/* ========== 최우선 적용 규칙 - 1200px 이하 여백 통일 ========== */
+@media (max-width: 1200px) {
+  .container-fluid,
+  .container,
+  .bg-light-gray .container-fluid,
+  div.container-fluid,
+  section.container-fluid,
+  main.container-fluid {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .row,
+  div.row,
+  .bg-light-gray .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .card-body,
+  .bg-light-gray .card-body,
+  div.card-body {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .row.gap-3,
+  .row.gap-lg-4,
+  .row[class*='gap'] {
+    gap: 10px !important;
+  }
+}
+
+/* 1201px 이상에서만 넓은 여백 복원 */
+@media (min-width: 1201px) {
+  .container-fluid {
+    padding-left: 3rem !important;
+    padding-right: 3rem !important;
+  }
+
+  .bg-light-gray .container-fluid {
+    padding-left: 2rem !important;
+    padding-right: 2rem !important;
+  }
+}
+
+/* ============================================ */
+/* 경기 상세 - 분석 탭                            */
+/* ============================================ */
+#analysisTab .nav-link {
+  color: #6b7280;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#analysisTab .nav-link:hover {
+  color: #111827;
+  background: #f9fafb;
+}
+#analysisTab .nav-link.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-accent);
+  background: transparent;
+}
+#analysisTab .nav-link i {
+  font-size: 0.7rem;
+}
+
+/* ============================================ */
+/* 경기 상세 - 타자/투수 세그먼트 컨트롤          */
+/* ============================================ */
+.sub-tab-group {
+  display: inline-flex;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 12px 0 8px 12px;
+}
+.sub-tab-group .nav-link {
+  color: #374151;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 20px;
+  border-radius: 0;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+}
+.sub-tab-group .nav-link:not(:last-child) {
+  border-right: 1px solid #d1d5db;
+}
+.sub-tab-group .nav-link.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+.sub-tab-group .nav-link:hover:not(.active) {
+  background: #f3f4f6;
+  color: #111827;
 }

@@ -1,0 +1,27 @@
+crawl:
+  scheduled:
+    enabled: true
+
+analysis:
+  scheduled:
+    enabled: true
+
+spring:
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/glvpen
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
+  thymeleaf:
+    cache: true
+
+# security-variable.yml 대체 (AWS 환경변수로 주입)
+mysql:
+  password: ${DB_PASSWORD}
+
+gemini:
+  api-key: ${GEMINI_API_KEY}
+
+crawler:
+  login:
+    username: ${CRAWLER_USERNAME}
+    password: ${CRAWLER_PASSWORD}
