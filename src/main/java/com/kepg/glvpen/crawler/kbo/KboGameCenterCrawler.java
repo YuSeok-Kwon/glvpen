@@ -405,6 +405,12 @@ public class KboGameCenterCrawler {
                 }
             }
 
+            // 유효한 데이터가 없으면 빈 스코어보드 저장 방지
+            if (crowd == null && awayR == null && homeR == null && awayInnings == null && homeInnings == null) {
+                log.warn("[게임센터] 스코어보드 데이터 없음 (빈 응답): {}", kboGameId);
+                return;
+            }
+
             ScoreBoard scoreBoard = ScoreBoard.builder()
                     .scheduleId(scheduleId)
                     .awayInningScores(awayInnings)
