@@ -5,11 +5,11 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
+User=ec2-user
+Group=ec2-user
 WorkingDirectory=/opt/glvpen
-EnvironmentFile=/opt/glvpen/.env
-ExecStart=/usr/bin/java -Xms512m -Xmx1280m -jar /opt/glvpen/app.jar --spring.profiles.active=prod
+EnvironmentFile=/opt/glvpen/env.conf
+ExecStart=/usr/bin/java -Xms256m -Xmx512m -jar /opt/glvpen/glvpen.jar --spring.profiles.active=prod
 ExecStop=/bin/kill -TERM $MAINPID
 Restart=always
 RestartSec=10
