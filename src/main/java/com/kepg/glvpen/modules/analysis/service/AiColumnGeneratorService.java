@@ -74,8 +74,17 @@ public class AiColumnGeneratorService {
         try {
             int weekOfYear = LocalDateTime.now().get(WeekFields.of(Locale.KOREA).weekOfYear());
 
+            int dataSeason = CURRENT_SEASON;
             List<TeamRanking> rankings = teamRankingRepository.findBySeasonAndSeriesOrderByRankingAsc(CURRENT_SEASON, "0");
-            if (rankings.isEmpty()) {
+            if (rankings.isEmpty() && CURRENT_SEASON > 2020) {
+                dataSeason = CURRENT_SEASON - 1;
+                rankings = teamRankingRepository.findBySeasonAndSeriesOrderByRankingAsc(dataSeason, "0");
+                if (rankings.isEmpty()) {
+                    log.warn("팀 순위 데이터가 없어 주간 분석을 생성할 수 없습니다. ({}시즌, {}시즌 모두 없음)", CURRENT_SEASON, dataSeason);
+                    return;
+                }
+                log.info("{}시즌 데이터 없음 → {}시즌 데이터로 분석 생성", CURRENT_SEASON, dataSeason);
+            } else if (rankings.isEmpty()) {
                 log.warn("팀 순위 데이터가 없어 주간 분석을 생성할 수 없습니다.");
                 return;
             }
@@ -89,14 +98,14 @@ public class AiColumnGeneratorService {
             if (teamName == null) {
                 teamName = "팀ID:" + teamId;
             }
-            String teamDetailData = buildTeamDetailData(teamId, teamName, targetRanking, CURRENT_SEASON);
+            String teamDetailData = buildTeamDetailData(teamId, teamName, targetRanking, dataSeason);
 
             // 프롬프트 구성
             StringBuilder prompt = new StringBuilder();
             prompt.append("당신은 KBO 야구 매거진 기사 작성 전문가입니다.\n")
                   .append("'").append(teamName).append("'의 이번 주 전력 분석 매거진 기사를 작성해주세요.\n\n")
                   .append("=== 실제 데이터 ===\n")
-                  .append("시즌: ").append(CURRENT_SEASON).append("\n")
+                  .append("시즌: ").append(dataSeason).append("\n")
                   .append(teamDetailData).append("\n")
                   .append(buildWritingRules());
 
@@ -130,20 +139,28 @@ public class AiColumnGeneratorService {
             String category = ROTATING_TOPICS[topicIndex][1];
 
             // 1. Python 배치 분석 결과 조회 (analysis_result 테이블)
+            int dataSeason = CURRENT_SEASON;
             Optional<AnalysisResult> analysisResultOpt =
                     analysisResultRepository.findByTopicAndSeason(topicIndex, CURRENT_SEASON);
+            if (analysisResultOpt.isEmpty() && CURRENT_SEASON > 2020) {
+                dataSeason = CURRENT_SEASON - 1;
+                analysisResultOpt = analysisResultRepository.findByTopicAndSeason(topicIndex, dataSeason);
+                if (analysisResultOpt.isPresent()) {
+                    log.info("{}시즌 Python 분석 결과 없음 → {}시즌 결과로 fallback", CURRENT_SEASON, dataSeason);
+                }
+            }
 
             StringBuilder prompt = new StringBuilder();
             prompt.append("당신은 KBO 야구 매거진 기사 작성 전문가입니다.\n")
                   .append("주제: ").append(topic).append("\n")
-                  .append("시즌: ").append(CURRENT_SEASON).append("\n\n");
+                  .append("시즌: ").append(dataSeason).append("\n\n");
 
             String chartDataForColumn = null;
 
             if (analysisResultOpt.isPresent()) {
                 // Python 분석 결과 기반 프롬프트 (통계 분석 + 가설검정 + 차트)
                 AnalysisResult result = analysisResultOpt.get();
-                log.info("Python 분석 결과 사용 (topic={}, season={})", topicIndex, CURRENT_SEASON);
+                log.info("Python 분석 결과 사용 (topic={}, season={})", topicIndex, dataSeason);
 
                 prompt.append("=== 통계 분석 데이터 ===\n")
                       .append(result.getStatsJson()).append("\n\n");
@@ -166,23 +183,23 @@ public class AiColumnGeneratorService {
 
             } else {
                 // Fallback: 기존 ColumnDataCalculator 사용
-                log.info("Python 분석 결과 없음 → ColumnDataCalculator fallback (topic={}, season={})", topicIndex, CURRENT_SEASON);
+                log.info("Python 분석 결과 없음 → ColumnDataCalculator fallback (topic={}, season={})", topicIndex, dataSeason);
                 String preComputedData = switch (topicIndex) {
-                    case 0  -> calculator.calcSabermetricsTrend(CURRENT_SEASON);
-                    case 1  -> calculator.calcWarSpotlight(CURRENT_SEASON);
-                    case 2  -> calculator.calcBreakoutCandidates(CURRENT_SEASON);
-                    case 3  -> calculator.calcLuckAdjusted(CURRENT_SEASON);
-                    case 4  -> calculator.calcHeadToHead(CURRENT_SEASON);
-                    case 5  -> calculator.calcInningScoring(CURRENT_SEASON);
-                    case 6  -> calculator.calcHomeAwayAdvantage(CURRENT_SEASON);
-                    case 7  -> calculator.calcCrowdTrend(CURRENT_SEASON);
-                    case 8  -> calculator.calcFuturesProspects(CURRENT_SEASON);
-                    case 9  -> calculator.calcAbsImpact(CURRENT_SEASON);
-                    case 10 -> calculator.calcClutchChoker(CURRENT_SEASON);
-                    case 11 -> calculator.calcAgeCurve(CURRENT_SEASON);
-                    case 12 -> calculator.calcLineupEfficiency(CURRENT_SEASON);
-                    case 13 -> calculator.calcSeasonalPatterns(CURRENT_SEASON);
-                    case 14 -> calculator.calcPositionValue(CURRENT_SEASON);
+                    case 0  -> calculator.calcSabermetricsTrend(dataSeason);
+                    case 1  -> calculator.calcWarSpotlight(dataSeason);
+                    case 2  -> calculator.calcBreakoutCandidates(dataSeason);
+                    case 3  -> calculator.calcLuckAdjusted(dataSeason);
+                    case 4  -> calculator.calcHeadToHead(dataSeason);
+                    case 5  -> calculator.calcInningScoring(dataSeason);
+                    case 6  -> calculator.calcHomeAwayAdvantage(dataSeason);
+                    case 7  -> calculator.calcCrowdTrend(dataSeason);
+                    case 8  -> calculator.calcFuturesProspects(dataSeason);
+                    case 9  -> calculator.calcAbsImpact(dataSeason);
+                    case 10 -> calculator.calcClutchChoker(dataSeason);
+                    case 11 -> calculator.calcAgeCurve(dataSeason);
+                    case 12 -> calculator.calcLineupEfficiency(dataSeason);
+                    case 13 -> calculator.calcSeasonalPatterns(dataSeason);
+                    case 14 -> calculator.calcPositionValue(dataSeason);
                     default -> "";
                 };
 

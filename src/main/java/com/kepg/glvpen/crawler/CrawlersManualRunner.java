@@ -75,14 +75,16 @@ try {
     // 예: -Dcrawl.sabermetrics=false
     boolean calculateSabermetrics = Boolean.parseBoolean(System.getProperty("crawl.sabermetrics", "true"));
 
-    // 크롤링 대상 시즌
-    int targetSeason = 2025;
+    // 크롤링 대상 시즌 (3월 이전이면 전년도, 3월 이후면 현재 연도)
+    int targetSeason = LocalDate.now().getMonthValue() < 3
+            ? LocalDate.now().getYear() - 1
+            : LocalDate.now().getYear();
 
     // 다시즌 배치 크롤링 — 시스템 프로퍼티로 시즌 범위 오버라이드 가능
     // 예: -Dcrawl.seasonStart=2022 -Dcrawl.seasonEnd=2023
     boolean crawlMultiSeason = true;
     int multiSeasonStart = Integer.parseInt(System.getProperty("crawl.seasonStart", "2020"));
-    int multiSeasonEnd = Integer.parseInt(System.getProperty("crawl.seasonEnd", "2024"));
+    int multiSeasonEnd = Integer.parseInt(System.getProperty("crawl.seasonEnd", String.valueOf(targetSeason)));
 
     // 단일 기간 스케줄 크롤링
     LocalDate startDate = LocalDate.of(targetSeason, 3, 1);
@@ -377,9 +379,8 @@ try {
         SabermetricsBatchService saberService = context.getBean(SabermetricsBatchService.class);
         int saberStart = crawlMultiSeason ? multiSeasonStart : targetSeason;
         int saberEnd = crawlMultiSeason ? multiSeasonEnd : targetSeason;
-        // 2025시즌 포함 (기존 크롤링 데이터도 재계산)
-        log.info("\n[세이버메트릭스] {}~2025 시즌 계산 시작", saberStart);
-        saberService.calculateAllSabermetrics(saberStart, 2025);
+        log.info("\n[세이버메트릭스] {}~{} 시즌 계산 시작", saberStart, saberEnd);
+        saberService.calculateAllSabermetrics(saberStart, saberEnd);
         log.info("[세이버메트릭스] 계산 완료");
     }
 
