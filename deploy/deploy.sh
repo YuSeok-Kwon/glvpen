@@ -3,16 +3,17 @@
 # glvpen 배포 스크립트
 # 로컬에서 빌드 → EC2로 전송 → 서비스 재시작
 #
-# 사용법: bash deploy/deploy.sh <EC2_IP> [SSH_KEY_PATH]
-# 예시:   bash deploy/deploy.sh 3.35.xxx.xxx ~/.ssh/glvpen-key.pem
+# 사용법: bash deploy/deploy.sh <EC2_IP> <SSH_KEY_PATH>
+# 예시:   bash deploy/deploy.sh 54.180.19.228 ~/path/to/key.pem
 # ============================================
 
 set -e
 
-EC2_IP="${1:?사용법: deploy.sh <EC2_IP> [SSH_KEY_PATH]}"
-SSH_KEY="${2:-~/.ssh/glvpen-key.pem}"
-EC2_USER="ubuntu"
+EC2_IP="${1:?사용법: deploy.sh <EC2_IP> <SSH_KEY_PATH>}"
+SSH_KEY="${2:?사용법: deploy.sh <EC2_IP> <SSH_KEY_PATH>}"
+EC2_USER="ec2-user"
 REMOTE_DIR="/opt/glvpen"
+JAR_NAME="glvpen.jar"
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
@@ -34,7 +35,7 @@ echo "빌드 완료: ${JAR_FILE}"
 
 # --- 2. JAR 파일 전송 ---
 echo "[2/4] JAR 파일 전송..."
-scp -i "${SSH_KEY}" "${JAR_FILE}" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/app.jar.new"
+scp -i "${SSH_KEY}" "${JAR_FILE}" "${EC2_USER}@${EC2_IP}:${REMOTE_DIR}/${JAR_NAME}.new"
 
 # --- 3. Python 분석 파이프라인 전송 ---
 echo "[3/4] Python 분석 파이프라인 전송..."
@@ -46,11 +47,11 @@ rsync -avz --exclude='__pycache__' --exclude='*.pyc' --exclude='.env' --exclude=
 echo "[4/4] 서비스 재시작..."
 ssh -i "${SSH_KEY}" "${EC2_USER}@${EC2_IP}" << 'REMOTE'
     # 백업
-    if [ -f /opt/glvpen/app.jar ]; then
-        cp /opt/glvpen/app.jar /opt/glvpen/app.jar.backup
+    if [ -f /opt/glvpen/glvpen.jar ]; then
+        cp /opt/glvpen/glvpen.jar /opt/glvpen/glvpen.jar.backup
     fi
     # 원자적 교체
-    mv /opt/glvpen/app.jar.new /opt/glvpen/app.jar
+    mv /opt/glvpen/glvpen.jar.new /opt/glvpen/glvpen.jar
     # 서비스 재시작
     sudo systemctl restart glvpen
     # 상태 확인 (5초 대기 후)
